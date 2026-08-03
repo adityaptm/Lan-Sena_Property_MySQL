@@ -1,0 +1,649 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import type {
+  Customer, Bank, Location, Block, UnitType, SubsidyType, Unit,
+  MarketerType, Marketer, OnlineBooking, InventoryItem, Purchase,
+  GoodsIn, GoodsOut, CashBankAccount, ChartOfAccount, BankLoan,
+  CashflowEntry, MandorAdvance, OperationalExpense, DisbursementRequest,
+  CompanyAsset, Sale, UserProfile, SalesStep, CertificateStep, PriceItem, MarketerRight, CompanySettings
+} from '@/types';
+
+interface DataContextType {
+  currentUser: UserProfile | null;
+  loading: boolean;
+
+  // Kontak
+  customers: Customer[];
+  addCustomer: (c: Omit<Customer, 'id' | 'created_at'>) => Promise<void>;
+  updateCustomer: (id: string, c: Partial<Customer>) => Promise<void>;
+  deleteCustomer: (id: string) => Promise<void>;
+
+  companySettings: CompanySettings | null;
+
+  banks: Bank[];
+  addBank: (b: Omit<Bank, 'id' | 'created_at'>) => Promise<void>;
+  updateBank: (id: string, b: Partial<Bank>) => Promise<void>;
+  deleteBank: (id: string) => Promise<void>;
+
+  // Master Data Unit
+  salesSteps: SalesStep[];
+  addSalesStep: (s: Omit<SalesStep, 'id'>) => Promise<void>;
+  certificateSteps: CertificateStep[];
+  addCertificateStep: (c: Omit<CertificateStep, 'id'>) => Promise<void>;
+  priceItems: PriceItem[];
+  addPriceItem: (p: Omit<PriceItem, 'id'>) => Promise<void>;
+  locations: Location[];
+  addLocation: (l: Omit<Location, 'id'>) => Promise<void>;
+  blocks: Block[];
+  addBlock: (b: Omit<Block, 'id'>) => Promise<void>;
+  unitTypes: UnitType[];
+  addUnitType: (u: Omit<UnitType, 'id'>) => Promise<void>;
+  subsidyTypes: SubsidyType[];
+  addSubsidyType: (s: Omit<SubsidyType, 'id'>) => Promise<void>;
+
+  // Unit Rumah
+  units: Unit[];
+  addUnit: (u: any) => Promise<void>;
+  updateUnit: (id: string, u: any) => Promise<void>;
+  deleteUnit: (id: string) => Promise<void>;
+
+  // Marketing
+  marketerTypes: MarketerType[];
+  addMarketerType: (mt: Omit<MarketerType, 'id'>) => Promise<void>;
+  marketers: Marketer[];
+  addMarketer: (m: Omit<Marketer, 'id'>) => Promise<void>;
+  updateMarketerData: (id: string, m: Partial<Marketer>) => Promise<void>;
+  deleteMarketerData: (id: string) => Promise<void>;
+  onlineBookings: OnlineBooking[];
+  addOnlineBooking: (ob: Omit<OnlineBooking, 'id'>) => Promise<void>;
+  convertBookingToSale: (bookingId: string) => Promise<void>;
+  marketerRights: MarketerRight[];
+
+  // Gudang
+  items: InventoryItem[];
+  addItem: (i: Omit<InventoryItem, 'id'>) => Promise<void>;
+  updateItem: (id: string, i: Partial<InventoryItem>) => Promise<void>;
+  purchases: Purchase[];
+  addPurchase: (p: Omit<Purchase, 'id'>) => Promise<void>;
+  updatePurchaseStatus: (id: string, status: 'Draft' | 'Approved' | 'Received') => Promise<void>;
+  goodsIn: GoodsIn[];
+  addGoodsIn: (gi: Omit<GoodsIn, 'id'>) => Promise<void>;
+  goodsOut: GoodsOut[];
+  addGoodsOut: (go: Omit<GoodsOut, 'id'>) => Promise<void>;
+
+  // Keuangan
+  cashBankAccounts: CashBankAccount[];
+  addCashBankAccount: (acc: Omit<CashBankAccount, 'id'>) => Promise<void>;
+  chartOfAccounts: ChartOfAccount[];
+  addChartOfAccount: (coa: Omit<ChartOfAccount, 'id'>) => Promise<void>;
+  bankLoans: BankLoan[];
+  addBankLoan: (bl: Omit<BankLoan, 'id'>) => Promise<void>;
+  cashflowEntries: CashflowEntry[];
+  addCashflowEntry: (cfe: Omit<CashflowEntry, 'id'>) => Promise<void>;
+  mandorAdvances: MandorAdvance[];
+  addMandorAdvance: (ma: Omit<MandorAdvance, 'id'>) => Promise<void>;
+  operationalExpenses: OperationalExpense[];
+  addOperationalExpense: (oe: Omit<OperationalExpense, 'id'>) => Promise<void>;
+  disbursementRequests: DisbursementRequest[];
+  addDisbursementRequest: (dr: Omit<DisbursementRequest, 'id'>) => Promise<void>;
+  updateDisbursementStatus: (id: string, status: 'Diajukan' | 'Disetujui' | 'Dicairkan' | 'Ditolak') => Promise<void>;
+  companyAssets: CompanyAsset[];
+  addCompanyAsset: (ca: Omit<CompanyAsset, 'id'>) => Promise<void>;
+
+  // Penjualan
+  sales: Sale[];
+  addSale: (s: Omit<Sale, 'id' | 'created_at'>) => Promise<void>;
+  updateSale: (id: string, s: Partial<Sale>) => Promise<void>;
+  updateSaleStatus: (id: string, status: Sale['status']) => Promise<void>;
+  updateKprStatus: (id: string, status: Sale['kpr_status']) => Promise<void>;
+  cancelSale: (id: string) => Promise<void>;
+  deleteSale: (id: string) => Promise<void>;
+  relocateUnit: (saleId: string, newUnitId: string, newUnitNo: string) => Promise<void>;
+
+  // Pengguna
+  users: UserProfile[];
+  toggleUserActive: (id: string) => Promise<void>;
+  updateUser: (id: string, data: { nama: string; role: string }) => Promise<void>;
+
+  // Refresh
+  refresh: () => Promise<void>;
+}
+
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+const supabase = createClient();
+
+async function fetchTable<T>(table: string): Promise<T[]> {
+  const { data, error } = await supabase.from(table).select('*').limit(1000);
+  if (error) { console.warn(`Warning fetching ${table}:`, error.message); return []; }
+  return (data || []) as T[];
+}
+
+export function DataProvider({ children }: { children: React.ReactNode }) {
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [salesSteps, setSalesSteps] = useState<SalesStep[]>([]);
+  const [certificateSteps, setCertificateSteps] = useState<CertificateStep[]>([]);
+  const [priceItems, setPriceItems] = useState<PriceItem[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [unitTypes, setUnitTypes] = useState<UnitType[]>([]);
+  const [subsidyTypes, setSubsidyTypes] = useState<SubsidyType[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [marketerTypes, setMarketerTypes] = useState<MarketerType[]>([]);
+  const [marketers, setMarketers] = useState<Marketer[]>([]);
+  const [onlineBookings, setOnlineBookings] = useState<OnlineBooking[]>([]);
+  const [marketerRights, setMarketerRights] = useState<MarketerRight[]>([]);
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [goodsIn, setGoodsIn] = useState<GoodsIn[]>([]);
+  const [goodsOut, setGoodsOut] = useState<GoodsOut[]>([]);
+  const [cashBankAccounts, setCashBankAccounts] = useState<CashBankAccount[]>([]);
+  const [chartOfAccounts, setChartOfAccounts] = useState<ChartOfAccount[]>([]);
+  const [bankLoans, setBankLoans] = useState<BankLoan[]>([]);
+  const [cashflowEntries, setCashflowEntries] = useState<CashflowEntry[]>([]);
+  const [mandorAdvances, setMandorAdvances] = useState<MandorAdvance[]>([]);
+  const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([]);
+  const [disbursementRequests, setDisbursementRequests] = useState<DisbursementRequest[]>([]);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [companyAssets, setCompanyAssets] = useState<CompanyAsset[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single();
+        setCurrentUser(profile || { id: user.id, nama: user.email || 'User', email: user.email || '', role: 'Viewer', is_active: true });
+      }
+
+      const [
+        cust, bnk, ss, cs, pi, loc, blk, ut, sub, un,
+        mt, mkt, ob, mr, compSettings, itm, pur, gi, go,
+        cba, coa, bl, cfe, ma, oe, dr, ca, sal, usr
+      ] = await Promise.all([
+        fetchTable<Customer>('customers'),
+        fetchTable<Bank>('banks'),
+        fetchTable<SalesStep>('sales_steps'),
+        fetchTable<CertificateStep>('certificate_steps'),
+        fetchTable<PriceItem>('price_items'),
+        fetchTable<Location>('locations'),
+        fetchTable<Block>('blocks'),
+        fetchTable<UnitType>('unit_types'),
+        fetchTable<SubsidyType>('subsidy_types'),
+        fetchTable<Unit>('units'),
+        fetchTable<MarketerType>('marketer_types'),
+        fetchTable<Marketer>('marketers'),
+        fetchTable<OnlineBooking>('online_bookings'),
+        fetchTable<MarketerRight>('marketer_rights'),
+        fetchTable<CompanySettings>('company_settings'),
+        fetchTable<InventoryItem>('items'),
+        fetchTable<Purchase>('purchases'),
+        fetchTable<GoodsIn>('goods_in'),
+        fetchTable<GoodsOut>('goods_out'),
+        fetchTable<CashBankAccount>('cash_bank_accounts'),
+        fetchTable<ChartOfAccount>('chart_of_accounts'),
+        fetchTable<BankLoan>('bank_loans'),
+        fetchTable<CashflowEntry>('cashflow_entries'),
+        fetchTable<MandorAdvance>('mandor_advances'),
+        fetchTable<OperationalExpense>('operational_expenses'),
+        fetchTable<DisbursementRequest>('disbursement_requests'),
+        fetchTable<CompanyAsset>('company_assets'),
+        fetchTable<Sale>('sales'),
+        fetchTable<UserProfile>('users'),
+      ]);
+
+      // Client-side joins mapping
+      const mappedUnits = un.map((unit) => {
+        const block = blk.find((b) => b.id === unit.block_id);
+        const locItem = loc.find((l) => l.id === block?.location_id);
+        const uType = ut.find((t) => t.id === unit.unit_type_id);
+        const subType = sub.find((s) => s.id === unit.subsidy_type_id);
+        const sStep = ss.find((s) => s.id === unit.sales_step_id);
+        const cStep = cs.find((c) => c.id === unit.certificate_step_id);
+
+        return {
+          ...unit,
+          block_nama: block ? block.nama_blok : undefined,
+          location_nama: locItem ? locItem.nama_lokasi : undefined,
+          unit_type_nama: uType ? uType.nama_type : undefined,
+          subsidy_type_nama: subType ? subType.nama_type : undefined,
+          sales_step_nama: sStep ? sStep.nama_step : undefined,
+          certificate_step_nama: cStep ? cStep.nama_step : undefined,
+        };
+      });
+
+      const mappedSales = sal.map((s) => {
+        const custItem = cust.find((c) => c.id === s.customer_id);
+        const unitItem = mappedUnits.find((u) => u.id === s.unit_id);
+        const bankItem = bnk.find((b) => b.id === s.bank_id);
+        const marketerItem = mkt.find((m) => m.id === s.marketer_id);
+
+        return {
+          ...s,
+          customer_nama: custItem ? custItem.nama : undefined,
+          unit_no: unitItem ? unitItem.no_unit : undefined,
+          location_nama: unitItem ? unitItem.location_nama : undefined,
+          block_nama: unitItem ? unitItem.block_nama : undefined,
+          bank_nama: bankItem ? bankItem.nama_bank : undefined,
+          marketer_nama: marketerItem ? marketerItem.nama : undefined,
+        };
+      });
+
+      const mappedCashflow = cfe.map((entry) => {
+        const account = cba.find((a) => a.id === entry.account_id);
+        return {
+          ...entry,
+          account_nama: account ? account.nama_akun : undefined,
+        };
+      });
+
+      setCustomers(cust); setBanks(bnk); setSalesSteps(ss); setCertificateSteps(cs);
+      setPriceItems(pi); setLocations(loc); setBlocks(blk); setUnitTypes(ut);
+      setSubsidyTypes(sub); setUnits(mappedUnits); setMarketerTypes(mt); setMarketers(mkt);
+      setOnlineBookings(ob); setMarketerRights(mr); setItems(itm); setPurchases(pur);
+      setGoodsIn(gi); setGoodsOut(go); setCashBankAccounts(cba); setChartOfAccounts(coa);
+      setBankLoans(bl); setCashflowEntries(mappedCashflow); setMandorAdvances(ma);
+      setOperationalExpenses(oe); setDisbursementRequests(dr); setCompanyAssets(ca);
+      setSales(mappedSales); setUsers(usr); setCompanySettings(compSettings[0] || null);
+    } catch (e) {
+      console.error('Load error:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  // --- Helpers ---
+  async function insert(table: string, data: Record<string, any>) {
+    const { error } = await supabase.from(table).insert([data]);
+    if (error) throw new Error(error.message);
+    await loadAll();
+  }
+  async function update(table: string, id: string, data: Record<string, any>) {
+    const { error } = await supabase.from(table).update(data).eq('id', id);
+    if (error) throw new Error(error.message);
+    await loadAll();
+  }
+  async function remove(table: string, id: string) {
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    await loadAll();
+  }
+
+  // --- Kontak ---
+  const addCustomer = (c: Omit<Customer, 'id' | 'created_at'>) => insert('customers', c);
+  const updateCustomer = (id: string, c: Partial<Customer>) => update('customers', id, c);
+  const deleteCustomer = async (id: string) => {
+    // Hapus fisik semua transaksi customer ini sebelum menghapus customernya agar tidak error FK constraint
+    const activeSales = sales.filter((s) => s.customer_id === id);
+    for (const s of activeSales) {
+      if (s.unit_id) {
+        // Kembalikan unit ke tersedia
+        await supabase.from('units').update({ status: 'Tersedia' }).eq('id', s.unit_id);
+      }
+      // Hapus data sales dari database
+      await supabase.from('sales').delete().eq('id', s.id);
+    }
+    return remove('customers', id);
+  };
+
+  const addBank = (b: Omit<Bank, 'id' | 'created_at'>) => insert('banks', b);
+  const updateBank = (id: string, b: Partial<Bank>) => update('banks', id, b);
+  const deleteBank = (id: string) => remove('banks', id);
+
+  // --- Master Data ---
+  const addSalesStep = (s: Omit<SalesStep, 'id'>) => insert('sales_steps', s);
+  const addCertificateStep = (c: Omit<CertificateStep, 'id'>) => insert('certificate_steps', c);
+  const addPriceItem = (p: Omit<PriceItem, 'id'>) => insert('price_items', p);
+  const addLocation = (l: Omit<Location, 'id'>) => insert('locations', l);
+  const addBlock = (b: Omit<Block, 'id'>) => insert('blocks', b);
+  const addUnitType = (u: Omit<UnitType, 'id'>) => insert('unit_types', u);
+  const addSubsidyType = (s: Omit<SubsidyType, 'id'>) => insert('subsidy_types', s);
+
+  // --- Unit ---
+  const addUnit = async (u: any) => {
+    // 1. Resolve Location & Block
+    let locId = locations[0]?.id;
+    if (!locId) {
+      const { data: newLoc, error } = await supabase.from('locations').insert({ nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: 'Perum Benteng Mutiara Mas, Desa Benteng Kec. Cempaka Kab. Purwakarta' }).select().single();
+      if (error) throw new Error(error.message);
+      locId = newLoc.id;
+    }
+
+    let blockId = '';
+    const existingBlock = blocks.find(b => b.nama_blok.toLowerCase() === u.block_nama.toLowerCase());
+    if (existingBlock) {
+      blockId = existingBlock.id;
+    } else {
+      const { data: newBlock, error } = await supabase.from('blocks').insert({ nama_blok: u.block_nama, location_id: locId }).select().single();
+      if (error) throw new Error(error.message);
+      blockId = newBlock.id;
+    }
+
+    // 2. Resolve Unit Type
+    let unitTypeId = '';
+    const existingType = unitTypes.find(t => t.nama_type.toLowerCase() === u.unit_type_nama.toLowerCase());
+    if (existingType) {
+      unitTypeId = existingType.id;
+    } else {
+      let lt = 72;
+      let lb = 36;
+      const match = u.unit_type_nama.match(/(\d+)\s*\/\s*(\d+)/);
+      if (match) {
+        lb = parseInt(match[1]);
+        lt = parseInt(match[2]);
+      }
+      const { data: newType, error } = await supabase.from('unit_types').insert({ nama_type: u.unit_type_nama, luas_tanah: lt, luas_bangunan: lb }).select().single();
+      if (error) throw new Error(error.message);
+      unitTypeId = newType.id;
+    }
+
+    // 3. Resolve Subsidy/KPR Category
+    let subsidyTypeId = '';
+    const existingSub = subsidyTypes.find(s => s.nama_type.toLowerCase() === u.kategori_kpr.toLowerCase());
+    if (existingSub) {
+      subsidyTypeId = existingSub.id;
+    } else {
+      const { data: newSub, error } = await supabase.from('subsidy_types').insert({ nama_type: u.kategori_kpr, keterangan: 'Kategori KPR' }).select().single();
+      if (error) throw new Error(error.message);
+      subsidyTypeId = newSub.id;
+    }
+
+    // 4. Resolve Sales Step
+    let salesStepId = '';
+    const existingStep = salesSteps.find(s => s.nama_step.toLowerCase() === u.sales_step_nama.toLowerCase());
+    if (existingStep) {
+      salesStepId = existingStep.id;
+    } else {
+      const { data: newStep, error } = await supabase.from('sales_steps').insert({ nama_step: u.sales_step_nama, urutan: salesSteps.length + 1 }).select().single();
+      if (error) throw new Error(error.message);
+      salesStepId = newStep.id;
+    }
+
+    // 5. Insert unit
+    await insert('units', {
+      no_unit: u.no_unit,
+      block_id: blockId,
+      unit_type_id: unitTypeId,
+      subsidy_type_id: subsidyTypeId,
+      sales_step_id: salesStepId,
+      certificate_step_id: u.certificate_step_id || null,
+      harga_dasar: u.harga_dasar,
+      status: u.status
+    });
+  };
+
+  const updateUnit = async (id: string, u: any) => {
+    const updateData: Record<string, any> = {};
+    if (u.no_unit !== undefined) updateData.no_unit = u.no_unit;
+    if (u.harga_dasar !== undefined) updateData.harga_dasar = u.harga_dasar;
+    if (u.status !== undefined) updateData.status = u.status;
+    if (u.certificate_step_id !== undefined) updateData.certificate_step_id = u.certificate_step_id || null;
+
+    // Resolve location & block if block_nama changed
+    if (u.block_nama !== undefined) {
+      let locId = locations[0]?.id;
+      if (!locId) {
+        const { data: newLoc, error } = await supabase.from('locations').insert({ nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: 'Perum Benteng Mutiara Mas, Desa Benteng Kec. Cempaka Kab. Purwakarta' }).select().single();
+        if (error) throw new Error(error.message);
+        locId = newLoc.id;
+      }
+      let blockId = '';
+      const existingBlock = blocks.find(b => b.nama_blok.toLowerCase() === u.block_nama.toLowerCase());
+      if (existingBlock) {
+        blockId = existingBlock.id;
+      } else {
+        const { data: newBlock, error } = await supabase.from('blocks').insert({ nama_blok: u.block_nama, location_id: locId }).select().single();
+        if (error) throw new Error(error.message);
+        blockId = newBlock.id;
+      }
+      updateData.block_id = blockId;
+    }
+
+    // Resolve unit type if unit_type_nama changed
+    if (u.unit_type_nama !== undefined) {
+      let unitTypeId = '';
+      const existingType = unitTypes.find(t => t.nama_type.toLowerCase() === u.unit_type_nama.toLowerCase());
+      if (existingType) {
+        unitTypeId = existingType.id;
+      } else {
+        let lt = 72;
+        let lb = 36;
+        const match = u.unit_type_nama.match(/(\d+)\s*\/\s*(\d+)/);
+        if (match) {
+          lb = parseInt(match[1]);
+          lt = parseInt(match[2]);
+        }
+        const { data: newType, error } = await supabase.from('unit_types').insert({ nama_type: u.unit_type_nama, luas_tanah: lt, luas_bangunan: lb }).select().single();
+        if (error) throw new Error(error.message);
+        unitTypeId = newType.id;
+      }
+      updateData.unit_type_id = unitTypeId;
+    }
+
+    // Resolve subsidy/KPR if changed
+    if (u.kategori_kpr !== undefined) {
+      let subsidyTypeId = '';
+      const existingSub = subsidyTypes.find(s => s.nama_type.toLowerCase() === u.kategori_kpr.toLowerCase());
+      if (existingSub) {
+        subsidyTypeId = existingSub.id;
+      } else {
+        const { data: newSub, error } = await supabase.from('subsidy_types').insert({ nama_type: u.kategori_kpr, keterangan: 'Kategori KPR' }).select().single();
+        if (error) throw new Error(error.message);
+        subsidyTypeId = newSub.id;
+      }
+      updateData.subsidy_type_id = subsidyTypeId;
+    }
+
+    // Resolve sales step if changed
+    if (u.sales_step_nama !== undefined) {
+      let salesStepId = '';
+      const existingStep = salesSteps.find(s => s.nama_step.toLowerCase() === u.sales_step_nama.toLowerCase());
+      if (existingStep) {
+        salesStepId = existingStep.id;
+      } else {
+        const { data: newStep, error } = await supabase.from('sales_steps').insert({ nama_step: u.sales_step_nama, urutan: salesSteps.length + 1 }).select().single();
+        if (error) throw new Error(error.message);
+        salesStepId = newStep.id;
+      }
+      updateData.sales_step_id = salesStepId;
+    }
+
+    await update('units', id, updateData);
+  };
+
+  const deleteUnit = async (id: string) => {
+    // Cek apakah unit masih direferensikan oleh sales yang aktif
+    const activeSale = sales.find((s) => s.unit_id === id && s.status !== 'Batal');
+    if (activeSale) {
+      throw new Error(
+        `Unit tidak dapat dihapus karena masih terdapat transaksi aktif atas nama "${activeSale.customer_nama || 'Konsumen'}" (Status: ${activeSale.status}). Batalkan atau selesaikan transaksi terlebih dahulu.`
+      );
+    }
+    return remove('units', id);
+  };
+
+  // --- Marketing ---
+  const addMarketerType = (mt: Omit<MarketerType, 'id'>) => insert('marketer_types', mt);
+  const addMarketer = (m: Omit<Marketer, 'id'>) => insert('marketers', m);
+  const updateMarketerData = (id: string, m: Partial<Marketer>) => update('marketers', id, m);
+  const deleteMarketerData = (id: string) => remove('marketers', id);
+  const addOnlineBooking = (ob: Omit<OnlineBooking, 'id'>) => insert('online_bookings', ob);
+
+  const convertBookingToSale = async (bookingId: string) => {
+    await update('online_bookings', bookingId, { status: 'Deal' });
+    const booking = onlineBookings.find((b) => b.id === bookingId);
+    if (!booking) return;
+    const un = units.find((u) => u.id === booking.unit_id);
+    await insert('sales', {
+      customer_id: booking.customer_id,
+      unit_id: booking.unit_id,
+      tanggal_booking: booking.tanggal_booking,
+      total_harga: un?.harga_dasar || 0,
+      metode_bayar: 'KPR',
+      status: 'Booking',
+    });
+    if (un) await update('units', un.id, { status: 'Booking' });
+  };
+
+  // --- Gudang ---
+  const addItem = (i: Omit<InventoryItem, 'id'>) => insert('items', i);
+  const updateItem = (id: string, i: Partial<InventoryItem>) => update('items', id, i);
+  const addPurchase = (p: Omit<Purchase, 'id'>) => insert('purchases', p);
+  const updatePurchaseStatus = (id: string, status: 'Draft' | 'Approved' | 'Received') => update('purchases', id, { status });
+
+  const addGoodsIn = async (gi: Omit<GoodsIn, 'id'>) => {
+    await insert('goods_in', gi);
+    if (gi.items) {
+      for (const giItem of gi.items) {
+        const item = items.find((i) => i.id === giItem.item_id);
+        if (item) await update('items', item.id, { stok: item.stok + giItem.qty });
+      }
+    }
+  };
+
+  const addGoodsOut = async (go: Omit<GoodsOut, 'id'>) => {
+    await insert('goods_out', go);
+    if (go.items) {
+      for (const goItem of go.items) {
+        const item = items.find((i) => i.id === goItem.item_id);
+        if (item) await update('items', item.id, { stok: Math.max(0, item.stok - goItem.qty) });
+      }
+    }
+  };
+
+  // --- Keuangan ---
+  const addCashBankAccount = (acc: Omit<CashBankAccount, 'id'>) => insert('cash_bank_accounts', acc);
+  const addChartOfAccount = (coa: Omit<ChartOfAccount, 'id'>) => insert('chart_of_accounts', coa);
+  const addBankLoan = (bl: Omit<BankLoan, 'id'>) => insert('bank_loans', bl);
+
+  const addCashflowEntry = async (cfe: Omit<CashflowEntry, 'id'>) => {
+    await insert('cashflow_entries', cfe);
+    const acc = cashBankAccounts.find((a) => a.id === cfe.account_id);
+    if (acc) {
+      const delta = cfe.jenis === 'Masuk' ? cfe.nominal : -cfe.nominal;
+      await update('cash_bank_accounts', acc.id, { saldo: acc.saldo + delta });
+    }
+  };
+
+  const addMandorAdvance = (ma: Omit<MandorAdvance, 'id'>) => insert('mandor_advances', ma);
+  const addOperationalExpense = (oe: Omit<OperationalExpense, 'id'>) => insert('operational_expenses', oe);
+  const addDisbursementRequest = (dr: Omit<DisbursementRequest, 'id'>) => insert('disbursement_requests', dr);
+  const updateDisbursementStatus = (id: string, status: 'Diajukan' | 'Disetujui' | 'Dicairkan' | 'Ditolak') =>
+    update('disbursement_requests', id, { status_approval: status });
+  const addCompanyAsset = (ca: Omit<CompanyAsset, 'id'>) => insert('company_assets', ca);
+
+  // --- Penjualan ---
+  const addSale = async (s: Omit<Sale, 'id' | 'created_at'>) => {
+    // Auto-generate no_penjualan jika belum ada
+    let saleData = { ...s };
+    if (!saleData.no_penjualan) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const urutan = String(sales.length + 1).padStart(4, '0');
+      saleData.no_penjualan = `INV/SALES/${year}/${month}/${urutan}`;
+    }
+
+    // Strip virtual/joined fields
+    const dbData = {
+      customer_id: saleData.customer_id,
+      unit_id: saleData.unit_id,
+      bank_id: saleData.bank_id,
+      marketer_id: saleData.marketer_id,
+      tanggal_booking: saleData.tanggal_booking,
+      tanggal_akad: saleData.tanggal_akad,
+      total_harga: saleData.total_harga,
+      metode_bayar: saleData.metode_bayar,
+      status: saleData.status,
+      marketing_user_id: saleData.marketing_user_id,
+      no_penjualan: saleData.no_penjualan,
+      harga_jual_awal: saleData.harga_kesepakatan || saleData.harga_jual_awal || saleData.total_harga,
+      potongan: saleData.diskon || saleData.potongan || 0,
+      komitmen_pembayaran: saleData.komitmen_pembayaran,
+      harga_jual_pajak: saleData.harga_jual_pajak,
+    };
+
+    await insert('sales', dbData);
+    const statusMap: Record<string, Unit['status']> = { Lunas: 'Lunas', Akad: 'Akad', DP: 'DP', Booking: 'Booking' };
+    if (s.unit_id) await update('units', s.unit_id, { status: statusMap[s.status] || 'Booking' });
+  };
+
+  const updateSale = (id: string, s: Partial<Sale>) => update('sales', id, s);
+  const updateSaleStatus = (id: string, status: Sale['status']) => update('sales', id, { status });
+  const updateKprStatus = (id: string, kpr_status: Sale['kpr_status']) => update('sales', id, { kpr_status });
+
+  const cancelSale = async (id: string) => {
+    const sale = sales.find((s) => s.id === id);
+    await update('sales', id, { status: 'Batal' });
+    if (sale?.unit_id) await update('units', sale.unit_id, { status: 'Tersedia' });
+  };
+
+  const deleteSale = async (id: string) => {
+    const sale = sales.find((s) => s.id === id);
+    if (sale?.unit_id) await update('units', sale.unit_id, { status: 'Tersedia' });
+    await remove('sales', id);
+  };
+
+  const relocateUnit = async (saleId: string, newUnitId: string, newUnitNo: string) => {
+    const sale = sales.find((s) => s.id === saleId);
+    if (sale?.unit_id) await update('units', sale.unit_id, { status: 'Tersedia' });
+    await update('units', newUnitId, { status: sale?.status || 'Booking' });
+    await update('sales', saleId, { unit_id: newUnitId });
+  };
+
+  // --- Pengguna ---
+  const toggleUserActive = (id: string) => {
+    const u = users.find((u) => u.id === id);
+    return update('users', id, { is_active: !u?.is_active });
+  };
+  const updateUser = (id: string, data: { nama: string; role: string }) => update('users', id, data);
+
+  return (
+    <DataContext.Provider value={{
+      currentUser, loading, companySettings,
+      customers, addCustomer, updateCustomer, deleteCustomer,
+      banks, addBank, updateBank, deleteBank,
+      salesSteps, addSalesStep, certificateSteps, addCertificateStep,
+      priceItems, addPriceItem, locations, addLocation, blocks, addBlock,
+      unitTypes, addUnitType, subsidyTypes, addSubsidyType,
+      units, addUnit, updateUnit, deleteUnit,
+      marketerTypes, addMarketerType, marketers, addMarketer, updateMarketerData, deleteMarketerData,
+      onlineBookings, addOnlineBooking, convertBookingToSale, marketerRights,
+      items, addItem, updateItem, purchases, addPurchase, updatePurchaseStatus,
+      goodsIn, addGoodsIn, goodsOut, addGoodsOut,
+      cashBankAccounts, addCashBankAccount, chartOfAccounts, addChartOfAccount,
+      bankLoans, addBankLoan, cashflowEntries, addCashflowEntry,
+      mandorAdvances, addMandorAdvance, operationalExpenses, addOperationalExpense,
+      disbursementRequests, addDisbursementRequest, updateDisbursementStatus,
+      companyAssets, addCompanyAsset,
+      sales,
+      addSale,
+      updateSale,
+      updateSaleStatus,
+      updateKprStatus,
+      cancelSale,
+      deleteSale,
+      relocateUnit,
+      users, toggleUserActive, updateUser: updateUser,
+      refresh: loadAll,
+    }}>
+      {children}
+    </DataContext.Provider>
+  );
+}
+
+export function useData() {
+  const context = useContext(DataContext);
+  if (!context) throw new Error('useData must be used within a DataProvider');
+  return context;
+}

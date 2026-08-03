@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Custom scrollbar — neutral gray, works in both sidebar (dark) and content (light) */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.6);
+  }
+}
+
+.print-only {
+  display: none;
+}
+
+/* Print Styles for Document Checklist & Tables */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  header, aside, nav, button {
+    display: none !important;
+  }
+  [class*="lg:pl-64"] {
+    padding-left: 0 !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+}
