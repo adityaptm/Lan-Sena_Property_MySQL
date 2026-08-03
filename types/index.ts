@@ -49,6 +49,7 @@ export interface Bank {
   nama_bank: string;
   cabang: string;
   pic_nama: string;
+  jabatan_pic?: string;
   pic_hp: string;
   pic_email: string;
   created_at: string;
@@ -349,4 +350,23 @@ export interface SaleStepHistory {
   changed_by?: string;
   created_at: string;
   changed_by_nama?: string; // Joined field
+}
+export interface CompanySettings {
+  id: string;
+
+  nama_perusahaan: string;
+
+  direktur_nama: string;
+  direktur_nik: string;
+  direktur_jabatan: string;
+
+  alamat_kantor: string;
+  telp_kantor: string;
+
+  email?: string;
+  website?: string;
+  logo_url?: string;
+
+  npwp?: string;
+  created_at?: string;
 }
