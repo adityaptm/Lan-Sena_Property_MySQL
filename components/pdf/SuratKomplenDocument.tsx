@@ -25,7 +25,7 @@ Font.register({
 const styles = StyleSheet.create({
   page: {
     padding: 40,
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'Arial Narrow',
     lineHeight: 1.5,
     color: '#000000',
@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Helvetica-Bold',
     textDecoration: 'underline',
   },
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   label: {
-    width: 80,
+    width: 90,
     fontFamily: 'Helvetica-Bold',
   },
   colon: {
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#cccccc',
     paddingBottom: 2,
-    minHeight: 20,
+    minHeight: 22,
   },
   itemNumber: {
     width: 20,
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   },
   dateLocation: {
     marginTop: 15,
-    marginBottom: 30,
+    marginBottom: 8,
   },
   signatureSection: {
     flexDirection: 'row',
@@ -137,7 +137,7 @@ export function SuratKomplenDocument({
   // 2. Ekstraksi Data Unit (Mendukung fleksibilitas penamaan properti DB)
   const blokVal = unit?.block_nama || unit?.block || unit?.blok || '';
   const nomorVal = unit?.no_unit || unit?.number || unit?.unit_number || unit?.no || '';
-  
+
   // Kombinasi Blok dan Nomor Unit
   let blokNomor = '-';
   if (blokVal && nomorVal) {

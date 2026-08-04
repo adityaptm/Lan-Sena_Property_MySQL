@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingLeft: 30,
     paddingRight: 30,
-    fontSize: 8.5,
+    fontSize: 10,
     fontFamily: 'Arial Narrow',
     lineHeight: 1.3,
   },
@@ -38,35 +38,35 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 5,
   },
   logoContainer: {
-    width: 120,
-    marginRight: 10,
+    width: 80,
+    marginRight: 4,
   },
   logo: {
     width: '100%',
   },
   headerTextContainer: {
-    flex: 1,
     alignItems: 'center',
   },
   companyName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
     marginBottom: 4,
   },
   companySubtitle: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
     marginBottom: 2,
   },
   companyAddress: {
-    fontSize: 7.5,
+    fontSize: 9,
     textAlign: 'center',
     color: '#000',
   },
@@ -83,12 +83,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
   },
   subtitle: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: 'Helvetica-Bold',
     marginTop: 2,
   },
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   labelCell: {
-    width: 140,
+    width: 150,
   },
   colonCell: {
     width: 10,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
 
 export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
   const tanggalCetak = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
-  
+
   // Generate nomor surat: XXXX/KodeLokasi/SPPR/Bulan/Tahun
   const tanggalRef = sale.tanggal_booking ? new Date(sale.tanggal_booking) : new Date();
   const bulan = bulanKeRomawi(tanggalRef.getMonth() + 1);
@@ -188,10 +188,10 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
     const parts = sale.no_penjualan.split('/');
     urutan = parts[parts.length - 1] || '0001';
   }
-  
+
   // Kode lokasi
   const kodeLokasi = unit?.location_kode_lokasi || sale?.kode_lokasi || 'BMM';
-  
+
   const noSurat = `${urutan}/${kodeLokasi}/SPPR/${bulan}/${tahun}`;
   const isKPR = sale.metode_bayar === 'KPR';
   const kprAmount = isKPR ? (sale.total_harga - sale.dp_nominal) : 0;
@@ -225,7 +225,7 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
 
         {/* ISI 1 */}
         <Text style={styles.paragraphBold}>Yang bertanda tangan dibawah ini,</Text>
-        
+
         <View style={styles.table}>
           <View style={styles.row}><Text style={styles.labelCell}>Nama</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.nama || '-'}</Text></View>
           <View style={styles.row}><Text style={styles.labelCell}>Alamat</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.domisili || customer?.alamat || '-'}</Text></View>
@@ -258,12 +258,12 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
           <Text style={styles.bullet}>1.</Text>
           <Text style={styles.listItemText}>Semua pembayaran sesuai waktu yang telah ditentukan, tanpa adanya pemberitahuan terlebih dahulu oleh <Text style={styles.boldText}>PIHAK PENJUAL.</Text></Text>
         </View>
-        
+
         <View style={styles.listRow}>
           <Text style={styles.bullet}>2.</Text>
           <View style={styles.listItemText}>
             <Text style={{ textAlign: 'justify' }}>Apabila terjadi keterlambatan ataupun kelalaian atas kewajiban tersebut, kami bersedia mengikuti sanksi-sanksi sebagai berikut:</Text>
-            
+
             <View style={styles.subListRow}>
               <Text style={styles.subBullet}>o</Text>
               <Text style={styles.listItemText}>Apabila ada penurunan kpr dari bank yang ditetapkan awal {formatRupiah(kprAmount)}, kekurangannya akad dibebankan ke penambahan uang muka</Text>

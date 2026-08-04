@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingLeft: 30,
     paddingRight: 30,
-    fontSize: 8.5,
+    fontSize: 10,
     fontFamily: 'Arial Narrow',
     lineHeight: 1.3,
   },
@@ -36,35 +36,35 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 5,
   },
   logoContainer: {
-    width: 120,
-    marginRight: 10,
+    width: 100,
+    marginRight: 4,
   },
   logo: {
     width: '100%',
   },
   headerTextContainer: {
-    flex: 1,
     alignItems: 'center',
   },
   companyName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
     marginBottom: 4,
   },
   companySubtitle: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
     marginBottom: 2,
   },
   companyAddress: {
-    fontSize: 7.5,
+    fontSize: 9,
     textAlign: 'center',
     color: '#000',
   },
@@ -80,13 +80,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     textDecoration: 'underline',
   },
   subTitle: {
-    fontSize: 9,
+    fontSize: 10.5,
     marginTop: 2,
     fontFamily: 'Helvetica-Bold',
   },
@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
   },
   introText: {
     marginBottom: 8,
+    fontFamily: 'Helvetica-Bold',
   },
   table: {
     marginVertical: 8,
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   label: {
-    width: 70,
+    width: 80,
     fontFamily: 'Helvetica-Bold',
   },
   colon: {
@@ -119,9 +120,18 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     textAlign: 'justify',
   },
-  dateLocation: {
+  noteBold: {
+    fontFamily: 'Helvetica-Bold',
+  },
+  dateLocationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: -50,
     marginTop: 12,
-    marginBottom: 25,
+    marginBottom: 6,
+  },
+  dateLocationText: {
+    width: 180,
   },
   signatureSection: {
     flexDirection: 'row',
@@ -248,15 +258,18 @@ export function SerahTerimaKunciDocument({
             </View>
           </View>
 
-          {/* KETENTUAN PEMELIHARAAN */}
-          <Text style={styles.note}>
-            Masa pemeliharaan {masaPemeliharaan} hari sejak kunci rumah tersebut dengan catatan {catatanPemeliharaan}.
-          </Text>
-
-          {/* LOKASI DAN TANGGAL */}
-          <Text style={styles.dateLocation}>
-            Purwakarta, {formatTanggalIndo(tanggalSerahTerima)}
-          </Text>
+ {/* KETENTUAN PEMELIHARAAN */}
+<Text style={styles.note}>
+  Masa pemeliharaan{' '}
+  <Text style={styles.noteBold}>{masaPemeliharaan} hari sejak kunci rumah</Text>
+  {' '}tersebut dengan catatan {catatanPemeliharaan}.
+</Text>
+          {/* TANGGAL - sejajar tepat di atas kolom "Yang Menerima" */}
+          <View style={styles.dateLocationContainer}>
+            <Text style={styles.dateLocationText}>
+              Purwakarta, {formatTanggalIndo(tanggalSerahTerima)}
+            </Text>
+          </View>
 
           {/* TANDA TANGAN */}
           <View style={styles.signatureSection}>
