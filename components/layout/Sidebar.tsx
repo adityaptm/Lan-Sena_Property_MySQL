@@ -91,8 +91,6 @@ const NAV_MENU: NavGroup[] = [
     items: [
       { label: 'Input Penjualan Baru', href: '/penjualan/input' },
       { label: 'Daftar Penjualan', href: '/penjualan/daftar' },
-      { label: 'Print Persyaratan KPR', href: '/penjualan/print-kpr' },
-      { label: 'Filter Penjualan', href: '/penjualan/filter' },
     ],
   },
   {

@@ -1,6 +1,26 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
-import { formatRupiah, bulanKeRomawi } from '@/lib/format';
+import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
+
+Font.register({
+  family: 'Arial Narrow',
+  fonts: [
+    { src: '/fonts/ArchivoNarrow-Regular.ttf' },
+    { src: '/fonts/ArchivoNarrow-Bold.ttf', fontWeight: 'bold' }
+  ]
+});
+
+Font.register({
+  family: 'Helvetica',
+  fonts: [
+    { src: '/fonts/ArchivoNarrow-Regular.ttf' },
+    { src: '/fonts/ArchivoNarrow-Bold.ttf', fontWeight: 'bold' }
+  ]
+});
+
+Font.register({
+  family: 'Helvetica-Bold',
+  src: '/fonts/ArchivoNarrow-Bold.ttf'
+});
 
 const styles = StyleSheet.create({
   page: {
@@ -9,9 +29,10 @@ const styles = StyleSheet.create({
     paddingLeft: 30,
     paddingRight: 30,
     fontSize: 8.5,
-    fontFamily: 'Helvetica',
+    fontFamily: 'Arial Narrow',
     lineHeight: 1.3,
   },
+  // --- Header / Kop Surat ---
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -53,85 +74,122 @@ const styles = StyleSheet.create({
     marginTop: 5,
     marginBottom: 10,
   },
+  // --- Title ---
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
+    textDecoration: 'underline',
   },
-  subtitle: {
-    fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
+  subTitle: {
+    fontSize: 9,
     marginTop: 2,
-  },
-  paragraph: {
-    marginBottom: 5,
-    textAlign: 'justify',
-  },
-  paragraphBold: {
-    marginBottom: 5,
     fontFamily: 'Helvetica-Bold',
-    textAlign: 'left',
+  },
+  // --- Content ---
+  content: {
+    marginTop: 6,
+  },
+  introText: {
+    marginBottom: 8,
   },
   table: {
-    marginBottom: 8,
-    paddingLeft: 0,
+    marginVertical: 8,
+    marginLeft: 15,
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  labelCell: {
-    width: 140,
+  label: {
+    width: 70,
+    fontFamily: 'Helvetica-Bold',
   },
-  colonCell: {
+  colon: {
     width: 10,
   },
-  valueCellNormal: {
+  value: {
     flex: 1,
-    textTransform: 'uppercase',
   },
-  valueCellBold: {
-    flex: 1,
-    fontFamily: 'Helvetica-Bold',
-    textTransform: 'uppercase',
+  note: {
+    marginVertical: 12,
+    textAlign: 'justify',
   },
-  signatureContainer: {
+  dateLocation: {
+    marginTop: 12,
+    marginBottom: 25,
+  },
+  signatureSection: {
     flexDirection: 'row',
-    marginTop: 20,
     justifyContent: 'space-between',
-    paddingLeft: 15,
-    paddingRight: 15,
+    marginTop: 8,
+    paddingHorizontal: 20,
   },
-  signatureBlock: {
-    alignItems: 'center',
-    width: 200,
+  signatureBox: {
+    width: 180,
+    textAlign: 'center',
   },
-  signatureDate: {
-    marginBottom: 5,
-  },
-  signatureSpace: {
-    height: 45,
+  space: {
+    height: 55,
   },
 });
 
-export const SerahTerimaKunciDocument = ({ sale, customer, unit, tanggalSerahTerima, yangMenyerahkan, baseUrl }: any) => {
-  const tanggalST = tanggalSerahTerima ? new Date(tanggalSerahTerima) : new Date();
-  const tanggalCetak = tanggalST.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
+interface SerahTerimaKunciDocumentProps {
+  sale?: any;
+  customer?: any;
+  unit?: any;
+  nomorSurat?: string;
+  tanggalSerahTerima?: string;
+  yangMenyerahkan?: string;
+  masaPemeliharaan?: string | number;
+  catatanPemeliharaan?: string;
+  baseUrl?: string;
+}
 
-  // Nomor surat: XXXX/KodeLokasi/STK/Bulan/Tahun
-  const bulan = bulanKeRomawi(tanggalST.getMonth() + 1);
-  const tahun = tanggalST.getFullYear();
-  let urutan = '0001';
-  if (sale?.no_penjualan) {
-    const parts = sale.no_penjualan.split('/');
-    urutan = parts[parts.length - 1] || '0001';
+export function SerahTerimaKunciDocument({
+  customer,
+  unit,
+  nomorSurat = '',
+  tanggalSerahTerima,
+  yangMenyerahkan = '',
+  masaPemeliharaan = '100',
+  catatanPemeliharaan = 'tidak merenovasi dan memperbaiki sendiri',
+  baseUrl = '',
+}: SerahTerimaKunciDocumentProps) {
+  const formatTanggalIndo = (dateString?: string) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  // 1. Ekstraksi Nama Customer
+  const namaCustomer = customer?.nama || customer?.name || '-';
+
+  // 2. Ekstraksi Data Unit
+  const blokVal = unit?.block_nama || unit?.block || unit?.blok || '';
+  const nomorVal = unit?.no_unit || unit?.number || unit?.unit_number || unit?.no || '';
+
+  let blokNomor = '-';
+  if (blokVal && nomorVal) {
+    blokNomor = `${blokVal} No ${nomorVal}`;
+  } else if (blokVal) {
+    blokNomor = blokVal;
+  } else if (nomorVal) {
+    blokNomor = nomorVal;
+  } else if (unit?.nama_unit) {
+    blokNomor = unit.nama_unit;
   }
-  const kodeLokasi = unit?.location_kode_lokasi || 'BMM';
-  const noSurat = `${urutan}/${kodeLokasi}/STK/${bulan}/${tahun}`;
+
+  // 3. Ekstraksi Tipe Unit
+  const tipeUnit = unit?.unit_type_nama || unit?.type || unit?.tipe || '-';
 
   return (
     <Document>
@@ -143,7 +201,7 @@ export const SerahTerimaKunciDocument = ({ sale, customer, unit, tanggalSerahTer
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>
-            <Text style={styles.companySubtitle}>DEVELOPER & CONTRACTOR</Text>
+            <Text style={styles.companySubtitle}>DEVELOPER &amp; CONTRACTOR</Text>
             <Text style={styles.companyAddress}>
               Perum Benteng Mutiara Mas Ruko No. 16 Babakan Situ 004/002
             </Text>
@@ -156,60 +214,70 @@ export const SerahTerimaKunciDocument = ({ sale, customer, unit, tanggalSerahTer
 
         {/* JUDUL */}
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>BERITA ACARA SERAH TERIMA KUNCI</Text>
-          <Text style={styles.subtitle}>{noSurat}</Text>
+          <Text style={styles.title}>TANDA TERIMA KUNCI</Text>
+          {nomorSurat ? <Text style={styles.subTitle}>{nomorSurat}</Text> : null}
         </View>
 
-        <Text style={styles.paragraph}>
-          Pada hari ini, {tanggalCetak}, yang bertanda tangan di bawah ini:
-        </Text>
+        {/* ISI */}
+        <View style={styles.content}>
+          <Text style={styles.introText}>
+            Telah diterima kunci rumah Perumahan Benteng Mutiara Mas :
+          </Text>
 
-        <Text style={styles.paragraphBold}>Pihak Pertama (Yang Menyerahkan):</Text>
-        <View style={styles.table}>
-          <View style={styles.row}><Text style={styles.labelCell}>Nama</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{yangMenyerahkan || '-'}</Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>Jabatan</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>PT LAN SENA JAYA</Text></View>
-        </View>
-
-        <Text style={styles.paragraphBold}>Pihak Kedua (Yang Menerima):</Text>
-        <View style={styles.table}>
-          <View style={styles.row}><Text style={styles.labelCell}>Nama</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{customer?.nama || '-'}</Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>Alamat</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.domisili || customer?.alamat || '-'}</Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>No. Telp/HP</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.no_hp || '-'}</Text></View>
-        </View>
-
-        <Text style={styles.paragraph}>
-          Dengan ini Pihak Pertama menyerahkan kunci rumah kepada Pihak Kedua atas unit rumah dengan rincian sebagai berikut:
-        </Text>
-
-        <View style={styles.table}>
-          <View style={styles.row}><Text style={styles.labelCell}>Lokasi</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.location_nama || '-'}</Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>Blok/Kavling</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.block_nama || '-'}</Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>Nomor Unit</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.no_unit || '-'}</Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>Tipe</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.unit_type_nama || '-'}</Text></View>
-        </View>
-
-        <Text style={styles.paragraph}>
-          Pihak Kedua telah menerima kunci rumah tersebut di atas dalam keadaan baik dan lengkap. Dengan ditandatanganinya berita acara ini, maka segala kerusakan dan/atau kehilangan atas unit rumah tersebut menjadi tanggung jawab Pihak Kedua.
-        </Text>
-
-        <Text style={styles.paragraph}>
-          Demikian berita acara ini dibuat dan ditandatangani oleh kedua belah pihak dalam keadaan sadar dan tanpa paksaan dari pihak manapun.
-        </Text>
-
-        {/* TANDA TANGAN */}
-        <View style={styles.signatureContainer}>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureDate}>Yang Menyerahkan,</Text>
-            <View style={styles.signatureSpace} />
-            <Text style={{ fontFamily: 'Helvetica-Bold' }}>{yangMenyerahkan || '____________________'}</Text>
+          {/* TABLE DETAIL DATA */}
+          <View style={styles.table}>
+            <View style={styles.row}>
+              <Text style={styles.label}>Nama</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>{namaCustomer}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Blok / No</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>{blokNomor}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Type</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>{tipeUnit}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Kunci</Text>
+              <Text style={styles.colon}>:</Text>
+              <Text style={styles.value}>Satu Set</Text>
+            </View>
           </View>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureDate}>Yang Menerima,</Text>
-            <View style={styles.signatureSpace} />
-            <Text style={{ fontFamily: 'Helvetica-Bold' }}>{customer?.nama || '____________________'}</Text>
+
+          {/* KETENTUAN PEMELIHARAAN */}
+          <Text style={styles.note}>
+            Masa pemeliharaan {masaPemeliharaan} hari sejak kunci rumah tersebut dengan catatan {catatanPemeliharaan}.
+          </Text>
+
+          {/* LOKASI DAN TANGGAL */}
+          <Text style={styles.dateLocation}>
+            Purwakarta, {formatTanggalIndo(tanggalSerahTerima)}
+          </Text>
+
+          {/* TANDA TANGAN */}
+          <View style={styles.signatureSection}>
+            <View style={styles.signatureBox}>
+              <Text>Yang Menyerahkan,</Text>
+              <View style={styles.space} />
+              <Text style={{ fontFamily: 'Helvetica-Bold' }}>
+                ( {yangMenyerahkan || '............................'} )
+              </Text>
+            </View>
+
+            <View style={styles.signatureBox}>
+              <Text>Yang Menerima,</Text>
+              <View style={styles.space} />
+              <Text style={{ fontFamily: 'Helvetica-Bold' }}>
+                ( {namaCustomer} )
+              </Text>
+            </View>
           </View>
         </View>
       </Page>
     </Document>
   );
-};
+}

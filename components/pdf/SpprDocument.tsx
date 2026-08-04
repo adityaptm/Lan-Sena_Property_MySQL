@@ -1,6 +1,28 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { formatRupiah, bulanKeRomawi } from '@/lib/format';
+
+Font.register({
+  family: 'Arial Narrow',
+  fonts: [
+    { src: '/fonts/ArchivoNarrow-Regular.ttf' },
+    { src: '/fonts/ArchivoNarrow-Bold.ttf', fontWeight: 'bold' }
+  ]
+});
+
+Font.register({
+  family: 'Helvetica',
+  fonts: [
+    { src: '/fonts/ArchivoNarrow-Regular.ttf' },
+    { src: '/fonts/ArchivoNarrow-Bold.ttf', fontWeight: 'bold' }
+  ]
+});
+
+Font.register({
+  family: 'Helvetica-Bold',
+  src: '/fonts/ArchivoNarrow-Bold.ttf'
+});
+
 // Create styles
 const styles = StyleSheet.create({
   page: {
@@ -9,7 +31,7 @@ const styles = StyleSheet.create({
     paddingLeft: 30,
     paddingRight: 30,
     fontSize: 8.5,
-    fontFamily: 'Helvetica',
+    fontFamily: 'Arial Narrow',
     lineHeight: 1.3,
   },
   // --- Header / Kop Surat ---

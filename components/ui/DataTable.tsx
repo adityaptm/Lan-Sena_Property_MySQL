@@ -156,7 +156,7 @@ export function DataTable<T extends Record<string, any>>({
       <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="text-xs text-slate-600 bg-slate-50 uppercase font-semibold border-b border-slate-200">
+            <thead className="text-xs text-white bg-blue-600 uppercase font-semibold border-b border-blue-700 shadow-sm">
               <tr>
                 <th className="py-3.5 px-4 w-12 text-center">#</th>
                 {columns.map((col, idx) => (
@@ -164,13 +164,13 @@ export function DataTable<T extends Record<string, any>>({
                     key={idx}
                     onClick={() => handleSort(idx)}
                     className={`px-4 py-3 ${
-                      col.sortable ? 'cursor-pointer select-none hover:text-slate-800' : ''
+                      col.sortable ? 'cursor-pointer select-none hover:text-blue-100' : ''
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       {col.header}
                       {col.sortable && (
-                        <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-70" />
                       )}
                     </div>
                   </th>
@@ -190,7 +190,7 @@ export function DataTable<T extends Record<string, any>>({
                 </tr>
               ) : (
                 paginatedData.map((row, rowIdx) => (
-                  <tr key={rowIdx} className="hover:bg-slate-50 transition-colors">
+                  <tr key={rowIdx} className="hover:bg-blue-50 even:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4 text-center text-slate-500 font-mono text-xs">
                       {(currentPage - 1) * pageSize + rowIdx + 1}
                     </td>

@@ -1,21 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
 
-interface Props {
-  id?: string;
-  tanggal?: string;
-  penyerah?: string;
-}
+export default function PrintSerahTerimaKunciClient() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id');
+  const nomor = searchParams.get('nomor') || '';
+  const tanggal = searchParams.get('tanggal') || new Date().toISOString().split('T')[0];
+  const penyerah = searchParams.get('penyerah') || '';
+  const pemeliharaan = searchParams.get('pemeliharaan') || '100';
+  const catatan = searchParams.get('catatan') || 'tidak merenovasi dan memperbaiki sendiri';
 
-export default function PrintSerahTerimaKunciClient({
-  id,
-  tanggal,
-  penyerah,
-}: Props) {
-  const { sales, customers, units } = useData();
+  const { sales, customers, units, loading } = useData();
 
   const [pdfUrl, setPdfUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -41,8 +40,11 @@ export default function PrintSerahTerimaKunciClient({
             sale={sale}
             customer={customer}
             unit={unit}
+            nomorSurat={nomor}
             tanggalSerahTerima={tanggal}
             yangMenyerahkan={penyerah}
+            masaPemeliharaan={pemeliharaan}
+            catatanPemeliharaan={catatan}
             baseUrl={window.location.origin}
           />
         ).toBlob();
@@ -63,7 +65,18 @@ export default function PrintSerahTerimaKunciClient({
         URL.revokeObjectURL(pdfUrl);
       }
     };
-  }, [sale, customer, unit, tanggal, penyerah]);
+  }, [sale, customer, unit, nomor, tanggal, penyerah, pemeliharaan, catatan]);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-medium">Memuat data serah terima kunci...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (!id || !sale) {
     return (
@@ -81,7 +94,6 @@ export default function PrintSerahTerimaKunciClient({
         <h1 className="text-xl font-bold text-slate-800">
           Cetak Berita Acara Serah Terima Kunci
         </h1>
-
         <p className="text-sm text-slate-500">
           Pratinjau Dokumen Berita Acara Serah Terima Kunci
         </p>

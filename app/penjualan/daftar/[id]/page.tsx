@@ -19,7 +19,7 @@ import { CetakPersyaratanKprForm } from '@/components/penjualan/forms';
 
 export default function DetailPenjualanPage() {
   const { id } = useParams() as { id: string };
-  const { sales, customers, units, marketers, locations, blocks, banks, currentUser } = useData();
+  const { sales, customers, units, marketers, locations, blocks, banks, currentUser, salesSteps, certificateSteps } = useData();
   const supabase = createClient();
   const router = useRouter();
 
@@ -48,9 +48,13 @@ export default function DetailPenjualanPage() {
   const [showPindahUnitModal, setShowPindahUnitModal] = useState(false);
   const [showUpdateMarketerModal, setShowUpdateMarketerModal] = useState(false);
   const [showUpdateKonsumenModal, setShowUpdateKonsumenModal] = useState(false);
+  const [showProgresModal, setShowProgresModal] = useState(false);
+  const [showUbahHargaModal, setShowUbahHargaModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [potonganForm, setPotonganForm] = useState({ nominal: '', keterangan: '' });
+  const [progresForm, setProgresForm] = useState({ status: '', keterangan: '' });
+  const [hargaPajakForm, setHargaPajakForm] = useState('');
 
   const handleSavePotongan = async () => {
     if (!potonganForm.nominal) return;
@@ -58,6 +62,63 @@ export default function DetailPenjualanPage() {
     await supabase.from('sales').update({ potongan: Number(potonganForm.nominal.replace(/\D/g,'')) }).eq('id', id);
     setShowPotonganModal(false); setPotonganForm({ nominal: '', keterangan: '' });
     setSaving(false); window.location.reload();
+  };
+
+  const handleSaveProgres = async () => {
+    if (!progresForm.status) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('sale_step_history').insert({
+        sale_id: id,
+        jenis_step: activeTab as any,
+        status: progresForm.status,
+        keterangan: progresForm.keterangan || '',
+        changed_by: currentUser?.id
+      });
+      if (error) throw error;
+
+      // Update unit step
+      if (activeTab === 'penjualan' && sale?.unit_id) {
+        const selectedStep = salesSteps.find(s => s.nama_step === progresForm.status);
+        if (selectedStep) {
+          await supabase.from('units').update({ sales_step_id: selectedStep.id }).eq('id', sale.unit_id);
+        }
+      } else if (activeTab === 'sertifikat' && sale?.unit_id) {
+        const selectedStep = certificateSteps.find(c => c.nama_step === progresForm.status);
+        if (selectedStep) {
+          await supabase.from('units').update({ certificate_step_id: selectedStep.id }).eq('id', sale.unit_id);
+        }
+      }
+
+      alert('Progres berhasil disimpan.');
+      window.location.reload();
+    } catch (err: any) {
+      alert(err?.message || 'Gagal menyimpan progres.');
+    } finally {
+      setSaving(false);
+      setShowProgresModal(false);
+      setProgresForm({ status: '', keterangan: '' });
+    }
+  };
+
+  const handleSaveHargaPajak = async () => {
+    setSaving(true);
+    try {
+      const nominalValue = Number(hargaPajakForm.replace(/\D/g, ''));
+      const { error } = await supabase
+        .from('sales')
+        .update({ harga_jual_pajak: nominalValue })
+        .eq('id', id);
+
+      if (error) throw error;
+      alert('Harga Pajak berhasil diperbarui.');
+      window.location.reload();
+    } catch (err: any) {
+      alert(err?.message || 'Gagal mengubah harga.');
+    } finally {
+      setSaving(false);
+      setShowUbahHargaModal(false);
+    }
   };
 
   useEffect(() => {
@@ -273,7 +334,15 @@ export default function DetailPenjualanPage() {
                 <span className="font-semibold text-slate-600">Harga Jual (PAJAK)</span><span>:</span>
                 <div className="flex items-center gap-2">
                   <span>{formatRupiah(sale.harga_jual_pajak || 0)}</span>
-                  <button className="text-[10px] text-blue-600 hover:underline">(Ubah Harga)</button>
+                  <button
+                    onClick={() => {
+                      setHargaPajakForm(String(sale.harga_jual_pajak || 0).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+                      setShowUbahHargaModal(true);
+                    }}
+                    className="text-[10px] text-blue-600 hover:underline"
+                  >
+                    (Ubah Harga)
+                  </button>
                 </div>
               </div>
             </div>
@@ -303,6 +372,14 @@ export default function DetailPenjualanPage() {
                 <button onClick={() => setShowPotonganModal(true)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Input Potongan</button>
                 <button onClick={() => setShowBiayaModal(true)} className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Input Biaya Tambahan</button>
               </div>
+            )}
+            {(activeTab === 'penjualan' || activeTab === 'sertifikat' || activeTab === 'posisi_sertifikat') && (
+              <button
+                onClick={() => setShowProgresModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
+              >
+                + Input Progres
+              </button>
             )}
           </div>
 
@@ -523,6 +600,90 @@ export default function DetailPenjualanPage() {
           bank={banks.find(b => b.id === sale?.bank_id)}
           onClose={() => setShowPersyaratanModal(false)}
         />
+      )}
+
+      {/* Modal Input Progres */}
+      {showProgresModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="font-bold text-slate-800 text-lg mb-4">Input Progres - {TABS.find(t => t.id === activeTab)?.label}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Status/Step *</label>
+                {activeTab === 'penjualan' ? (
+                  <select
+                    value={progresForm.status}
+                    onChange={e => setProgresForm({...progresForm, status: e.target.value})}
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Pilih Step Penjualan...</option>
+                    {salesSteps.map(s => <option key={s.id} value={s.nama_step}>{s.nama_step}</option>)}
+                  </select>
+                ) : activeTab === 'sertifikat' ? (
+                  <select
+                    value={progresForm.status}
+                    onChange={e => setProgresForm({...progresForm, status: e.target.value})}
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Pilih Step Sertifikat...</option>
+                    {certificateSteps.map(c => <option key={c.id} value={c.nama_step}>{c.nama_step}</option>)}
+                  </select>
+                ) : (
+                  <select
+                    value={progresForm.status}
+                    onChange={e => setProgresForm({...progresForm, status: e.target.value})}
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Pilih Posisi Sertifikat...</option>
+                    <option value="Di Developer (Kantor)">Di Developer (Kantor)</option>
+                    <option value="Di BPN / Proses Notaris">Di BPN / Proses Notaris</option>
+                    <option value="Di Bank Partner (Jaminan)">Di Bank Partner (Jaminan)</option>
+                    <option value="Diserahkan ke Konsumen">Diserahkan ke Konsumen</option>
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Keterangan / Progress Detail</label>
+                <textarea
+                  placeholder="Catatan tambahan..."
+                  value={progresForm.keterangan}
+                  onChange={e => setProgresForm({...progresForm, keterangan: e.target.value})}
+                  rows={3}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button onClick={() => { setShowProgresModal(false); setProgresForm({ status: '', keterangan: '' }); }} className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold">Batal</button>
+              <button onClick={handleSaveProgres} disabled={saving || !progresForm.status} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50">{saving ? 'Menyimpan...' : 'Simpan'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ubah Harga Pajak */}
+      {showUbahHargaModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="font-bold text-slate-800 text-lg mb-4">Ubah Harga Jual Pajak</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Harga Jual (untuk laporan penjualan - PAJAK) (Rp) *</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 150.000.000"
+                  value={hargaPajakForm}
+                  onChange={e => setHargaPajakForm(e.target.value.replace(/[^0-9]/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,'.'))}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button onClick={() => setShowUbahHargaModal(false)} className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold">Batal</button>
+              <button onClick={handleSaveHargaPajak} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50">{saving ? 'Menyimpan...' : 'Simpan'}</button>
+            </div>
+          </div>
+        </div>
       )}
   </>
   );

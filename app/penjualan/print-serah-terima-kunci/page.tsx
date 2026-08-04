@@ -12,10 +12,6 @@ export default async function Page({
   const params = await searchParams;
 
   return (
-    <PrintSerahTerimaKunciClient
-      id={params.id}
-      tanggal={params.tanggal}
-      penyerah={params.penyerah}
-    />
+    <PrintSerahTerimaKunciClient />
   );
 }

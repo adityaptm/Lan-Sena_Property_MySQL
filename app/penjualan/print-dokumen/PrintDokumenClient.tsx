@@ -13,7 +13,7 @@ export default function PrintDokumenClient({
   id,
   type = 'persyaratan',
 }: Props) {
-  const { sales, customers, units } = useData();
+  const { sales, customers, units, loading } = useData();
 
   const [pdfUrl, setPdfUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +59,17 @@ export default function PrintDokumenClient({
       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     };
   }, [sale, customer, unit, type]);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-medium">Memuat data dokumen...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (!id || !sale) {
     return (
