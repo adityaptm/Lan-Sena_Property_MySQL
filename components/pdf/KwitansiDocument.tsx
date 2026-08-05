@@ -6,8 +6,21 @@ Font.register({
   family: 'Arial Narrow',
   fonts: [
     { src: '/fonts/ArchivoNarrow-Regular.ttf' },
-    { src: '/fonts/ArchivoNarrow-Bold.ttf', fontWeight: 'bold' },
-  ],
+    { src: '/fonts/ArchivoNarrow-Bold.ttf', fontWeight: 'bold' }
+  ]
+});
+
+Font.register({
+  family: 'Helvetica',
+  fonts: [
+    { src: '/fonts/ArchivoNarrow-Regular.ttf' },
+    { src: '/fonts/ArchivoNarrow-Bold.ttf', fontWeight: 'bold' }
+  ]
+});
+
+Font.register({
+  family: 'Helvetica-Bold',
+  src: '/fonts/ArchivoNarrow-Bold.ttf'
 });
 
 const styles = StyleSheet.create({
@@ -36,12 +49,14 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
     marginBottom: 2,
   },
   companySubtitle: {
     fontSize: 10,
     fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
     marginBottom: 2,
   },
@@ -65,6 +80,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 12,
     fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
     letterSpacing: 1.2,
     color: '#000',
   },
@@ -86,21 +102,21 @@ const styles = StyleSheet.create({
   colon: {
     width: 15,
     color: '#222',
-    fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
   },
   valueCol: {
     flex: 1,
     color: '#000',
   },
   valueBold: {
-    fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
   },
   sectionTitleRow: {
     marginTop: 4,
     marginBottom: 4,
   },
   sectionTitle: {
-    fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
     fontSize: 10,
     color: '#000',
   },
@@ -139,32 +155,15 @@ const styles = StyleSheet.create({
 });
 
 interface KwitansiProps {
-  payment: {
-    no_kwitansi: string;
-    tanggal: string;
-    diterima_dari: string;
-    nominal: number;
-    deskripsi: string;
-    bank_tujuan?: string;
-  };
-  sale?: {
-    no_penjualan?: string;
-    metode_bayar?: string;
-  };
-  unit?: {
-    no_unit?: string;
-    block_nama?: string;
-    location_nama?: string;
-    unit_type_nama?: string;
-  };
-  customer?: {
-    nama?: string;
-  };
+  payment?: any;
+  sale?: any;
+  unit?: any;
+  customer?: any;
   petugasNama?: string;
-  baseUrl: string;
+  baseUrl?: string;
 }
 
-function formatTanggalLong(dateStr: string): string {
+function formatTanggalLong(dateStr?: string): string {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
@@ -176,7 +175,7 @@ function formatTanggalLong(dateStr: string): string {
   return `${days[d.getDay()]}, ${d.getDate().toString().padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function formatKotaTanggal(dateStr: string): string {
+function formatKotaTanggal(dateStr?: string): string {
   if (!dateStr) return 'Purwakarta';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return 'Purwakarta';
@@ -187,11 +186,16 @@ function formatKotaTanggal(dateStr: string): string {
   return `Purwakarta, ${d.getDate().toString().padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-export function KwitansiDocument({ payment, unit, customer, petugasNama, baseUrl }: KwitansiProps) {
+export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRUL ROZI', baseUrl = '' }: KwitansiProps) {
   const logoSrc = `${baseUrl}/logo.jpg`;
 
-  const namaKonsumen = (customer?.nama || payment.diterima_dari || '').toUpperCase();
-  const namaPenyetor = (payment.diterima_dari || customer?.nama || '').toUpperCase();
+  const noKwitansi = payment?.no_kwitansi || '-';
+  const nominal = Number(payment?.nominal) || 0;
+  const deskripsi = payment?.deskripsi || '-';
+  const tanggal = payment?.tanggal || '';
+
+  const namaKonsumen = (customer?.nama || customer?.name || payment?.diterima_dari || '').toUpperCase();
+  const namaPenyetor = (payment?.diterima_dari || customer?.nama || customer?.name || '').toUpperCase();
   const namaPetugas = (petugasNama || 'FAHRUL ROZI').toUpperCase();
 
   const unitText = unit?.no_unit 
@@ -235,13 +239,13 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama, baseUrl
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>No Kwitansi</Text>
             <Text style={styles.colon}>:</Text>
-            <Text style={[styles.valueCol, styles.valueBold]}>{payment.no_kwitansi}</Text>
+            <Text style={[styles.valueCol, styles.valueBold]}>{noKwitansi}</Text>
           </View>
 
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>Tgl Pembayaran</Text>
             <Text style={styles.colon}>:</Text>
-            <Text style={[styles.valueCol, styles.valueBold]}>{formatTanggalLong(payment.tanggal)}</Text>
+            <Text style={[styles.valueCol, styles.valueBold]}>{formatTanggalLong(tanggal)}</Text>
           </View>
 
           <View style={styles.fieldRow}>
@@ -253,19 +257,19 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama, baseUrl
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>Sebesar</Text>
             <Text style={styles.colon}>:</Text>
-            <Text style={[styles.valueCol, styles.valueBold]}>Rp {formatRupiah(payment.nominal)}</Text>
+            <Text style={[styles.valueCol, styles.valueBold]}>Rp {formatRupiah(nominal)}</Text>
           </View>
 
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>Terbilang</Text>
             <Text style={styles.colon}>:</Text>
-            <Text style={[styles.valueCol, styles.valueBold]}>{terbilang(payment.nominal)}</Text>
+            <Text style={[styles.valueCol, styles.valueBold]}>{terbilang(nominal)}</Text>
           </View>
 
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>Keterangan</Text>
             <Text style={styles.colon}>:</Text>
-            <Text style={[styles.valueCol, styles.valueBold]}>{(payment.deskripsi || '-').toUpperCase()}</Text>
+            <Text style={[styles.valueCol, styles.valueBold]}>{deskripsi.toUpperCase()}</Text>
           </View>
 
           <View style={styles.sectionTitleRow}>
@@ -293,7 +297,7 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama, baseUrl
 
         {/* TTD */}
         <View style={styles.ttdContainer}>
-          <Text style={styles.tanggalText}>{formatKotaTanggal(payment.tanggal)}</Text>
+          <Text style={styles.tanggalText}>{formatKotaTanggal(tanggal)}</Text>
           <View style={styles.signatureRow}>
             <View style={styles.signatureBlockLeft}>
               <Text style={styles.signatureTitle}>Penyetor,</Text>

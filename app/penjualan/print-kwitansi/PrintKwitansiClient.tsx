@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { createClient } from '@/lib/supabase/client';
 import { SalePayment } from '@/types';
 
-interface Props {
-  paymentId?: string;
-  saleId?: string;
-}
+export default function PrintKwitansiClient() {
+  const searchParams = useSearchParams();
+  const paymentId = searchParams.get('payment_id') || searchParams.get('id') || '';
+  const saleId = searchParams.get('sale_id') || '';
 
-export default function PrintKwitansiClient({ paymentId, saleId }: Props) {
   const { sales, customers, units, currentUser, loading } = useData();
   const supabase = createClient();
 
@@ -20,37 +20,52 @@ export default function PrintKwitansiClient({ paymentId, saleId }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Load the payment data
+  // Load the payment data from Supabase
   useEffect(() => {
     async function loadPayment() {
-      if (!paymentId) { setError('ID pembayaran tidak ditemukan.'); setIsLoading(false); return; }
-      const { data, error: err } = await supabase
-        .from('sale_payments')
-        .select('*')
-        .eq('id', paymentId)
-        .single();
-      if (err || !data) { setError('Data pembayaran tidak ditemukan.'); setIsLoading(false); return; }
-      setPayment(data);
+      if (!paymentId) {
+        setError('ID pembayaran tidak ditemukan.');
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const { data, error: err } = await supabase
+          .from('sale_payments')
+          .select('*')
+          .eq('id', paymentId)
+          .single();
+        if (err || !data) {
+          setError('Data pembayaran tidak ditemukan.');
+          setIsLoading(false);
+          return;
+        }
+        setPayment(data);
+      } catch (e) {
+        console.error(e);
+        setError('Gagal memuat data pembayaran.');
+        setIsLoading(false);
+      }
     }
     loadPayment();
   }, [paymentId, supabase]);
 
-  // Generate PDF once we have all data
+  // Generate PDF document once payment and context data are ready
   useEffect(() => {
     if (loading || !payment) return;
 
-    // Capture ke variabel lokal agar TypeScript tahu non-null di dalam closure async
     const currentPayment = payment;
     const targetSaleId = saleId || currentPayment.sale_id;
-    const sale = sales.find(s => s.id === targetSaleId);
-    const customer = customers.find(c => c.id === sale?.customer_id);
-    const unit = units.find(u => u.id === sale?.unit_id);
+    const sale = sales.find((s) => s.id === targetSaleId);
+    const customer = customers.find((c) => c.id === sale?.customer_id);
+    const unit = units.find((u) => u.id === sale?.unit_id);
 
     async function generatePdf() {
       setIsLoading(true);
       try {
         const { pdf } = await import('@react-pdf/renderer');
-        const { KwitansiDocument } = await import('@/components/pdf/KwitansiDocument');
+        const { KwitansiDocument } = await import(
+          '@/components/pdf/KwitansiDocument'
+        );
 
         const blob = await pdf(
           <KwitansiDocument
@@ -58,7 +73,7 @@ export default function PrintKwitansiClient({ paymentId, saleId }: Props) {
             sale={sale}
             unit={unit}
             customer={customer}
-            petugasNama={currentUser?.nama || ''}
+            petugasNama={currentUser?.nama || 'FAHRUL ROZI'}
             baseUrl={window.location.origin}
           />
         ).toBlob();
@@ -66,7 +81,7 @@ export default function PrintKwitansiClient({ paymentId, saleId }: Props) {
         const url = URL.createObjectURL(blob);
         setPdfUrl(url);
       } catch (e) {
-        console.error(e);
+        console.error('Error generating Kwitansi PDF:', e);
         setError('Gagal membuat PDF.');
       } finally {
         setIsLoading(false);
@@ -74,9 +89,24 @@ export default function PrintKwitansiClient({ paymentId, saleId }: Props) {
     }
     generatePdf();
 
-    return () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payment, loading, sales, customers, units, currentUser]);
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+
+  }, [payment, loading, sales, customers, units, currentUser, saleId]);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-medium">Memuat data kwitansi...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (error) {
     return (
@@ -90,14 +120,18 @@ export default function PrintKwitansiClient({ paymentId, saleId }: Props) {
     <AppLayout>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Kwitansi Pembayaran</h1>
-          <p className="text-sm text-slate-500">{payment?.no_kwitansi || 'Memuat...'}</p>
+          <h1 className="text-xl font-bold text-slate-800">
+            Cetak Kwitansi Pembayaran
+          </h1>
+          <p className="text-sm text-slate-500">
+            {payment?.no_kwitansi || 'Memuat kwitansi...'}
+          </p>
         </div>
         {pdfUrl && (
           <a
             href={pdfUrl}
             download={`kwitansi-${payment?.no_kwitansi?.replace(/\//g, '-') || 'pembayaran'}.pdf`}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold transition"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold transition shadow-sm"
           >
             ↓ Unduh PDF
           </a>
@@ -108,10 +142,16 @@ export default function PrintKwitansiClient({ paymentId, saleId }: Props) {
         {isLoading ? (
           <div className="w-full h-full flex flex-col gap-3 items-center justify-center bg-slate-50">
             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-slate-500 font-medium">Memuat Dokumen PDF...</p>
+            <p className="text-slate-500 font-medium">
+              Memuat Dokumen PDF...
+            </p>
           </div>
         ) : pdfUrl ? (
-          <iframe src={pdfUrl} className="w-full h-full" title="Kwitansi Pembayaran" />
+          <iframe
+            src={pdfUrl}
+            className="w-full h-full"
+            title="Kwitansi Pembayaran Document"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-slate-50">
             <p className="text-red-500 font-medium">Gagal memuat PDF.</p>
