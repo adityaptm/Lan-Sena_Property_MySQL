@@ -120,6 +120,7 @@ interface DataContextType {
   users: UserProfile[];
   toggleUserActive: (id: string) => Promise<void>;
   updateUser: (id: string, data: { nama: string; role: string }) => Promise<void>;
+  searchCustomers: (query: string) => Promise<Customer[]>;
 
   // Refresh
   refresh: () => Promise<void>;
@@ -294,21 +295,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }
 
   // --- Kontak ---
-  const addCustomer = (c: Omit<Customer, 'id' | 'created_at'>) => insert('customers', c);
-  const updateCustomer = (id: string, c: Partial<Customer>) => update('customers', id, c);
-  const deleteCustomer = async (id: string) => {
-    // Hapus fisik semua transaksi customer ini sebelum menghapus customernya agar tidak error FK constraint
-    const activeSales = sales.filter((s) => s.customer_id === id);
-    for (const s of activeSales) {
-      if (s.unit_id) {
-        // Kembalikan unit ke tersedia
-        await supabase.from('units').update({ status: 'Tersedia' }).eq('id', s.unit_id);
-      }
-      // Hapus data sales dari database
-      await supabase.from('sales').delete().eq('id', s.id);
+ const addCustomer = (c: Omit<Customer, 'id' | 'created_at'>) => insert('customers', c);
+const updateCustomer = (id: string, c: Partial<Customer>) => update('customers', id, c);
+const deleteCustomer = async (id: string) => {
+  // Hapus fisik semua transaksi customer ini sebelum menghapus customernya agar tidak error FK constraint
+  const activeSales = sales.filter((s) => s.customer_id === id);
+  for (const s of activeSales) {
+    if (s.unit_id) {
+      // Kembalikan unit ke tersedia
+      await supabase.from('units').update({ status: 'Tersedia' }).eq('id', s.unit_id);
     }
-    return remove('customers', id);
-  };
+    // Hapus data sales dari database
+    await supabase.from('sales').delete().eq('id', s.id);
+  }
+  return remove('customers', id);
+};
+
+const searchCustomers = async (query: string): Promise<Customer[]> => {
+  const keyword = query.trim();
+  if (keyword.length < 2) return [];
+
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*')
+    .or(`nama.ilike.%${keyword}%,no_hp.ilike.%${keyword}%,nik.ilike.%${keyword}%`)
+    .limit(20);
+
+  if (error) {
+    console.warn('searchCustomers error:', error.message);
+    return [];
+  }
+  return (data || []) as Customer[];
+};
 
   const addBank = (b: Omit<Bank, 'id' | 'created_at'>) => insert('banks', b);
   const updateBank = (id: string, b: Partial<Bank>) => update('banks', id, b);
@@ -414,6 +432,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       sales_step_id: salesStepId,
       certificate_step_id: u.certificate_step_id || null,
       harga_dasar: u.harga_dasar,
+      maksimal_kredit: u.maksimal_kredit || 0,
+      uang_muka: u.uang_muka || 0,
+      booking_fee: u.booking_fee || 0,
       status: u.status
     });
   };
@@ -422,6 +443,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const updateData: Record<string, any> = {};
     if (u.no_unit !== undefined) updateData.no_unit = u.no_unit;
     if (u.harga_dasar !== undefined) updateData.harga_dasar = u.harga_dasar;
+    if (u.maksimal_kredit !== undefined) updateData.maksimal_kredit = u.maksimal_kredit;
+    if (u.uang_muka !== undefined) updateData.uang_muka = u.uang_muka;
+    if (u.booking_fee !== undefined) updateData.booking_fee = u.booking_fee;
     if (u.status !== undefined) updateData.status = u.status;
     if (u.certificate_step_id !== undefined) updateData.certificate_step_id = u.certificate_step_id || null;
 
@@ -649,7 +673,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   return (
     <DataContext.Provider value={{
       currentUser, loading, companySettings,
-      customers, addCustomer, updateCustomer, deleteCustomer,
+      customers, addCustomer, updateCustomer, deleteCustomer, searchCustomers,
       banks, addBank, updateBank, deleteBank,
       salesSteps, addSalesStep, updateSalesStep, deleteSalesStep,
       certificateSteps, addCertificateStep, updateCertificateStep, deleteCertificateStep,

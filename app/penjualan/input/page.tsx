@@ -1,26 +1,105 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useData } from '@/lib/data-context';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Search, ExternalLink } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
 import { createClient } from '@/lib/supabase/client';
+import type { Customer, Unit } from '@/types';
+
+// Urutan alami supaya "2" tampil sebelum "10" (bukan urutan teks biasa)
+function naturalSort<T>(arr: T[], getKey: (item: T) => string): T[] {
+  return [...arr].sort((a, b) =>
+    getKey(a).localeCompare(getKey(b), undefined, { numeric: true, sensitivity: 'base' })
+  );
+}
 
 export default function InputPenjualanPage() {
   const router = useRouter();
-  const { customers, units, marketers, banks, locations, blocks, unitTypes, subsidyTypes, addSale } = useData();
+  const { customers, units, marketers, banks, locations, blocks, addSale, searchCustomers } = useData();
   const supabase = createClient();
 
-  const availableUnits = units.filter((u) => u.status === 'Tersedia' || u.status === 'Booking');
+  // --- State pencarian Customer ---
+  const [customerQuery, setCustomerQuery] = useState('');
+  const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const customerBoxRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const q = customerQuery.trim();
+    if (q.length < 2) {
+      setCustomerResults([]);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      const result = await searchCustomers(q);
+      setCustomerResults(result);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [customerQuery, searchCustomers]);
+
+  // Tutup dropdown hasil pencarian kalau klik di luar box-nya
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (customerBoxRef.current && !customerBoxRef.current.contains(e.target as Node)) {
+        setShowCustomerDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handlePickCustomer = (c: Customer) => {
+    setSelectedCustomerId(c.id);
+    setCustomerQuery(c.nama);
+    setShowCustomerDropdown(false);
+  };
+
+  const handleCustomerQueryChange = (val: string) => {
+    setCustomerQuery(val);
+    setSelectedCustomerId(''); // ketik manual = dianggap customer baru sampai pilih dari list lagi
+    setShowCustomerDropdown(true);
+  };
+
+  // --- State cascading Perumahan > Blok > No Unit ---
+  const [locationId, setLocationId] = useState('');
+  const [blockId, setBlockId] = useState('');
+  const [unitId, setUnitId] = useState('');
+
+  const filteredBlocks = useMemo(
+    () => naturalSort(blocks.filter((b) => b.location_id === locationId), (b) => b.nama_blok),
+    [blocks, locationId]
+  );
+
+  const availableUnitsInBlock = useMemo(() => {
+    const filtered = units.filter(
+      (u) => u.block_id === blockId && (u.status === 'Tersedia' || u.status === 'Booking')
+    );
+    return naturalSort(filtered, (u) => u.no_unit || '');
+  }, [units, blockId]);
+
+  const selectedUnit: Unit | undefined = useMemo(
+    () => units.find((u) => u.id === unitId),
+    [units, unitId]
+  );
+
+  const handleLocationChange = (val: string) => {
+    setLocationId(val);
+    setBlockId('');
+    setUnitId('');
+  };
+
+  const handleBlockChange = (val: string) => {
+    setBlockId(val);
+    setUnitId('');
+  };
+
+  // --- Form utama ---
   const [formData, setFormData] = useState({
-    customer_nama: '',
-    unit_blok: '',
-    unit_no: '',
-    unit_type: '30/60',
-    subsidy_type: 'Subsidi',
     marketer_nama: '',
     metode_bayar: 'KPR' as 'KPR' | 'Cash Bertahap' | 'Cash Keras',
     bank_nama: 'Mandiri',
@@ -31,162 +110,63 @@ export default function InputPenjualanPage() {
     status: 'DP' as 'Booking' | 'DP' | 'Akad' | 'Lunas',
   });
 
-  const [unitSearchInput, setUnitSearchInput] = useState('');
-  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalHarga = formData.harga_kesepakatan - formData.diskon;
 
-  const handleUnitChange = (typedValue: string) => {
-    setUnitSearchInput(typedValue);
-
-    const foundUnit = units.find((u) => {
-      const fullLabel = `${u.block_nama || ''} ${u.no_unit || ''}`.trim().toLowerCase();
-      const unitNoOnly = (u.no_unit || '').toLowerCase();
-      const target = typedValue.toLowerCase().trim();
-
-      return fullLabel === target || unitNoOnly === target;
-    });
-
-    if (foundUnit) {
+  // Begitu unit dipilih, auto-isi harga, DP, booking fee dari data master unit
+  const handleUnitChange = (val: string) => {
+    setUnitId(val);
+    const u = units.find((x) => x.id === val);
+    if (u) {
       setFormData((prev) => ({
         ...prev,
-        unit_no: foundUnit.no_unit || '',
-        unit_blok: foundUnit.block_nama || prev.unit_blok,
-        unit_type: foundUnit.unit_type_nama || prev.unit_type,
-        harga_kesepakatan: foundUnit.harga_dasar || prev.harga_kesepakatan,
-      }));
-      return;
-    }
-
-    const match = typedValue.match(/(?:blok\s*)?([a-z0-9\-\s]+?)\s*(?:no\.?|nomor|\/)?\s*([0-9]+[a-z]?)$/i);
-
-    if (match) {
-      const rawBlok = match[1].trim();
-      const rawNo = match[2].trim();
-
-      const formattedBlok = rawBlok.toUpperCase().startsWith('BLOK')
-        ? rawBlok
-        : `Blok ${rawBlok}`;
-
-      setFormData((prev) => ({
-        ...prev,
-        unit_blok: formattedBlok,
-        unit_no: rawNo,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        unit_no: typedValue,
+        harga_kesepakatan: u.harga_dasar || 0,
+        dp_nominal: u.uang_muka || 0,
+        booking_fee: u.booking_fee || 0,
       }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!unitId) {
+      alert('Silakan pilih Perumahan, Blok, dan No Unit terlebih dahulu.');
+      return;
+    }
+    if (!selectedCustomerId && !customerQuery.trim()) {
+      alert('Silakan pilih atau ketik nama customer.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // 1. Customer
-      let custId: string | undefined = selectedCustomerId || undefined;
-      if (!custId) {
-        custId = customers.find(
-          (c) => (c.nama || '').toLowerCase() === formData.customer_nama.toLowerCase()
-        )?.id;
-      }
+      // 1. Resolve Customer ID (pakai yang dipilih dari pencarian, atau bikin baru dari nama yang diketik)
+      let custId = selectedCustomerId;
+      let custNama = customerQuery.trim();
+
       if (!custId) {
         const dummyNik = '0000000000000000-' + Math.floor(Math.random() * 10000);
-        const { data, error } = await supabase.from('customers').insert({
-          nama: formData.customer_nama, nik: dummyNik, alamat: '-', no_hp: '-',
-        }).select().single();
-        if (error) throw error;
-        custId = data?.id;
-      }
-
-      let unitItem = units.find(
-        (u) =>
-          (u.no_unit || '').toLowerCase() === formData.unit_no.toLowerCase() &&
-          (u.block_nama || '').toLowerCase() === formData.unit_blok.toLowerCase()
-      );
-      let unitId = unitItem?.id;
-
-      if (!unitId) {
-        let locationId = locations[0]?.id;
-        if (!locationId) {
-          const { data: newLoc, error } = await supabase
-            .from('locations')
-            .insert({ nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: '-' })
-            .select()
-            .single();
-          if (error) throw error;
-          locationId = newLoc.id;
-        }
-
-        const blockRecord = blocks.find(
-          (b) => b.nama_blok.toLowerCase() === formData.unit_blok.toLowerCase()
-        );
-        let blockId = blockRecord?.id;
-        if (!blockId) {
-          const { data: newBlock, error } = await supabase
-            .from('blocks')
-            .insert({ nama_blok: formData.unit_blok, location_id: locationId })
-            .select()
-            .single();
-          if (error) throw error;
-          blockId = newBlock.id;
-        }
-
-        const unitTypeRecord = unitTypes.find(
-          (t) => t.nama_type.toLowerCase() === formData.unit_type.toLowerCase()
-        );
-        let unitTypeId = unitTypeRecord?.id;
-        if (!unitTypeId) {
-          const typeMatch = formData.unit_type.match(/(\d+)\s*\/\s*(\d+)/);
-          const luasBangunan = typeMatch ? parseInt(typeMatch[1]) : 36;
-          const luasTanah = typeMatch ? parseInt(typeMatch[2]) : 72;
-          const { data: newType, error } = await supabase
-            .from('unit_types')
-            .insert({
-              nama_type: formData.unit_type,
-              luas_tanah: luasTanah,
-              luas_bangunan: luasBangunan,
-            })
-            .select()
-            .single();
-          if (error) throw error;
-          unitTypeId = newType.id;
-        }
-
-        let subsidyTypeId = subsidyTypes.find(
-          (s) => s.nama_type.toLowerCase() === formData.subsidy_type.toLowerCase()
-        )?.id;
-        if (!subsidyTypeId) {
-          const { data: newSub, error } = await supabase
-            .from('subsidy_types')
-            .insert({ nama_type: formData.subsidy_type, keterangan: 'Kategori KPR' })
-            .select()
-            .single();
-          if (error) throw error;
-          subsidyTypeId = newSub.id;
-        }
-
         const { data, error } = await supabase
-          .from('units')
+          .from('customers')
           .insert({
-            no_unit: formData.unit_no,
-            block_id: blockId,
-            unit_type_id: unitTypeId,
-            subsidy_type_id: subsidyTypeId,
-            harga_dasar: formData.harga_kesepakatan,
-            status: 'Booking',
+            nama: custNama,
+            nik: dummyNik,
+            alamat: '-',
+            no_hp: '-',
           })
           .select()
           .single();
         if (error) throw error;
-        unitId = data?.id;
-        unitItem = data as any;
+        custId = data?.id;
+      } else {
+        const existing = customers.find((c) => c.id === custId) || customerResults.find((c) => c.id === custId);
+        if (existing) custNama = existing.nama;
       }
 
+      // 2. Resolve Marketer ID
       let markId = marketers.find(
         (m) => (m.nama || '').toLowerCase() === formData.marketer_nama.toLowerCase()
       )?.id;
@@ -194,15 +174,13 @@ export default function InputPenjualanPage() {
       if (!markId && formData.marketer_nama) {
         const { data, error } = await supabase
           .from('marketers')
-          .insert({
-            nama: formData.marketer_nama,
-            no_hp: '-',
-          })
+          .insert({ nama: formData.marketer_nama, no_hp: '-' })
           .select()
           .single();
         if (!error) markId = data?.id;
       }
 
+      // 3. Resolve Bank ID
       let bankId: string | undefined = undefined;
       let finalBankNama: string | undefined = undefined;
       if (formData.metode_bayar === 'KPR') {
@@ -215,12 +193,7 @@ export default function InputPenjualanPage() {
         } else {
           const { data, error } = await supabase
             .from('banks')
-            .insert({
-              nama_bank: formData.bank_nama,
-              cabang: 'Pusat',
-              pic_nama: '-',
-              pic_hp: '-',
-            })
+            .insert({ nama_bank: formData.bank_nama, cabang: 'Pusat', pic_nama: '-', pic_hp: '-' })
             .select()
             .single();
           if (!error) {
@@ -230,13 +203,14 @@ export default function InputPenjualanPage() {
         }
       }
 
+      // 4. Simpan Transaksi Penjualan (unit_id sudah pasti valid, tidak ada lagi create-unit di sini)
       await addSale({
         customer_id: custId || '',
-        customer_nama: formData.customer_nama,
-        unit_id: unitId || '',
-        unit_no: formData.unit_no,
-        block_nama: formData.unit_blok,
-        location_nama: unitItem?.location_nama || 'Perumahan Benteng Mutiara Mas',
+        customer_nama: custNama,
+        unit_id: unitId,
+        unit_no: selectedUnit?.no_unit,
+        block_nama: selectedUnit?.block_nama,
+        location_nama: selectedUnit?.location_nama,
         marketer_id: markId,
         marketer_nama: formData.marketer_nama,
         metode_bayar: formData.metode_bayar,
@@ -276,131 +250,153 @@ export default function InputPenjualanPage() {
           onSubmit={handleSubmit}
           className="bg-white/60 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
         >
+          {/* Section 1: Customer */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b border-slate-200 pb-2">
-              1. Identitas Pembeli & Unit Rumah
+              1. Identitas Pembeli
             </h3>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1.5">
-                Pilih Customer yang Sudah Ada (opsional)
-              </label>
-              <select
-                value={selectedCustomerId}
-                onChange={(e) => {
-                  const cid = e.target.value;
-                  setSelectedCustomerId(cid);
-                  const found = customers.find(c => c.id === cid);
-                  if (found) setFormData({ ...formData, customer_nama: found.nama });
-                }}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="">-- Customer Baru (ketik nama di bawah) --</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nama} — {c.no_hp}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
+            <div className="relative" ref={customerBoxRef}>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                Nama Customer Pembeli *
+                Cari / Ketik Nama Customer *
               </label>
-              <input
-                type="text"
-                required
-                placeholder="Ketik nama customer..."
-                value={formData.customer_nama}
-                onChange={(e) => {
-                  setSelectedCustomerId('');
-                  setFormData({ ...formData, customer_nama: e.target.value });
-                }}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  placeholder="Ketik minimal 2 huruf untuk cari customer..."
+                  value={customerQuery}
+                  onChange={(e) => handleCustomerQueryChange(e.target.value)}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+              </div>
+
+              {showCustomerDropdown && customerQuery.trim().length >= 2 && (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-64 overflow-y-auto">
+                  {customerResults.length === 0 ? (
+                    <div className="px-3.5 py-3 text-xs text-slate-400">
+                      Tidak ditemukan — lanjutkan ketik nama untuk buat customer baru.
+                    </div>
+                  ) : (
+                    customerResults.map((c) => (
+                      <button
+                        type="button"
+                        key={c.id}
+                        onClick={() => handlePickCustomer(c)}
+                        className="w-full text-left px-3.5 py-2 hover:bg-blue-50 border-b border-slate-100 last:border-0"
+                      >
+                        <div className="text-sm font-semibold text-slate-800">{c.nama}</div>
+                        <div className="text-xs text-slate-500">{c.no_hp}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {selectedCustomerId && (
+                <p className="text-[11px] text-emerald-600 mt-1">
+                  ✓ Customer sudah ada di database, tidak akan dibuat data baru.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Section 2: Unit Rumah (cascading dari master data) */}
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">
+                2. Pilih Unit Rumah
+              </h3>
+              <Link
+                href="/unit-rumah"
+                target="_blank"
+                className="flex items-center gap-1 text-[11px] text-blue-600 hover:underline"
+              >
+                <span>+ Unit belum ada? Tambah di sini</span>
+                <ExternalLink className="w-3 h-3" />
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                  Jenis Rumah *
+                  Perumahan *
                 </label>
                 <select
-                  value={formData.subsidy_type}
-                  onChange={(e) => setFormData({ ...formData, subsidy_type: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="Subsidi">Subsidi</option>
-                  <option value="Komersil">Komersil</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                  Pilih / Ketik Unit *
-                </label>
-                <input
-                  type="text"
                   required
-                  list="units-list"
-                  placeholder="Contoh: Blok 24 No 02"
-                  value={unitSearchInput}
-                  onChange={(e) => handleUnitChange(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <datalist id="units-list">
-                  {availableUnits.map((u) => {
-                    const displayBlok = u.block_nama ? `${u.block_nama} ` : '';
-                    const displayNo = u.no_unit ? `No ${u.no_unit}` : '';
-                    const fullValue = `${displayBlok}${displayNo}`.trim();
-                    const tipeText = u.unit_type_nama ? ` (Type ${u.unit_type_nama})` : '';
-                    const hargaText = u.harga_dasar
-                      ? ` - Rp ${u.harga_dasar.toLocaleString('id-ID')}`
-                      : '';
-
-                    return (
-                      <option key={u.id} value={fullValue}>
-                        {`${fullValue}${tipeText}${hargaText}`}
-                      </option>
-                    );
-                  })}
-                </datalist>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                  Blok Unit *
-                </label>
-                <select
-                  value={formData.unit_blok}
-                  onChange={(e) => setFormData({ ...formData, unit_blok: e.target.value })}
+                  value={locationId}
+                  onChange={(e) => handleLocationChange(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  <option value="">-- Pilih Blok --</option>
-                  {blocks.map((b) => (
-                    <option key={b.id} value={b.nama_blok}>{b.nama_blok}</option>
+                  <option value="">-- Pilih Perumahan --</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>{l.nama_lokasi}</option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                  Tipe Unit *
+                  Blok *
                 </label>
                 <select
-                  value={formData.unit_type}
-                  onChange={(e) => setFormData({ ...formData, unit_type: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  required
+                  disabled={!locationId}
+                  value={blockId}
+                  onChange={(e) => handleBlockChange(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
                 >
-                  <option value="30/60">30/60</option>
-                  <option value="36/72">36/72</option>
-                  <option value="45/78">45/78</option>
-                  <option value="70/70">70/70</option>
-                  <option value="67/67">67/67</option>
-                  <option value="45/54">45/54</option>
-                  <option value="Ruko">Ruko</option>
+                  <option value="">{locationId ? '-- Pilih Blok --' : 'Pilih Perumahan dulu'}</option>
+                  {filteredBlocks.map((b) => (
+                    <option key={b.id} value={b.id}>{b.nama_blok}</option>
+                  ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  No Unit *
+                </label>
+                <select
+                  required
+                  disabled={!blockId}
+                  value={unitId}
+                  onChange={(e) => handleUnitChange(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
+                >
+                  <option value="">{blockId ? '-- Pilih No Unit --' : 'Pilih Blok dulu'}</option>
+                  {availableUnitsInBlock.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      No {u.no_unit} — {u.status}
+                    </option>
+                  ))}
+                </select>
+                {blockId && availableUnitsInBlock.length === 0 && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    Tidak ada unit tersedia di blok ini.
+                  </p>
+                )}
+              </div>
             </div>
+
+            {selectedUnit && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 border border-slate-200 rounded-md p-3 text-xs">
+                <div>
+                  <span className="block text-slate-400">Tipe Unit</span>
+                  <span className="font-semibold text-slate-700">{selectedUnit.unit_type_nama || '-'}</span>
+                </div>
+                <div>
+                  <span className="block text-slate-400">Jenis Rumah</span>
+                  <span className="font-semibold text-slate-700">{selectedUnit.subsidy_type_nama || '-'}</span>
+                </div>
+                <div>
+                  <span className="block text-slate-400">Harga Dasar</span>
+                  <span className="font-semibold text-slate-700">{formatRupiah(selectedUnit.harga_dasar || 0)}</span>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">
@@ -423,9 +419,10 @@ export default function InputPenjualanPage() {
             </div>
           </div>
 
+          {/* Section 3: Skema Pembiayaan & Harga */}
           <div className="space-y-4 pt-2">
             <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b border-slate-200 pb-2">
-              2. Skema Pembayaran & Harga Transaksi
+              3. Skema Pembayaran & Harga Transaksi
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -435,9 +432,7 @@ export default function InputPenjualanPage() {
                 </label>
                 <select
                   value={formData.metode_bayar}
-                  onChange={(e) =>
-                    setFormData({ ...formData, metode_bayar: e.target.value as any })
-                  }
+                  onChange={(e) => setFormData({ ...formData, metode_bayar: e.target.value as any })}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
                 >
                   <option value="KPR">KPR (Kredit Pemilikan Rumah)</option>
@@ -464,6 +459,20 @@ export default function InputPenjualanPage() {
                 </div>
               )}
             </div>
+
+            {formData.metode_bayar === 'KPR' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                <span className="block text-[11px] text-blue-500 font-semibold mb-0.5">
+                  Maksimal Kredit (Plafon KPR Unit Ini)
+                </span>
+                <span className="text-sm font-bold text-blue-700">
+                  {selectedUnit ? formatRupiah(selectedUnit.maksimal_kredit || 0) : 'Pilih unit terlebih dahulu'}
+                </span>
+                <p className="text-[10px] text-blue-400 mt-1">
+                  Cek sebelum isi Harga Kesepakatan.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
@@ -514,6 +523,7 @@ export default function InputPenjualanPage() {
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                   Booking Fee (Rp)
+                  <span className="text-[10px] text-slate-400 font-normal ml-1">(otomatis dari unit, bisa diedit)</span>
                 </label>
                 <input
                   type="text"
@@ -529,6 +539,7 @@ export default function InputPenjualanPage() {
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                   Uang Muka (DP) (Rp)
+                  <span className="text-[10px] text-slate-400 font-normal ml-1">(otomatis dari unit, bisa diedit)</span>
                 </label>
                 <input
                   type="text"
@@ -547,9 +558,7 @@ export default function InputPenjualanPage() {
                 </label>
                 <select
                   value={formData.status}
-                  onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value as any })
-                  }
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
                 >
                   <option value="Booking">Booking Fee Only</option>

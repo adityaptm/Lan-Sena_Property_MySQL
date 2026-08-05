@@ -67,6 +67,9 @@ export default function UnitRumahPage() {
     sales_step_nama: 'Kantor',
     certificate_step_id: '',
     harga_dasar: 0,
+    maksimal_kredit: 0,
+    uang_muka: 0,
+    booking_fee: 0,
     status: 'Tersedia' as Unit['status'],
   });
 
@@ -94,6 +97,9 @@ export default function UnitRumahPage() {
       sales_step_nama: 'Kantor',
       certificate_step_id: certificateSteps[0]?.id || '',
       harga_dasar: 0,
+      maksimal_kredit: 0,
+      uang_muka: 0,
+      booking_fee: 0,
       status: 'Tersedia',
     });
     setIsUnitModalOpen(true);
@@ -112,6 +118,9 @@ export default function UnitRumahPage() {
       sales_step_nama: u.sales_step_nama || 'Kantor',
       certificate_step_id: u.certificate_step_id || '',
       harga_dasar: u.harga_dasar,
+      maksimal_kredit: u.maksimal_kredit || 0,
+      uang_muka: u.uang_muka || 0,
+      booking_fee: u.booking_fee || 0,
       status: u.status,
     });
     setIsUnitModalOpen(true);
@@ -647,6 +656,50 @@ export default function UnitRumahPage() {
                   setUnitForm({ ...unitForm, harga_dasar: Number(cleanVal) || 0 });
                 }}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Maksimal Kredit, Uang Muka, Booking Fee — nilai per-unit, otomatis mengalir
+              ke form Input Penjualan begitu unit ini dipilih di sana */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Maksimal Kredit (Rp)</label>
+              <input
+                type="text"
+                value={formatRupiah(unitForm.maksimal_kredit)}
+                onChange={(e) => {
+                  const cleanVal = e.target.value.replace(/\D/g, '');
+                  setUnitForm({ ...unitForm, maksimal_kredit: Number(cleanVal) || 0 });
+                }}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
+                placeholder="Plafon KPR maksimal"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Uang Muka / DP (Rp)</label>
+              <input
+                type="text"
+                value={formatRupiah(unitForm.uang_muka)}
+                onChange={(e) => {
+                  const cleanVal = e.target.value.replace(/\D/g, '');
+                  setUnitForm({ ...unitForm, uang_muka: Number(cleanVal) || 0 });
+                }}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
+                placeholder="Nominal DP default"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Booking Fee (Rp)</label>
+              <input
+                type="text"
+                value={formatRupiah(unitForm.booking_fee)}
+                onChange={(e) => {
+                  const cleanVal = e.target.value.replace(/\D/g, '');
+                  setUnitForm({ ...unitForm, booking_fee: Number(cleanVal) || 0 });
+                }}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
+                placeholder="Nominal booking fee default"
               />
             </div>
           </div>

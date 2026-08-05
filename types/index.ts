@@ -111,6 +111,9 @@ export interface Unit {
   sales_step_id: string;
   certificate_step_id: string;
   harga_dasar: number;
+  maksimal_kredit?: number;
+  uang_muka?: number;
+  booking_fee?: number;
   status: 'Tersedia' | 'Booking' | 'DP' | 'Akad' | 'Lunas';
   created_at: string;
   nop?: string; // Nomor Objek Pajak
@@ -313,6 +316,8 @@ export interface Sale {
   potongan?: number;
   komitmen_pembayaran?: string;
   harga_jual_pajak?: number;
+  kredit_pengajuan?: number;
+  fee_marketer?: number;
 }
 
 export interface SaleAdditionalCost {
@@ -330,6 +335,8 @@ export interface SalePayment {
   tanggal: string;
   deskripsi: string;
   nominal: number;
+  bank_tujuan?: string;
+  diterima_dari?: string;
   created_at: string;
 }
 

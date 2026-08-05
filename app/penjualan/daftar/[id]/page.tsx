@@ -17,6 +17,31 @@ import { UpdateBiayaTambahanForm } from '@/components/penjualan/forms/UpdateBiay
 import { UpdateDataKonsumenForm } from '@/components/penjualan/forms/UpdateDataKonsumenForm';
 import { CetakPersyaratanKprForm } from '@/components/penjualan/forms';
 
+// Daftar rekening tujuan uang masuk (sesuaikan lagi kalau ada rekening baru)
+const REKENING_OPTIONS = [
+  'Bank BJB Purwakarta',
+  'Bank BNI',
+  'Bank BRI',
+  'Bank BTN KC Karawang',
+  'Bank BTN KC Purwakarta',
+  'Bank Mandiri',
+  'Bank Syariah Indonesia',
+  'BPRS HIK Cibitung',
+  'BTN KC SUBANG',
+  'Kas Kantor',
+];
+
+// Ubah nomor HP lokal (08xx / +62 / 62) jadi format internasional murni angka untuk wa.me
+function toWaNumber(phone: string): string {
+  let digits = (phone || '').replace(/\D/g, '');
+  if (digits.startsWith('0')) {
+    digits = '62' + digits.slice(1);
+  } else if (!digits.startsWith('62')) {
+    digits = '62' + digits;
+  }
+  return digits;
+}
+
 export default function DetailPenjualanPage() {
   const { id } = useParams() as { id: string };
   const { sales, customers, units, marketers, locations, blocks, banks, currentUser, salesSteps, certificateSteps } = useData();
@@ -28,6 +53,7 @@ export default function DetailPenjualanPage() {
   const customer = useMemo(() => customers.find(c => c.id === sale?.customer_id), [customers, sale]);
   const unit = useMemo(() => units.find(u => u.id === sale?.unit_id), [units, sale]);
   const marketer = useMemo(() => marketers.find(m => m.id === sale?.marketer_id), [marketers, sale]);
+  const bank = useMemo(() => banks.find(b => b.id === sale?.bank_id), [banks, sale]);
 
   // Additional Data States
   const [additionalCosts, setAdditionalCosts] = useState<SaleAdditionalCost[]>([]);
@@ -50,11 +76,30 @@ export default function DetailPenjualanPage() {
   const [showUpdateKonsumenModal, setShowUpdateKonsumenModal] = useState(false);
   const [showProgresModal, setShowProgresModal] = useState(false);
   const [showUbahHargaModal, setShowUbahHargaModal] = useState(false);
+  const [showAngsuranModal, setShowAngsuranModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [potonganForm, setPotonganForm] = useState({ nominal: '', keterangan: '' });
   const [progresForm, setProgresForm] = useState({ status: '', keterangan: '' });
   const [hargaPajakForm, setHargaPajakForm] = useState('');
+  const [angsuranForm, setAngsuranForm] = useState({
+    tanggal: new Date().toISOString().slice(0, 10),
+    bank_tujuan: '',
+    nominal: '',
+    diterima_dari: '',
+    keterangan: '',
+  });
+
+  const openAngsuranModal = () => {
+    setAngsuranForm({
+      tanggal: new Date().toISOString().slice(0, 10),
+      bank_tujuan: '',
+      nominal: '',
+      diterima_dari: customer?.nama || '',
+      keterangan: '',
+    });
+    setShowAngsuranModal(true);
+  };
 
   const handleSavePotongan = async () => {
     if (!potonganForm.nominal) return;
@@ -62,6 +107,40 @@ export default function DetailPenjualanPage() {
     await supabase.from('sales').update({ potongan: Number(potonganForm.nominal.replace(/\D/g,'')) }).eq('id', id);
     setShowPotonganModal(false); setPotonganForm({ nominal: '', keterangan: '' });
     setSaving(false); window.location.reload();
+  };
+
+  const handleSaveAngsuran = async () => {
+    if (!angsuranForm.tanggal || !angsuranForm.bank_tujuan || !angsuranForm.nominal || !angsuranForm.diterima_dari) {
+      alert('Tanggal, Uang Masuk ke, Sebesar, dan Diterima Dari wajib diisi.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const nominalValue = Number(angsuranForm.nominal.replace(/\D/g, ''));
+      const noKwitansi = `INV/INCOME/${new Date(angsuranForm.tanggal).getFullYear()}/${String(new Date(angsuranForm.tanggal).getMonth() + 1).padStart(2, '0')}/${String(payments.length + 1).padStart(4, '0')}`;
+
+      const { data: inserted, error } = await supabase.from('sale_payments').insert({
+        sale_id: id,
+        tanggal: angsuranForm.tanggal,
+        no_kwitansi: noKwitansi,
+        bank_tujuan: angsuranForm.bank_tujuan,
+        diterima_dari: angsuranForm.diterima_dari,
+        deskripsi: angsuranForm.keterangan || `Diterima dari ${angsuranForm.diterima_dari} — masuk ke ${angsuranForm.bank_tujuan}`,
+        nominal: nominalValue,
+      }).select().single();
+      if (error) throw error;
+
+      setShowAngsuranModal(false);
+      // Buka halaman cetak kwitansi di tab baru
+      if (inserted?.id) {
+        window.open(`/penjualan/print-kwitansi?payment_id=${inserted.id}&sale_id=${id}`, '_blank');
+      }
+      window.location.reload();
+    } catch (err: any) {
+      alert(err?.message || 'Gagal menyimpan angsuran.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveProgres = async () => {
@@ -154,6 +233,11 @@ export default function DetailPenjualanPage() {
   const uangMasuk = payments.reduce((sum, item) => sum + (item.nominal || 0), 0);
   const sisaTagihan = totalHargaFinal - uangMasuk;
 
+  // Pesan WhatsApp otomatis ke konsumen terkait unit ini
+  const waMessage = encodeURIComponent(
+    `Halo ${customer?.nama || ''}, saya dari tim Lansena Property terkait unit ${unit?.no_unit ? 'No. ' + unit.no_unit : ''}${unit?.block_nama ? ' Blok ' + unit.block_nama : ''}${unit?.location_nama ? ' di ' + unit.location_nama : ''}. Mohon waktunya sebentar ya, terima kasih.`
+  );
+
   // Render Tabs
   const TABS = [
     { id: 'penjualan', label: 'Step Penjualan' },
@@ -218,7 +302,12 @@ export default function DetailPenjualanPage() {
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-800">{customer?.no_hp || '-'}</span>
                 {customer?.no_hp && (
-                  <a href={`https://wa.me/${customer.no_hp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-200 hover:bg-green-100 transition">
+                  <a
+                    href={`https://wa.me/${toWaNumber(customer.no_hp)}?text=${waMessage}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-200 hover:bg-green-100 transition"
+                  >
                     <Phone className="w-3 h-3" /> Hubungi
                   </a>
                 )}
@@ -282,6 +371,18 @@ export default function DetailPenjualanPage() {
                 <span className="font-semibold text-slate-600">NOP</span><span>:</span>
                 <span>{unit?.nop || '-'}</span>
               </div>
+              <div className="grid grid-cols-[130px_10px_1fr] pt-2 border-t border-slate-100">
+                <span className="font-semibold text-slate-600">Maksimal Kredit</span><span>:</span>
+                <span className="font-bold text-slate-800">{formatRupiah(unit?.maksimal_kredit || 0)}</span>
+              </div>
+              <div className="grid grid-cols-[130px_10px_1fr]">
+                <span className="font-semibold text-slate-600">Uang Muka</span><span>:</span>
+                <span className="font-bold text-slate-800">{formatRupiah(unit?.uang_muka || 0)}</span>
+              </div>
+              <div className="grid grid-cols-[130px_10px_1fr]">
+                <span className="font-semibold text-slate-600">Booking Fee</span><span>:</span>
+                <span className="font-bold text-slate-800">{formatRupiah(unit?.booking_fee || 0)}</span>
+              </div>
             </div>
           </div>
 
@@ -300,11 +401,27 @@ export default function DetailPenjualanPage() {
               </div>
               <div className="grid grid-cols-[160px_10px_1fr]">
                 <span className="font-semibold text-slate-600">Jenis Penjualan</span><span>:</span>
-                <span className="font-bold text-slate-800">{sale.metode_bayar}</span>
+                <span className="font-bold text-slate-800">{sale.metode_bayar}{sale.kpr_status ? ` (${sale.kpr_status})` : ''}</span>
               </div>
+              {sale.metode_bayar === 'KPR' && (
+                <>
+                  <div className="grid grid-cols-[160px_10px_1fr]">
+                    <span className="font-semibold text-slate-600">Bank KPR</span><span>:</span>
+                    <span className="font-bold text-slate-800">{bank?.nama_bank || sale.bank_nama || '-'}</span>
+                  </div>
+                  <div className="grid grid-cols-[160px_10px_1fr]">
+                    <span className="font-semibold text-slate-600">Kredit Pengajuan</span><span>:</span>
+                    <span className="font-bold text-slate-800">{formatRupiah(sale.kredit_pengajuan || unit?.maksimal_kredit || 0)}</span>
+                  </div>
+                </>
+              )}
               <div className="grid grid-cols-[160px_10px_1fr]">
                 <span className="font-semibold text-slate-600">Marketer</span><span>:</span>
                 <span className="font-bold text-slate-800">{marketer?.nama || '-'}</span>
+              </div>
+              <div className="grid grid-cols-[160px_10px_1fr]">
+                <span className="font-semibold text-slate-600">Fee Marketer</span><span>:</span>
+                <span className="font-bold text-slate-800">{formatRupiah(sale.fee_marketer || 0)}</span>
               </div>
               <div className="grid grid-cols-[160px_10px_1fr] pt-2 border-t border-slate-100">
                 <span className="font-semibold text-slate-600">Harga Jual Awal</span><span>:</span>
@@ -318,6 +435,10 @@ export default function DetailPenjualanPage() {
                 <span className="font-semibold text-slate-600">Biaya Tambahan</span><span>:</span>
                 <span className="text-green-600">+ {formatRupiah(totalBiayaTambahan)}</span>
               </div>
+              <div className="grid grid-cols-[160px_10px_1fr]">
+                <span className="font-semibold text-slate-600">Biaya Tambahan Ket.</span><span>:</span>
+                <span>{additionalCosts.map(a => a.keterangan).filter(Boolean).join(', ') || '-'}</span>
+              </div>
               <div className="grid grid-cols-[160px_10px_1fr] pt-2 border-t border-slate-100">
                 <span className="font-semibold text-slate-800">Harga Jual Final</span><span>:</span>
                 <span className="font-bold text-slate-800">{formatRupiah(totalHargaFinal)}</span>
@@ -329,6 +450,10 @@ export default function DetailPenjualanPage() {
               <div className="grid grid-cols-[160px_10px_1fr] pt-2 border-t border-slate-100">
                 <span className="font-bold text-red-600">Sisa Tagihan</span><span>:</span>
                 <span className="font-bold text-red-600">{formatRupiah(sisaTagihan)}</span>
+              </div>
+              <div className="grid grid-cols-[160px_10px_1fr] pt-2 border-t border-slate-100">
+                <span className="font-semibold text-slate-600">Komitmen Pembayaran</span><span>:</span>
+                <span className="font-medium text-slate-800">{sale.komitmen_pembayaran || '-'}</span>
               </div>
               <div className="grid grid-cols-[160px_10px_1fr] pt-2 border-t border-slate-100">
                 <span className="font-semibold text-slate-600">Harga Jual (PAJAK)</span><span>:</span>
@@ -369,6 +494,7 @@ export default function DetailPenjualanPage() {
             <h3 className="font-bold text-lg text-slate-800">{TABS.find(t => t.id === activeTab)?.label}</h3>
             {activeTab === 'angsuran' && (
               <div className="flex gap-2">
+                <button onClick={openAngsuranModal} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Input Angsuran Baru</button>
                 <button onClick={() => setShowPotonganModal(true)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Input Potongan</button>
                 <button onClick={() => setShowBiayaModal(true)} className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Input Biaya Tambahan</button>
               </div>
@@ -429,7 +555,13 @@ export default function DetailPenjualanPage() {
                             </td>
                             <td className="px-4 py-2 text-right font-semibold text-green-600">{formatRupiah(p.nominal)}</td>
                             <td className="px-4 py-2 text-center">
-                              <button className="p-1 bg-amber-100 text-amber-600 hover:bg-amber-200 rounded" title="Cetak Kwitansi"><Printer className="w-4 h-4 mx-auto" /></button>
+                              <button
+                                onClick={() => window.open(`/penjualan/print-kwitansi?payment_id=${p.id}&sale_id=${id}`, '_blank')}
+                                className="p-1 bg-amber-100 text-amber-600 hover:bg-amber-200 rounded"
+                                title="Cetak Kwitansi"
+                              >
+                                <Printer className="w-4 h-4 mx-auto" />
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -527,6 +659,76 @@ export default function DetailPenjualanPage() {
             <div className="flex gap-2 mt-5 justify-end">
               <button onClick={() => setShowPotonganModal(false)} className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold">Batal</button>
               <button onClick={handleSavePotongan} disabled={saving} className="px-4 py-2 text-sm bg-emerald-500 hover:bg-emerald-600 text-white rounded font-semibold disabled:opacity-50">{saving ? 'Menyimpan...' : 'Simpan'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Input Angsuran Baru */}
+      {showAngsuranModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 text-lg">Form Input Cicilan</h3>
+              <button onClick={() => setShowAngsuranModal(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Tanggal *</label>
+                <input
+                  type="date"
+                  value={angsuranForm.tanggal}
+                  onChange={e => setAngsuranForm({ ...angsuranForm, tanggal: e.target.value })}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Uang Masuk ke *</label>
+                <select
+                  value={angsuranForm.bank_tujuan}
+                  onChange={e => setAngsuranForm({ ...angsuranForm, bank_tujuan: e.target.value })}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">-- Pilih Rekening --</option>
+                  {REKENING_OPTIONS.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Sebesar (Rp) *</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 2.500.000"
+                  value={angsuranForm.nominal}
+                  onChange={e => setAngsuranForm({ ...angsuranForm, nominal: e.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') })}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Diterima Dari *</label>
+                <input
+                  type="text"
+                  placeholder="Nama pengirim/pembayar..."
+                  value={angsuranForm.diterima_dari}
+                  onChange={e => setAngsuranForm({ ...angsuranForm, diterima_dari: e.target.value })}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Keterangan</label>
+                <textarea
+                  placeholder="Catatan tambahan (opsional)..."
+                  value={angsuranForm.keterangan}
+                  onChange={e => setAngsuranForm({ ...angsuranForm, keterangan: e.target.value })}
+                  rows={2}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button onClick={() => setShowAngsuranModal(false)} className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold">Batal</button>
+              <button onClick={handleSaveAngsuran} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50">{saving ? 'Menyimpan...' : 'Simpan'}</button>
             </div>
           </div>
         </div>
