@@ -39,6 +39,7 @@ export interface Customer {
   tanggal_lahir_pasangan?: string;
   pekerjaan_pasangan?: string;
   nik_pasangan?: string;
+  no_hp_pasangan?: string;
   alamat_domisili_pasangan?: string;
   bank_rekening_kpr?: string;
   nomor_rekening_kpr?: string;

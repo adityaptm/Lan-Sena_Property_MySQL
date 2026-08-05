@@ -32,6 +32,7 @@ export default function InputPenjualanPage() {
   });
 
   const [unitSearchInput, setUnitSearchInput] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalHarga = formData.harga_kesepakatan - formData.diskon;
@@ -86,22 +87,18 @@ export default function InputPenjualanPage() {
     setIsSubmitting(true);
 
     try {
-      let custId = customers.find(
-        (c) => (c.nama || '').toLowerCase() === formData.customer_nama.toLowerCase()
-      )?.id;
-
+      // 1. Customer
+      let custId: string | undefined = selectedCustomerId || undefined;
+      if (!custId) {
+        custId = customers.find(
+          (c) => (c.nama || '').toLowerCase() === formData.customer_nama.toLowerCase()
+        )?.id;
+      }
       if (!custId) {
         const dummyNik = '0000000000000000-' + Math.floor(Math.random() * 10000);
-        const { data, error } = await supabase
-          .from('customers')
-          .insert({
-            nama: formData.customer_nama,
-            nik: dummyNik,
-            alamat: '-',
-            no_hp: '-',
-          })
-          .select()
-          .single();
+        const { data, error } = await supabase.from('customers').insert({
+          nama: formData.customer_nama, nik: dummyNik, alamat: '-', no_hp: '-',
+        }).select().single();
         if (error) throw error;
         custId = data?.id;
       }
@@ -285,23 +282,41 @@ export default function InputPenjualanPage() {
             </h3>
 
             <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1.5">
+                Pilih Customer yang Sudah Ada (opsional)
+              </label>
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => {
+                  const cid = e.target.value;
+                  setSelectedCustomerId(cid);
+                  const found = customers.find(c => c.id === cid);
+                  if (found) setFormData({ ...formData, customer_nama: found.nama });
+                }}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">-- Customer Baru (ketik nama di bawah) --</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nama} — {c.no_hp}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                 Nama Customer Pembeli *
               </label>
               <input
                 type="text"
                 required
-                list="customers-list"
                 placeholder="Ketik nama customer..."
                 value={formData.customer_nama}
-                onChange={(e) => setFormData({ ...formData, customer_nama: e.target.value })}
+                onChange={(e) => {
+                  setSelectedCustomerId('');
+                  setFormData({ ...formData, customer_nama: e.target.value });
+                }}
                 className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-              <datalist id="customers-list">
-                {customers.map((c) => (
-                  <option key={c.id} value={c.nama || ''} />
-                ))}
-              </datalist>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -353,16 +368,37 @@ export default function InputPenjualanPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Blok Unit *
+                </label>
+                <select
+                  value={formData.unit_blok}
+                  onChange={(e) => setFormData({ ...formData, unit_blok: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">-- Pilih Blok --</option>
+                  {blocks.map((b) => (
+                    <option key={b.id} value={b.nama_blok}>{b.nama_blok}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                   Tipe Unit *
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: 30/60"
+                <select
                   value={formData.unit_type}
                   onChange={(e) => setFormData({ ...formData, unit_type: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                >
+                  <option value="30/60">30/60</option>
+                  <option value="36/72">36/72</option>
+                  <option value="45/78">45/78</option>
+                  <option value="70/70">70/70</option>
+                  <option value="67/67">67/67</option>
+                  <option value="45/54">45/54</option>
+                  <option value="Ruko">Ruko</option>
+                </select>
               </div>
             </div>
 

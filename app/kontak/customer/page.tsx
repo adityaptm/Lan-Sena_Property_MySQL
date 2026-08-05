@@ -21,7 +21,6 @@ export default function CustomerPage() {
     no_hp: '',
     email: '',
     status: 'Leads' as 'Leads' | 'Deal' | 'Batal',
-    catatan: '',
     is_registered_before: false,
     tempat_lahir: '',
     tanggal_lahir: '',
@@ -32,29 +31,58 @@ export default function CustomerPage() {
     pendapatan_per_bulan: '',
     npwp: '',
     status_pernikahan: 'Belum Menikah',
+    nama_pasangan: '',
+    tempat_lahir_pasangan: '',
+    tanggal_lahir_pasangan: '',
+    pekerjaan_pasangan: '',
+    nik_pasangan: '',
+    no_hp_pasangan: '',
+    alamat_domisili_pasangan: '',
   });
+
+  // Format angka jadi "5.000.000" otomatis saat diketik, tanpa titik manual dari user
+  const formatAngkaRibuan = (raw: string) => {
+    const clean = raw.replace(/\D/g, '');
+    if (!clean) return '';
+    return Number(clean).toLocaleString('id-ID');
+  };
+
+  const handlePendapatanChange = (raw: string) => {
+    const clean = raw.replace(/\D/g, '');
+    setFormData({ ...formData, pendapatan_per_bulan: clean });
+  };
+
+  const isMenikah = formData.status_pernikahan === 'Sudah Menikah';
+
+  const emptyForm = {
+    nama: '',
+    nik: '',
+    alamat: '',
+    no_hp: '',
+    email: '',
+    status: 'Leads' as 'Leads' | 'Deal' | 'Batal',
+    is_registered_before: false,
+    tempat_lahir: '',
+    tanggal_lahir: '',
+    alamat_ktp: '',
+    alamat_domisili: '',
+    pekerjaan: '',
+    instansi: '',
+    pendapatan_per_bulan: '',
+    npwp: '',
+    status_pernikahan: 'Belum Menikah',
+    nama_pasangan: '',
+    tempat_lahir_pasangan: '',
+    tanggal_lahir_pasangan: '',
+    pekerjaan_pasangan: '',
+    nik_pasangan: '',
+    no_hp_pasangan: '',
+    alamat_domisili_pasangan: '',
+  };
 
   const openAddModal = () => {
     setEditingId(null);
-    setFormData({
-      nama: '',
-      nik: '',
-      alamat: '',
-      no_hp: '',
-      email: '',
-      status: 'Leads',
-      catatan: '',
-      is_registered_before: false,
-      tempat_lahir: '',
-      tanggal_lahir: '',
-      alamat_ktp: '',
-      alamat_domisili: '',
-      pekerjaan: '',
-      instansi: '',
-      pendapatan_per_bulan: '',
-      npwp: '',
-      status_pernikahan: 'Belum Menikah',
-    });
+    setFormData(emptyForm);
     setIsModalOpen(true);
   };
 
@@ -67,7 +95,6 @@ export default function CustomerPage() {
       no_hp: c.no_hp,
       email: c.email || '',
       status: c.status,
-      catatan: c.catatan || '',
       is_registered_before: !!c.is_registered_before,
       tempat_lahir: c.tempat_lahir || '',
       tanggal_lahir: c.tanggal_lahir || '',
@@ -78,6 +105,13 @@ export default function CustomerPage() {
       pendapatan_per_bulan: c.pendapatan_per_bulan || '',
       npwp: c.npwp || '',
       status_pernikahan: c.status_pernikahan || 'Belum Menikah',
+      nama_pasangan: c.nama_pasangan || '',
+      tempat_lahir_pasangan: c.tempat_lahir_pasangan || '',
+      tanggal_lahir_pasangan: c.tanggal_lahir_pasangan || '',
+      pekerjaan_pasangan: c.pekerjaan_pasangan || '',
+      nik_pasangan: c.nik_pasangan || '',
+      no_hp_pasangan: c.no_hp_pasangan || '',
+      alamat_domisili_pasangan: c.alamat_domisili_pasangan || '',
     });
     setIsModalOpen(true);
   };
@@ -299,17 +333,6 @@ export default function CustomerPage() {
             />
           </div>
 
-          <div>
-            <label className="block font-semibold text-slate-600 mb-1">Alamat Domisili / Kantor</label>
-            <textarea
-              rows={2}
-              value={formData.alamat_domisili}
-              onChange={(e) => setFormData({ ...formData, alamat_domisili: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="Tulis alamat domisili atau alamat kantor jika berbeda..."
-            />
-          </div>
-
           {/* Pekerjaan & Institusi */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -340,10 +363,11 @@ export default function CustomerPage() {
               <label className="block font-semibold text-slate-600 mb-1">Pendapatan per Bulan</label>
               <input
                 type="text"
-                value={formData.pendapatan_per_bulan}
-                onChange={(e) => setFormData({ ...formData, pendapatan_per_bulan: e.target.value })}
+                inputMode="numeric"
+                value={formatAngkaRibuan(formData.pendapatan_per_bulan)}
+                onChange={(e) => handlePendapatanChange(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Contoh: Rp 5.000.000 - Rp 10.000.000"
+                placeholder="Contoh: 5.000.000"
               />
             </div>
             <div>
@@ -387,16 +411,86 @@ export default function CustomerPage() {
             </div>
           </div>
 
-          <div>
-            <label className="block font-semibold text-slate-600 mb-1">Catatan Tambahan</label>
-            <textarea
-              rows={2}
-              value={formData.catatan}
-              onChange={(e) => setFormData({ ...formData, catatan: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
-              placeholder="Catatan Preferensi tipe rumah, rencana KPR, dll..."
-            />
-          </div>
+          {/* Biodata Pasangan - hanya muncul kalau status "Sudah Menikah" */}
+          {isMenikah && (
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
+              <label className="block font-semibold text-slate-700">Biodata Pasangan (Suami/Istri)</label>
+
+              <div>
+                <label className="block font-semibold text-slate-600 mb-1">Nama Pasangan</label>
+                <input
+                  type="text"
+                  value={formData.nama_pasangan}
+                  onChange={(e) => setFormData({ ...formData, nama_pasangan: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="Nama lengkap pasangan"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Tempat Lahir Pasangan</label>
+                  <input
+                    type="text"
+                    value={formData.tempat_lahir_pasangan}
+                    onChange={(e) => setFormData({ ...formData, tempat_lahir_pasangan: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Tanggal Lahir Pasangan</label>
+                  <input
+                    type="date"
+                    value={formData.tanggal_lahir_pasangan}
+                    onChange={(e) => setFormData({ ...formData, tanggal_lahir_pasangan: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Pekerjaan Pasangan</label>
+                  <input
+                    type="text"
+                    value={formData.pekerjaan_pasangan}
+                    onChange={(e) => setFormData({ ...formData, pekerjaan_pasangan: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">NIK Pasangan</label>
+                  <input
+                    type="text"
+                    value={formData.nik_pasangan}
+                    onChange={(e) => setFormData({ ...formData, nik_pasangan: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-600 mb-1">No. Handphone Pasangan</label>
+                <input
+                  type="text"
+                  value={(formData as any).no_hp_pasangan || ''}
+                  onChange={(e) => setFormData({ ...formData, no_hp_pasangan: e.target.value } as any)}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="Contoh: 0812..."
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-600 mb-1">Alamat Domisili Pasangan</label>
+                <textarea
+                  rows={2}
+                  value={formData.alamat_domisili_pasangan}
+                  onChange={(e) => setFormData({ ...formData, alamat_domisili_pasangan: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          )}
 
           <p className="text-[10px] text-slate-400 font-medium">*) Wajib diisi.</p>
 
@@ -420,4 +514,3 @@ export default function CustomerPage() {
     </AppLayout>
   );
 }
-

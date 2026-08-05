@@ -30,18 +30,32 @@ interface DataContextType {
   // Master Data Unit
   salesSteps: SalesStep[];
   addSalesStep: (s: Omit<SalesStep, 'id'>) => Promise<void>;
+  updateSalesStep: (id: string, s: Partial<SalesStep>) => Promise<void>;
+  deleteSalesStep: (id: string) => Promise<void>;
   certificateSteps: CertificateStep[];
   addCertificateStep: (c: Omit<CertificateStep, 'id'>) => Promise<void>;
+  updateCertificateStep: (id: string, c: Partial<CertificateStep>) => Promise<void>;
+  deleteCertificateStep: (id: string) => Promise<void>;
   priceItems: PriceItem[];
   addPriceItem: (p: Omit<PriceItem, 'id'>) => Promise<void>;
+  updatePriceItem: (id: string, p: Partial<PriceItem>) => Promise<void>;
+  deletePriceItem: (id: string) => Promise<void>;
   locations: Location[];
   addLocation: (l: Omit<Location, 'id'>) => Promise<void>;
+  updateLocation: (id: string, l: Partial<Location>) => Promise<void>;
+  deleteLocation: (id: string) => Promise<void>;
   blocks: Block[];
   addBlock: (b: Omit<Block, 'id'>) => Promise<void>;
+  updateBlock: (id: string, b: Partial<Block>) => Promise<void>;
+  deleteBlock: (id: string) => Promise<void>;
   unitTypes: UnitType[];
   addUnitType: (u: Omit<UnitType, 'id'>) => Promise<void>;
+  updateUnitType: (id: string, u: Partial<UnitType>) => Promise<void>;
+  deleteUnitType: (id: string) => Promise<void>;
   subsidyTypes: SubsidyType[];
   addSubsidyType: (s: Omit<SubsidyType, 'id'>) => Promise<void>;
+  updateSubsidyType: (id: string, s: Partial<SubsidyType>) => Promise<void>;
+  deleteSubsidyType: (id: string) => Promise<void>;
 
   // Unit Rumah
   units: Unit[];
@@ -302,31 +316,53 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // --- Master Data ---
   const addSalesStep = (s: Omit<SalesStep, 'id'>) => insert('sales_steps', s);
+  const updateSalesStep = (id: string, s: Partial<SalesStep>) => update('sales_steps', id, s);
+  const deleteSalesStep = (id: string) => remove('sales_steps', id);
+
   const addCertificateStep = (c: Omit<CertificateStep, 'id'>) => insert('certificate_steps', c);
+  const updateCertificateStep = (id: string, c: Partial<CertificateStep>) => update('certificate_steps', id, c);
+  const deleteCertificateStep = (id: string) => remove('certificate_steps', id);
+
   const addPriceItem = (p: Omit<PriceItem, 'id'>) => insert('price_items', p);
+  const updatePriceItem = (id: string, p: Partial<PriceItem>) => update('price_items', id, p);
+  const deletePriceItem = (id: string) => remove('price_items', id);
+
   const addLocation = (l: Omit<Location, 'id'>) => insert('locations', l);
+  const updateLocation = (id: string, l: Partial<Location>) => update('locations', id, l);
+  const deleteLocation = (id: string) => remove('locations', id);
+
   const addBlock = (b: Omit<Block, 'id'>) => insert('blocks', b);
+  const updateBlock = (id: string, b: Partial<Block>) => update('blocks', id, b);
+  const deleteBlock = (id: string) => remove('blocks', id);
+
   const addUnitType = (u: Omit<UnitType, 'id'>) => insert('unit_types', u);
+  const updateUnitType = (id: string, u: Partial<UnitType>) => update('unit_types', id, u);
+  const deleteUnitType = (id: string) => remove('unit_types', id);
+
   const addSubsidyType = (s: Omit<SubsidyType, 'id'>) => insert('subsidy_types', s);
+  const updateSubsidyType = (id: string, s: Partial<SubsidyType>) => update('subsidy_types', id, s);
+  const deleteSubsidyType = (id: string) => remove('subsidy_types', id);
 
   // --- Unit ---
   const addUnit = async (u: any) => {
     // 1. Resolve Location & Block
-    let locId = locations[0]?.id;
-    if (!locId) {
-      const { data: newLoc, error } = await supabase.from('locations').insert({ nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: 'Perum Benteng Mutiara Mas, Desa Benteng Kec. Cempaka Kab. Purwakarta' }).select().single();
-      if (error) throw new Error(error.message);
-      locId = newLoc.id;
-    }
+    let blockId = u.block_id || '';
+    if (!blockId && u.block_nama) {
+      let locId = u.location_id || locations[0]?.id;
+      if (!locId) {
+        const { data: newLoc, error } = await supabase.from('locations').insert({ nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: 'Perum Benteng Mutiara Mas, Desa Benteng Kec. Cempaka Kab. Purwakarta' }).select().single();
+        if (error) throw new Error(error.message);
+        locId = newLoc.id;
+      }
 
-    let blockId = '';
-    const existingBlock = blocks.find(b => b.nama_blok.toLowerCase() === u.block_nama.toLowerCase());
-    if (existingBlock) {
-      blockId = existingBlock.id;
-    } else {
-      const { data: newBlock, error } = await supabase.from('blocks').insert({ nama_blok: u.block_nama, location_id: locId }).select().single();
-      if (error) throw new Error(error.message);
-      blockId = newBlock.id;
+      const existingBlock = blocks.find(b => b.nama_blok.toLowerCase() === u.block_nama.toLowerCase() && b.location_id === locId);
+      if (existingBlock) {
+        blockId = existingBlock.id;
+      } else {
+        const { data: newBlock, error } = await supabase.from('blocks').insert({ nama_blok: u.block_nama, location_id: locId }).select().single();
+        if (error) throw new Error(error.message);
+        blockId = newBlock.id;
+      }
     }
 
     // 2. Resolve Unit Type
@@ -389,16 +425,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (u.status !== undefined) updateData.status = u.status;
     if (u.certificate_step_id !== undefined) updateData.certificate_step_id = u.certificate_step_id || null;
 
-    // Resolve location & block if block_nama changed
-    if (u.block_nama !== undefined) {
-      let locId = locations[0]?.id;
+    // Resolve location & block if block_nama or block_id changed
+    if (u.block_id !== undefined) {
+      updateData.block_id = u.block_id;
+    } else if (u.block_nama !== undefined) {
+      let locId = u.location_id || locations[0]?.id;
       if (!locId) {
         const { data: newLoc, error } = await supabase.from('locations').insert({ nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: 'Perum Benteng Mutiara Mas, Desa Benteng Kec. Cempaka Kab. Purwakarta' }).select().single();
         if (error) throw new Error(error.message);
         locId = newLoc.id;
       }
       let blockId = '';
-      const existingBlock = blocks.find(b => b.nama_blok.toLowerCase() === u.block_nama.toLowerCase());
+      const existingBlock = blocks.find(b => b.nama_blok.toLowerCase() === u.block_nama.toLowerCase() && b.location_id === locId);
       if (existingBlock) {
         blockId = existingBlock.id;
       } else {
@@ -613,9 +651,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       currentUser, loading, companySettings,
       customers, addCustomer, updateCustomer, deleteCustomer,
       banks, addBank, updateBank, deleteBank,
-      salesSteps, addSalesStep, certificateSteps, addCertificateStep,
-      priceItems, addPriceItem, locations, addLocation, blocks, addBlock,
-      unitTypes, addUnitType, subsidyTypes, addSubsidyType,
+      salesSteps, addSalesStep, updateSalesStep, deleteSalesStep,
+      certificateSteps, addCertificateStep, updateCertificateStep, deleteCertificateStep,
+      priceItems, addPriceItem, updatePriceItem, deletePriceItem,
+      locations, addLocation, updateLocation, deleteLocation,
+      blocks, addBlock, updateBlock, deleteBlock,
+      unitTypes, addUnitType, updateUnitType, deleteUnitType,
+      subsidyTypes, addSubsidyType, updateSubsidyType, deleteSubsidyType,
       units, addUnit, updateUnit, deleteUnit,
       marketerTypes, addMarketerType, marketers, addMarketer, updateMarketerData, deleteMarketerData,
       onlineBookings, addOnlineBooking, convertBookingToSale, marketerRights,
