@@ -23,62 +23,68 @@ Font.register({
   src: '/fonts/ArchivoNarrow-Bold.ttf'
 });
 
+// Ukuran Kwitansi: 24 cm x 14 cm (1 cm = 28.3465 pt)
+// Width = 24 * 28.3465 = 680.315 pt
+// Height = 14 * 28.3465 = 396.85 pt
+const KWITANSI_WIDTH = 680.315;
+const KWITANSI_HEIGHT = 396.85;
+
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 30,
-    paddingBottom: 30,
-    paddingLeft: 40,
-    paddingRight: 40,
-    fontSize: 10,
+    paddingTop: 15,
+    paddingBottom: 15,
+    paddingLeft: 30,
+    paddingRight: 30,
+    fontSize: 9.5,
     fontFamily: 'Arial Narrow',
-    lineHeight: 1.4,
+    lineHeight: 1.3,
   },
   // --- KOP SURAT ---
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   logoContainer: {
-    width: 75,
+    width: 65,
     marginRight: 10,
   },
   logo: { width: '100%' },
   headerTextContainer: { alignItems: 'center' },
   companyName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   companySubtitle: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   companyAddress: {
-    fontSize: 8.5,
+    fontSize: 8,
     textAlign: 'center',
     color: '#333',
   },
   headerLine: {
     borderBottomWidth: 2,
     borderBottomColor: '#2563eb',
-    marginTop: 6,
-    marginBottom: 16,
+    marginTop: 4,
+    marginBottom: 10,
   },
 
   // --- JUDUL ---
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   titleText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     letterSpacing: 1.2,
@@ -87,20 +93,20 @@ const styles = StyleSheet.create({
 
   // --- DATA FIELDS (Tanpa Tabel / Polos dengan Kolon) ---
   fieldsContainer: {
-    marginBottom: 20,
+    marginBottom: 8,
     paddingLeft: 5,
   },
   fieldRow: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 3.5,
     alignItems: 'flex-start',
   },
   labelCol: {
-    width: 130,
+    width: 125,
     color: '#222',
   },
   colon: {
-    width: 15,
+    width: 12,
     color: '#222',
     fontFamily: 'Helvetica-Bold',
   },
@@ -112,25 +118,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
   },
   sectionTitleRow: {
-    marginTop: 4,
-    marginBottom: 4,
+    marginTop: 2,
+    marginBottom: 2,
   },
   sectionTitle: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 10,
+    fontSize: 9.5,
     color: '#000',
   },
 
   // --- TTD SECTION ---
   ttdContainer: {
-    marginTop: 30,
+    marginTop: 8,
     paddingHorizontal: 10,
   },
   tanggalText: {
     textAlign: 'right',
-    fontSize: 9.5,
-    marginBottom: 10,
-    marginRight: 40,
+    fontSize: 9,
+    marginBottom: 4,
+    marginRight: 30,
   },
   signatureRow: {
     flexDirection: 'row',
@@ -145,11 +151,11 @@ const styles = StyleSheet.create({
     width: 180,
   },
   signatureTitle: {
-    fontSize: 9.5,
-    marginBottom: 50,
+    fontSize: 9,
+    marginBottom: 32,
   },
   signatureName: {
-    fontSize: 9.5,
+    fontSize: 9,
     textAlign: 'center',
   },
 });
@@ -209,7 +215,7 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRU
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size={[KWITANSI_WIDTH, KWITANSI_HEIGHT]} orientation="landscape" style={styles.page}>
         {/* KOP SURAT */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
@@ -222,9 +228,8 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRU
               Perum Benteng Mutiara Mas Ruko No. 16 Babakan Situ 004/002
             </Text>
             <Text style={styles.companyAddress}>
-              Desa Benteng Kec. Cempaka Kab. Purwakarta (0264) - 8308450 Jawa Barat
+              Desa Benteng Kec. Cempaka Kab. Purwakarta (0264) - 8308450 Jawa Barat 41181
             </Text>
-            <Text style={styles.companyAddress}>41181</Text>
           </View>
         </View>
         <View style={styles.headerLine} />
