@@ -26,6 +26,7 @@ Font.register({
 // Ukuran Kwitansi: 24 cm x 14 cm (1 cm = 28.3465 pt)
 // Width = 24 * 28.3465 = 680.315 pt
 // Height = 14 * 28.3465 = 396.85 pt
+// Karena WIDTH > HEIGHT, halaman otomatis landscape tanpa perlu prop `orientation`.
 const KWITANSI_WIDTH = 680.315;
 const KWITANSI_HEIGHT = 396.85;
 
@@ -204,8 +205,8 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRU
   const namaPenyetor = (payment?.diterima_dari || customer?.nama || customer?.name || '').toUpperCase();
   const namaPetugas = (petugasNama || 'FAHRUL ROZI').toUpperCase();
 
-  const unitText = unit?.no_unit 
-    ? `${unit.no_unit} ${unit.unit_type_nama ? `(${unit.unit_type_nama})` : ''}` 
+  const unitText = unit?.no_unit
+    ? `${unit.no_unit} ${unit.unit_type_nama ? `(${unit.unit_type_nama})` : ''}`
     : '-';
 
   const lokasiText = [
@@ -215,7 +216,7 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRU
 
   return (
     <Document>
-      <Page size={[KWITANSI_WIDTH, KWITANSI_HEIGHT]} orientation="landscape" style={styles.page}>
+      <Page size={[KWITANSI_WIDTH, KWITANSI_HEIGHT]} style={styles.page}>
         {/* KOP SURAT */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
