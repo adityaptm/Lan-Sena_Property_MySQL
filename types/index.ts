@@ -359,6 +359,14 @@ export interface SaleStepHistory {
   created_at: string;
   changed_by_nama?: string; // Joined field
 }
+export interface SaleDiscount {
+  id: string;
+  sale_id: string;
+  tanggal: string;
+  nominal: number;
+  keterangan?: string;
+  created_at: string;
+}
 export interface CompanySettings {
   id: string;
 

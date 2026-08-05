@@ -23,87 +23,90 @@ Font.register({
   src: '/fonts/ArchivoNarrow-Bold.ttf'
 });
 
-// Ukuran Kwitansi: 24 cm x 14 cm (1 cm = 28.3465 pt)
-// Width = 24 * 28.3465 = 680.315 pt
-// Height = 14 * 28.3465 = 396.85 pt
-// Karena WIDTH > HEIGHT, halaman otomatis landscape tanpa perlu prop `orientation`.
 const KWITANSI_WIDTH = 680.315;
 const KWITANSI_HEIGHT = 396.85;
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 15,
-    paddingBottom: 15,
-    paddingLeft: 30,
-    paddingRight: 30,
-    fontSize: 9.5,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingLeft: 25,
+    paddingRight: 25,
+    fontSize: 9,
     fontFamily: 'Arial Narrow',
-    lineHeight: 1.3,
+    lineHeight: 1.15,
   },
   // --- KOP SURAT ---
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
+    justifyContent: 'flex-start',
+    marginBottom: 2,
+    marginLeft: 0,
   },
   logoContainer: {
-    width: 65,
+    width: 70,
     marginRight: 10,
   },
-  logo: { width: '100%' },
-  headerTextContainer: { alignItems: 'center' },
+  logo: { 
+    width: '100%',
+    objectFit: 'contain',
+  },
+  headerTextContainer: { 
+    alignItems: 'flex-start' 
+  },
   companyName: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
     marginBottom: 1,
   },
   companySubtitle: {
-    fontSize: 9.5,
+    fontSize: 8.5,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   companyAddress: {
-    fontSize: 8,
-    textAlign: 'center',
+    fontSize: 7.5,
+    textAlign: 'left',
     color: '#333',
+    lineHeight: 1.1,
   },
   headerLine: {
-    borderBottomWidth: 2,
+    borderBottomWidth: 1.5,
     borderBottomColor: '#2563eb',
-    marginTop: 4,
-    marginBottom: 10,
+    marginTop: 2,
+    marginBottom: 4,
   },
 
   // --- JUDUL ---
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 4,
   },
   titleText: {
-    fontSize: 11.5,
+    fontSize: 10.5,
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
-    letterSpacing: 1.2,
+    letterSpacing: 1,
     color: '#000',
   },
 
-  // --- DATA FIELDS (Tanpa Tabel / Polos dengan Kolon) ---
+  // --- DATA FIELDS ---
   fieldsContainer: {
-    marginBottom: 8,
+    marginBottom: 2,
     paddingLeft: 5,
   },
   fieldRow: {
     flexDirection: 'row',
-    marginBottom: 3.5,
+    marginBottom: 1.5,
     alignItems: 'flex-start',
   },
   labelCol: {
-    width: 125,
+    width: 120,
     color: '#222',
   },
   colon: {
@@ -119,25 +122,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
   },
   sectionTitleRow: {
-    marginTop: 2,
-    marginBottom: 2,
+    marginTop: 1,
+    marginBottom: 1,
   },
   sectionTitle: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 9.5,
+    fontSize: 8.5,
     color: '#000',
   },
 
   // --- TTD SECTION ---
   ttdContainer: {
-    marginTop: 8,
+    marginTop: 2,
     paddingHorizontal: 10,
   },
   tanggalText: {
     textAlign: 'right',
-    fontSize: 9,
-    marginBottom: 4,
-    marginRight: 30,
+    fontSize: 8.5,
+    marginBottom: 2,
+    marginRight: 20,
   },
   signatureRow: {
     flexDirection: 'row',
@@ -145,19 +148,20 @@ const styles = StyleSheet.create({
   },
   signatureBlockLeft: {
     alignItems: 'center',
-    width: 180,
+    width: 200,
   },
   signatureBlockRight: {
     alignItems: 'center',
-    width: 180,
+    width: 200,
   },
   signatureTitle: {
-    fontSize: 9,
-    marginBottom: 32,
+    fontSize: 8.5,
+    marginBottom: 45, // Jarak tempat TTD diperbesar (45pt)
   },
   signatureName: {
-    fontSize: 9,
+    fontSize: 8.5,
     textAlign: 'center',
+    fontFamily: 'Helvetica-Bold',
   },
 });
 
@@ -240,7 +244,7 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRU
           <Text style={styles.titleText}>KWITANSI PEMBAYARAN UNIT</Text>
         </View>
 
-        {/* LIST FIELD BIASA (TANPA TABEL) */}
+        {/* LIST FIELD BIASA */}
         <View style={styles.fieldsContainer}>
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>No Kwitansi</Text>

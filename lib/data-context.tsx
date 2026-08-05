@@ -7,7 +7,8 @@ import type {
   MarketerType, Marketer, OnlineBooking, InventoryItem, Purchase,
   GoodsIn, GoodsOut, CashBankAccount, ChartOfAccount, BankLoan,
   CashflowEntry, MandorAdvance, OperationalExpense, DisbursementRequest,
-  CompanyAsset, Sale, UserProfile, SalesStep, CertificateStep, PriceItem, MarketerRight, CompanySettings
+  CompanyAsset, Sale, UserProfile, SalesStep, CertificateStep, PriceItem, MarketerRight, CompanySettings,
+  SaleAdditionalCost, SalePayment, SaleDiscount
 } from '@/types';
 
 interface DataContextType {
@@ -19,6 +20,7 @@ interface DataContextType {
   addCustomer: (c: Omit<Customer, 'id' | 'created_at'>) => Promise<void>;
   updateCustomer: (id: string, c: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
+  searchCustomers: (query: string) => Promise<Customer[]>;
 
   companySettings: CompanySettings | null;
 
@@ -116,11 +118,28 @@ interface DataContextType {
   deleteSale: (id: string) => Promise<void>;
   relocateUnit: (saleId: string, newUnitId: string, newUnitNo: string) => Promise<void>;
 
+  // Angsuran / Pembayaran Konsumen
+  salePayments: SalePayment[];
+  addSalePayment: (p: Omit<SalePayment, 'id' | 'created_at'>) => Promise<void>;
+  updateSalePayment: (id: string, p: Partial<SalePayment>) => Promise<void>;
+  deleteSalePayment: (id: string) => Promise<void>;
+
+  // Biaya Tambahan
+  saleAdditionalCosts: SaleAdditionalCost[];
+  addSaleAdditionalCost: (c: Omit<SaleAdditionalCost, 'id' | 'created_at'>) => Promise<void>;
+  updateSaleAdditionalCost: (id: string, c: Partial<SaleAdditionalCost>) => Promise<void>;
+  deleteSaleAdditionalCost: (id: string) => Promise<void>;
+
+  // Potongan
+  saleDiscounts: SaleDiscount[];
+  addSaleDiscount: (d: Omit<SaleDiscount, 'id' | 'created_at'>) => Promise<void>;
+  updateSaleDiscount: (id: string, d: Partial<SaleDiscount>) => Promise<void>;
+  deleteSaleDiscount: (id: string) => Promise<void>;
+
   // Pengguna
   users: UserProfile[];
   toggleUserActive: (id: string) => Promise<void>;
   updateUser: (id: string, data: { nama: string; role: string }) => Promise<void>;
-  searchCustomers: (query: string) => Promise<Customer[]>;
 
   // Refresh
   refresh: () => Promise<void>;
@@ -168,6 +187,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [companyAssets, setCompanyAssets] = useState<CompanyAsset[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [salePayments, setSalePayments] = useState<SalePayment[]>([]);
+  const [saleAdditionalCosts, setSaleAdditionalCosts] = useState<SaleAdditionalCost[]>([]);
+  const [saleDiscounts, setSaleDiscounts] = useState<SaleDiscount[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
 
   const loadAll = useCallback(async () => {
@@ -182,7 +204,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const [
         cust, bnk, ss, cs, pi, loc, blk, ut, sub, un,
         mt, mkt, ob, mr, compSettings, itm, pur, gi, go,
-        cba, coa, bl, cfe, ma, oe, dr, ca, sal, usr
+        cba, coa, bl, cfe, ma, oe, dr, ca, sal, sp, sac, sd, usr
       ] = await Promise.all([
         fetchTable<Customer>('customers'),
         fetchTable<Bank>('banks'),
@@ -212,6 +234,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         fetchTable<DisbursementRequest>('disbursement_requests'),
         fetchTable<CompanyAsset>('company_assets'),
         fetchTable<Sale>('sales'),
+        fetchTable<SalePayment>('sale_payments'),
+        fetchTable<SaleAdditionalCost>('sale_additional_costs'),
+        fetchTable<SaleDiscount>('sale_discounts'),
         fetchTable<UserProfile>('users'),
       ]);
 
@@ -267,7 +292,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setGoodsIn(gi); setGoodsOut(go); setCashBankAccounts(cba); setChartOfAccounts(coa);
       setBankLoans(bl); setCashflowEntries(mappedCashflow); setMandorAdvances(ma);
       setOperationalExpenses(oe); setDisbursementRequests(dr); setCompanyAssets(ca);
-      setSales(mappedSales); setUsers(usr); setCompanySettings(compSettings[0] || null);
+      setSales(mappedSales); setSalePayments(sp); setSaleAdditionalCosts(sac); setSaleDiscounts(sd);
+      setUsers(usr); setCompanySettings(compSettings[0] || null);
     } catch (e) {
       console.error('Load error:', e);
     } finally {
@@ -295,38 +321,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }
 
   // --- Kontak ---
- const addCustomer = (c: Omit<Customer, 'id' | 'created_at'>) => insert('customers', c);
-const updateCustomer = (id: string, c: Partial<Customer>) => update('customers', id, c);
-const deleteCustomer = async (id: string) => {
-  // Hapus fisik semua transaksi customer ini sebelum menghapus customernya agar tidak error FK constraint
-  const activeSales = sales.filter((s) => s.customer_id === id);
-  for (const s of activeSales) {
-    if (s.unit_id) {
-      // Kembalikan unit ke tersedia
-      await supabase.from('units').update({ status: 'Tersedia' }).eq('id', s.unit_id);
+  const addCustomer = (c: Omit<Customer, 'id' | 'created_at'>) => insert('customers', c);
+  const updateCustomer = (id: string, c: Partial<Customer>) => update('customers', id, c);
+  const deleteCustomer = async (id: string) => {
+    // Hapus fisik semua transaksi customer ini sebelum menghapus customernya agar tidak error FK constraint
+    const activeSales = sales.filter((s) => s.customer_id === id);
+    for (const s of activeSales) {
+      if (s.unit_id) {
+        // Kembalikan unit ke tersedia
+        await supabase.from('units').update({ status: 'Tersedia' }).eq('id', s.unit_id);
+      }
+      // Hapus data sales dari database
+      await supabase.from('sales').delete().eq('id', s.id);
     }
-    // Hapus data sales dari database
-    await supabase.from('sales').delete().eq('id', s.id);
-  }
-  return remove('customers', id);
-};
+    return remove('customers', id);
+  };
 
-const searchCustomers = async (query: string): Promise<Customer[]> => {
-  const keyword = query.trim();
-  if (keyword.length < 2) return [];
+  const searchCustomers = async (query: string): Promise<Customer[]> => {
+    const keyword = query.trim();
+    if (keyword.length < 2) return [];
 
-  const { data, error } = await supabase
-    .from('customers')
-    .select('*')
-    .or(`nama.ilike.%${keyword}%,no_hp.ilike.%${keyword}%,nik.ilike.%${keyword}%`)
-    .limit(20);
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .or(`nama.ilike.%${keyword}%,no_hp.ilike.%${keyword}%,nik.ilike.%${keyword}%`)
+      .limit(20);
 
-  if (error) {
-    console.warn('searchCustomers error:', error.message);
-    return [];
-  }
-  return (data || []) as Customer[];
-};
+    if (error) {
+      console.warn('searchCustomers error:', error.message);
+      return [];
+    }
+    return (data || []) as Customer[];
+  };
 
   const addBank = (b: Omit<Bank, 'id' | 'created_at'>) => insert('banks', b);
   const updateBank = (id: string, b: Partial<Bank>) => update('banks', id, b);
@@ -663,6 +689,21 @@ const searchCustomers = async (query: string): Promise<Customer[]> => {
     await update('sales', saleId, { unit_id: newUnitId });
   };
 
+  // --- Angsuran / Pembayaran Konsumen ---
+  const addSalePayment = (p: Omit<SalePayment, 'id' | 'created_at'>) => insert('sale_payments', p);
+  const updateSalePayment = (id: string, p: Partial<SalePayment>) => update('sale_payments', id, p);
+  const deleteSalePayment = (id: string) => remove('sale_payments', id);
+
+  // --- Biaya Tambahan ---
+  const addSaleAdditionalCost = (c: Omit<SaleAdditionalCost, 'id' | 'created_at'>) => insert('sale_additional_costs', c);
+  const updateSaleAdditionalCost = (id: string, c: Partial<SaleAdditionalCost>) => update('sale_additional_costs', id, c);
+  const deleteSaleAdditionalCost = (id: string) => remove('sale_additional_costs', id);
+
+  // --- Potongan ---
+  const addSaleDiscount = (d: Omit<SaleDiscount, 'id' | 'created_at'>) => insert('sale_discounts', d);
+  const updateSaleDiscount = (id: string, d: Partial<SaleDiscount>) => update('sale_discounts', id, d);
+  const deleteSaleDiscount = (id: string) => remove('sale_discounts', id);
+
   // --- Pengguna ---
   const toggleUserActive = (id: string) => {
     const u = users.find((u) => u.id === id);
@@ -700,6 +741,9 @@ const searchCustomers = async (query: string): Promise<Customer[]> => {
       cancelSale,
       deleteSale,
       relocateUnit,
+      salePayments, addSalePayment, updateSalePayment, deleteSalePayment,
+      saleAdditionalCosts, addSaleAdditionalCost, updateSaleAdditionalCost, deleteSaleAdditionalCost,
+      saleDiscounts, addSaleDiscount, updateSaleDiscount, deleteSaleDiscount,
       users, toggleUserActive, updateUser: updateUser,
       refresh: loadAll,
     }}>

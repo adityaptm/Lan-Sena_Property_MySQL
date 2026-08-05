@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useData } from '@/lib/data-context';
 import { createClient } from '@/lib/supabase/client';
-import { ChevronRight, Settings, Printer, Phone, Upload, Eye, FileText, CheckCircle, Clock } from 'lucide-react';
+import { ChevronRight, Settings, Printer, Phone, Upload, Eye, FileText, CheckCircle, Clock, Edit3, Trash2 } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
 import { SaleAdditionalCost, SalePayment, SaleBillingLetter, SaleStepHistory } from '@/types';
 import { CetakSerahTerimaKunciForm } from '@/components/penjualan/forms/CetakSerahTerimaKunciForm';
@@ -90,7 +90,11 @@ export default function DetailPenjualanPage() {
     keterangan: '',
   });
 
+  // Menyimpan id payment yang sedang diedit. null = mode tambah baru.
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+
   const openAngsuranModal = () => {
+    setEditingPaymentId(null);
     setAngsuranForm({
       tanggal: new Date().toISOString().slice(0, 10),
       bank_tujuan: '',
@@ -99,6 +103,33 @@ export default function DetailPenjualanPage() {
       keterangan: '',
     });
     setShowAngsuranModal(true);
+  };
+
+  // Buka modal Angsuran dalam mode edit, isi form dari data payment yang dipilih
+  const openEditAngsuranModal = (p: SalePayment) => {
+    setEditingPaymentId(p.id);
+    setAngsuranForm({
+      tanggal: p.tanggal,
+      bank_tujuan: p.bank_tujuan || '',
+      nominal: String(p.nominal).replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+      diterima_dari: p.diterima_dari || '',
+      keterangan: p.deskripsi || '',
+    });
+    setShowAngsuranModal(true);
+  };
+
+  // Hapus data pembayaran (angsuran) berdasarkan id
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm('Yakin ingin menghapus data pembayaran ini? Nominal ini akan hilang dari total yang sudah dibayar.')) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('sale_payments').delete().eq('id', paymentId);
+      if (error) throw error;
+      window.location.reload();
+    } catch (err: any) {
+      alert(err?.message || 'Gagal menghapus pembayaran.');
+      setSaving(false);
+    }
   };
 
   const handleSavePotongan = async () => {
@@ -117,6 +148,28 @@ export default function DetailPenjualanPage() {
     setSaving(true);
     try {
       const nominalValue = Number(angsuranForm.nominal.replace(/\D/g, ''));
+      const deskripsi = angsuranForm.keterangan || `Diterima dari ${angsuranForm.diterima_dari} — masuk ke ${angsuranForm.bank_tujuan}`;
+
+      if (editingPaymentId) {
+        // MODE EDIT: update data yang sudah ada, no_kwitansi tidak berubah
+        const { error } = await supabase
+          .from('sale_payments')
+          .update({
+            tanggal: angsuranForm.tanggal,
+            bank_tujuan: angsuranForm.bank_tujuan,
+            diterima_dari: angsuranForm.diterima_dari,
+            deskripsi,
+            nominal: nominalValue,
+          })
+          .eq('id', editingPaymentId);
+        if (error) throw error;
+        setShowAngsuranModal(false);
+        setEditingPaymentId(null);
+        window.location.reload();
+        return;
+      }
+
+      // MODE TAMBAH BARU (perilaku lama, tidak berubah)
       const noKwitansi = `INV/INCOME/${new Date(angsuranForm.tanggal).getFullYear()}/${String(new Date(angsuranForm.tanggal).getMonth() + 1).padStart(2, '0')}/${String(payments.length + 1).padStart(4, '0')}`;
 
       const { data: inserted, error } = await supabase.from('sale_payments').insert({
@@ -125,7 +178,7 @@ export default function DetailPenjualanPage() {
         no_kwitansi: noKwitansi,
         bank_tujuan: angsuranForm.bank_tujuan,
         diterima_dari: angsuranForm.diterima_dari,
-        deskripsi: angsuranForm.keterangan || `Diterima dari ${angsuranForm.diterima_dari} — masuk ke ${angsuranForm.bank_tujuan}`,
+        deskripsi,
         nominal: nominalValue,
       }).select().single();
       if (error) throw error;
@@ -538,7 +591,7 @@ export default function DetailPenjualanPage() {
                         <th className="px-4 py-2 w-32">Tanggal</th>
                         <th className="px-4 py-2">No Kwitansi & Deskripsi</th>
                         <th className="px-4 py-2 text-right">Nominal</th>
-                        <th className="px-4 py-2 w-20 text-center">Cetak</th>
+                        <th className="px-4 py-2 w-28 text-center">Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -555,13 +608,29 @@ export default function DetailPenjualanPage() {
                             </td>
                             <td className="px-4 py-2 text-right font-semibold text-green-600">{formatRupiah(p.nominal)}</td>
                             <td className="px-4 py-2 text-center">
-                              <button
-                                onClick={() => window.open(`/penjualan/print-kwitansi?payment_id=${p.id}&sale_id=${id}`, '_blank')}
-                                className="p-1 bg-amber-100 text-amber-600 hover:bg-amber-200 rounded"
-                                title="Cetak Kwitansi"
-                              >
-                                <Printer className="w-4 h-4 mx-auto" />
-                              </button>
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => window.open(`/penjualan/print-kwitansi?payment_id=${p.id}&sale_id=${id}`, '_blank')}
+                                  className="p-1 bg-amber-100 text-amber-600 hover:bg-amber-200 rounded"
+                                  title="Cetak Kwitansi"
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => openEditAngsuranModal(p)}
+                                  className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
+                                  title="Edit"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeletePayment(p.id)}
+                                  className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
+                                  title="Hapus"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -664,13 +733,18 @@ export default function DetailPenjualanPage() {
         </div>
       )}
 
-      {/* Modal Input Angsuran Baru */}
+      {/* Modal Input / Edit Angsuran */}
       {showAngsuranModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-800 text-lg">Form Input Cicilan</h3>
-              <button onClick={() => setShowAngsuranModal(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+              <h3 className="font-bold text-slate-800 text-lg">{editingPaymentId ? 'Edit Data Pembayaran' : 'Form Input Cicilan'}</h3>
+              <button
+                onClick={() => { setShowAngsuranModal(false); setEditingPaymentId(null); }}
+                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+              >
+                &times;
+              </button>
             </div>
             <div className="space-y-3">
               <div>
@@ -727,7 +801,12 @@ export default function DetailPenjualanPage() {
               </div>
             </div>
             <div className="flex gap-2 mt-5 justify-end">
-              <button onClick={() => setShowAngsuranModal(false)} className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold">Batal</button>
+              <button
+                onClick={() => { setShowAngsuranModal(false); setEditingPaymentId(null); }}
+                className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold"
+              >
+                Batal
+              </button>
               <button onClick={handleSaveAngsuran} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50">{saving ? 'Menyimpan...' : 'Simpan'}</button>
             </div>
           </div>
