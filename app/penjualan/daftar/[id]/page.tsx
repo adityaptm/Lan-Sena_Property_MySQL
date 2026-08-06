@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useData } from '@/lib/data-context';
-import { createClient } from '@/lib/supabase/client';
-import { ChevronRight, Settings, Printer, Phone, Upload, Eye, FileText, CheckCircle, Clock, Edit3, Trash2 } from 'lucide-react';
+import { createClient } from '@/lib/sql/client';
+import { ChevronRight, Settings, Printer, Phone, Upload, Eye, FileText, CheckCircle, Clock, Edit3, Trash2, Wallet } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
 import { SaleAdditionalCost, SalePayment, SaleBillingLetter, SaleStepHistory } from '@/types';
 import { CetakSerahTerimaKunciForm } from '@/components/penjualan/forms/CetakSerahTerimaKunciForm';
@@ -44,8 +44,8 @@ function toWaNumber(phone: string): string {
 
 export default function DetailPenjualanPage() {
   const { id } = useParams() as { id: string };
-  const { sales, customers, units, marketers, locations, blocks, banks, currentUser, salesSteps, certificateSteps } = useData();
-  const supabase = createClient();
+  const { sales, customers, units, marketers, locations, blocks, banks, currentUser, salesSteps, certificateSteps, refresh } = useData();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   // Sale Data
@@ -61,6 +61,38 @@ export default function DetailPenjualanPage() {
   const [billingLetters, setBillingLetters] = useState<SaleBillingLetter[]>([]);
   const [stepHistory, setStepHistory] = useState<SaleStepHistory[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
+
+  const loadExtra = useCallback(async () => {
+    if (!id) return;
+    setLoadingExtra(true);
+    try {
+      const [acRes, payRes, billRes, histRes] = await Promise.all([
+        supabase.from('sale_additional_costs').select('*').eq('sale_id', id),
+        supabase.from('sale_payments').select('*').eq('sale_id', id).order('tanggal', { ascending: true }),
+        supabase.from('sale_billing_letters').select('*').eq('sale_id', id),
+        supabase.from('sale_step_history').select('*, users(nama)').eq('sale_id', id).order('created_at', { ascending: false })
+      ]);
+
+      if (acRes.data) setAdditionalCosts(acRes.data);
+      if (payRes.data) setPayments(payRes.data);
+      if (billRes.data) setBillingLetters(billRes.data);
+      if (histRes.data) {
+        setStepHistory(histRes.data.map((h: any) => ({
+          ...h,
+          changed_by_nama: h.users?.nama || 'System'
+        })));
+      }
+    } catch (e) {
+      console.error('Error loading extra details:', e);
+    } finally {
+      setLoadingExtra(false);
+    }
+  }, [id, supabase]);
+
+  const triggerRefresh = async () => {
+    await refresh();
+    await loadExtra();
+  };
 
   // Tab State
   const [activeTab, setActiveTab] = useState('angsuran');
@@ -118,6 +150,16 @@ export default function DetailPenjualanPage() {
     setShowAngsuranModal(true);
   };
 
+  // Buka modal Potongan, selalu diisi dengan nilai potongan yang sedang berlaku
+  // supaya admin bisa melihat & mengoreksinya (termasuk mengubahnya jadi 0).
+  const openPotonganModal = () => {
+    setPotonganForm({
+      nominal: sale?.potongan ? String(sale.potongan).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '',
+      keterangan: '',
+    });
+    setShowPotonganModal(true);
+  };
+
   // Hapus data pembayaran (angsuran) berdasarkan id
   const handleDeletePayment = async (paymentId: string) => {
     if (!confirm('Yakin ingin menghapus data pembayaran ini? Nominal ini akan hilang dari total yang sudah dibayar.')) return;
@@ -125,19 +167,44 @@ export default function DetailPenjualanPage() {
     try {
       const { error } = await supabase.from('sale_payments').delete().eq('id', paymentId);
       if (error) throw error;
-      window.location.reload();
+      await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || 'Gagal menghapus pembayaran.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Hapus satu baris biaya tambahan (kalau salah input, misalnya)
+  const handleDeleteBiaya = async (biayaId: string) => {
+    if (!confirm('Yakin ingin menghapus biaya tambahan ini?')) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('sale_additional_costs').delete().eq('id', biayaId);
+      if (error) throw error;
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err?.message || 'Gagal menghapus biaya tambahan.');
+    } finally {
       setSaving(false);
     }
   };
 
   const handleSavePotongan = async () => {
-    if (!potonganForm.nominal) return;
     setSaving(true);
-    await supabase.from('sales').update({ potongan: Number(potonganForm.nominal.replace(/\D/g,'')) }).eq('id', id);
-    setShowPotonganModal(false); setPotonganForm({ nominal: '', keterangan: '' });
-    setSaving(false); window.location.reload();
+    try {
+      // Field boleh dikosongkan sepenuhnya oleh admin — itu berarti potongan
+      // direset jadi 0, bukan dibatalkan diam-diam seperti sebelumnya.
+      const nominalValue = potonganForm.nominal ? Number(potonganForm.nominal.replace(/\D/g, '')) : 0;
+      await supabase.from('sales').update({ potongan: nominalValue }).eq('id', id);
+      setShowPotonganModal(false);
+      setPotonganForm({ nominal: '', keterangan: '' });
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err?.message || 'Gagal menyimpan potongan.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveAngsuran = async () => {
@@ -165,7 +232,7 @@ export default function DetailPenjualanPage() {
         if (error) throw error;
         setShowAngsuranModal(false);
         setEditingPaymentId(null);
-        window.location.reload();
+        await triggerRefresh();
         return;
       }
 
@@ -188,7 +255,7 @@ export default function DetailPenjualanPage() {
       if (inserted?.id) {
         window.open(`/penjualan/print-kwitansi?payment_id=${inserted.id}&sale_id=${id}`, '_blank');
       }
-      window.location.reload();
+      await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || 'Gagal menyimpan angsuran.');
     } finally {
@@ -223,13 +290,13 @@ export default function DetailPenjualanPage() {
       }
 
       alert('Progres berhasil disimpan.');
-      window.location.reload();
+      setShowProgresModal(false);
+      setProgresForm({ status: '', keterangan: '' });
+      await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || 'Gagal menyimpan progres.');
     } finally {
       setSaving(false);
-      setShowProgresModal(false);
-      setProgresForm({ status: '', keterangan: '' });
     }
   };
 
@@ -244,39 +311,18 @@ export default function DetailPenjualanPage() {
 
       if (error) throw error;
       alert('Harga Pajak berhasil diperbarui.');
-      window.location.reload();
+      setShowUbahHargaModal(false);
+      await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || 'Gagal mengubah harga.');
     } finally {
       setSaving(false);
-      setShowUbahHargaModal(false);
     }
   };
 
   useEffect(() => {
-    async function loadExtra() {
-      if (!id) return;
-      setLoadingExtra(true);
-      const [acRes, payRes, billRes, histRes] = await Promise.all([
-        supabase.from('sale_additional_costs').select('*').eq('sale_id', id),
-        supabase.from('sale_payments').select('*').eq('sale_id', id).order('tanggal', { ascending: true }),
-        supabase.from('sale_billing_letters').select('*').eq('sale_id', id),
-        supabase.from('sale_step_history').select('*, users(nama)').eq('sale_id', id).order('created_at', { ascending: false })
-      ]);
-
-      if (acRes.data) setAdditionalCosts(acRes.data);
-      if (payRes.data) setPayments(payRes.data);
-      if (billRes.data) setBillingLetters(billRes.data);
-      if (histRes.data) {
-        setStepHistory(histRes.data.map((h: any) => ({
-          ...h,
-          changed_by_nama: h.users?.nama || 'System'
-        })));
-      }
-      setLoadingExtra(false);
-    }
     loadExtra();
-  }, [id, supabase]);
+  }, [loadExtra]);
 
   if (!sale) return <AppLayout><div className="p-8 text-center text-slate-500">Loading atau data tidak ditemukan...</div></AppLayout>;
 
@@ -482,7 +528,15 @@ export default function DetailPenjualanPage() {
               </div>
               <div className="grid grid-cols-[160px_10px_1fr]">
                 <span className="font-semibold text-slate-600">Potongan</span><span>:</span>
-                <span className="text-red-500">- {formatRupiah(sale.potongan || 0)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-red-500">- {formatRupiah(sale.potongan || 0)}</span>
+                  <button
+                    onClick={openPotonganModal}
+                    className="text-[10px] text-blue-600 hover:underline"
+                  >
+                    (Ubah/Hapus)
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-[160px_10px_1fr]">
                 <span className="font-semibold text-slate-600">Biaya Tambahan</span><span>:</span>
@@ -548,7 +602,7 @@ export default function DetailPenjualanPage() {
             {activeTab === 'angsuran' && (
               <div className="flex gap-2">
                 <button onClick={openAngsuranModal} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Input Angsuran Baru</button>
-                <button onClick={() => setShowPotonganModal(true)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Input Potongan</button>
+                <button onClick={openPotonganModal} className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Input Potongan</button>
                 <button onClick={() => setShowBiayaModal(true)} className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold">+ Input Biaya Tambahan</button>
               </div>
             )}
@@ -647,6 +701,52 @@ export default function DetailPenjualanPage() {
                 </div>
               </div>
 
+              {/* Daftar Biaya Tambahan */}
+              <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
+                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><Wallet className="w-4 h-4 text-amber-500" /> Daftar Biaya Tambahan</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left border border-slate-200">
+                    <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-2 w-12 text-center">No</th>
+                        <th className="px-4 py-2">Keterangan</th>
+                        <th className="px-4 py-2 text-right">Nominal</th>
+                        <th className="px-4 py-2 w-20 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {additionalCosts.length === 0 ? (
+                        <tr><td colSpan={4} className="text-center py-4 text-slate-500">Belum ada biaya tambahan.</td></tr>
+                      ) : (
+                        additionalCosts.map((c, i) => (
+                          <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="px-4 py-2 text-center">{i + 1}</td>
+                            <td className="px-4 py-2">{c.keterangan || '-'}</td>
+                            <td className="px-4 py-2 text-right font-semibold text-green-600">{formatRupiah(c.nominal)}</td>
+                            <td className="px-4 py-2 text-center">
+                              <button
+                                onClick={() => handleDeleteBiaya(c.id)}
+                                className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
+                                title="Hapus"
+                              >
+                                <Trash2 className="w-4 h-4 mx-auto" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                      {additionalCosts.length > 0 && (
+                        <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
+                          <td colSpan={2} className="px-4 py-3 text-right">TOTAL BIAYA TAMBAHAN</td>
+                          <td className="px-4 py-3 text-right text-green-700">{formatRupiah(totalBiayaTambahan)}</td>
+                          <td></td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               {/* Daftar Surat Tagihan */}
               <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
                 <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><FileText className="w-4 h-4 text-amber-500" /> Daftar Surat Tagihan</h4>
@@ -710,13 +810,20 @@ export default function DetailPenjualanPage() {
       {showPotonganModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="font-bold text-slate-800 text-lg mb-4">Input Potongan Harga</h3>
+            <h3 className="font-bold text-slate-800 text-lg mb-4">Ubah Potongan Harga</h3>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Nominal Potongan (Rp) *</label>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Nominal Potongan (Rp)</label>
                 <input type="text" placeholder="Contoh: 5.000.000" value={potonganForm.nominal}
                   onChange={e => setPotonganForm({...potonganForm, nominal: e.target.value.replace(/[^0-9]/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,'.')})}
                   className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                <button
+                  type="button"
+                  onClick={() => setPotonganForm({ ...potonganForm, nominal: '' })}
+                  className="text-[11px] text-red-600 hover:underline mt-1"
+                >
+                  Kosongkan / set ke Rp 0
+                </button>
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">Keterangan</label>
@@ -818,7 +925,7 @@ export default function DetailPenjualanPage() {
         <UpdateBiayaTambahanForm 
           saleId={id} 
           onClose={() => setShowBiayaModal(false)} 
-          onSuccess={() => window.location.reload()} 
+          onSuccess={triggerRefresh} 
         />
       )}
 
@@ -827,7 +934,7 @@ export default function DetailPenjualanPage() {
         <CetakSerahTerimaKunciForm 
           saleId={id} 
           onClose={() => setShowSerahTerimaModal(false)} 
-          onSuccess={() => window.location.reload()} 
+          onSuccess={triggerRefresh} 
         />
       )}
 
@@ -836,7 +943,7 @@ export default function DetailPenjualanPage() {
         <CetakSuratKomplenForm 
           saleId={id} 
           onClose={() => setShowKomplenModal(false)} 
-          onSuccess={() => window.location.reload()} 
+          onSuccess={triggerRefresh} 
         />
       )}
 
@@ -849,7 +956,7 @@ export default function DetailPenjualanPage() {
           blocks={blocks}
           units={units}
           onClose={() => setShowPindahUnitModal(false)} 
-          onSuccess={() => window.location.reload()} 
+          onSuccess={triggerRefresh} 
         />
       )}
 
@@ -860,7 +967,7 @@ export default function DetailPenjualanPage() {
           currentMarketer={marketer}
           marketers={marketers}
           onClose={() => setShowUpdateMarketerModal(false)} 
-          onSuccess={() => window.location.reload()} 
+          onSuccess={triggerRefresh} 
         />
       )}
 
@@ -869,7 +976,7 @@ export default function DetailPenjualanPage() {
         <UpdateDataKonsumenForm 
           customer={customer}
           onClose={() => setShowUpdateKonsumenModal(false)} 
-          onSuccess={() => window.location.reload()} 
+          onSuccess={triggerRefresh} 
         />
       )}
 

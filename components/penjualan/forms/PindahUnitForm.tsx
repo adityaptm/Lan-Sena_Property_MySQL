@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/sql/client';
 import { Location, Block, Unit, Sale } from '@/types';
 
 interface Props {

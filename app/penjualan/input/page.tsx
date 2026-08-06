@@ -7,7 +7,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useData } from '@/lib/data-context';
 import { CheckCircle2, Search, ExternalLink } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/sql/client';
 import type { Customer, Unit } from '@/types';
 
 // Urutan alami supaya "2" tampil sebelum "10" (bukan urutan teks biasa)

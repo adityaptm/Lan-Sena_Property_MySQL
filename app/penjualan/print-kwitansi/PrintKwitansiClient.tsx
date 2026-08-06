@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/sql/client';
 import { SalePayment } from '@/types';
 
 export default function PrintKwitansiClient() {
@@ -13,7 +13,7 @@ export default function PrintKwitansiClient() {
   const saleId = searchParams.get('sale_id') || '';
 
   const { sales, customers, units, currentUser, loading } = useData();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [payment, setPayment] = useState<SalePayment | null>(null);
   const [pdfUrl, setPdfUrl] = useState('');
@@ -49,15 +49,29 @@ export default function PrintKwitansiClient() {
     loadPayment();
   }, [paymentId, supabase]);
 
+  const sale = useMemo(() => {
+    if (!payment) return null;
+    const targetSaleId = saleId || payment.sale_id;
+    return sales.find((s) => s.id === targetSaleId) || null;
+  }, [sales, saleId, payment]);
+
+  const customer = useMemo(() => {
+    if (!sale) return null;
+    return customers.find((c) => c.id === sale.customer_id) || null;
+  }, [customers, sale]);
+
+  const unit = useMemo(() => {
+    if (!sale) return null;
+    return units.find((u) => u.id === sale.unit_id) || null;
+  }, [units, sale]);
+
+  const currentUserNama = currentUser?.nama;
+
   // Generate PDF document once payment and context data are ready
   useEffect(() => {
-    if (loading || !payment) return;
+    if (loading || !payment || !sale || !customer || !unit) return;
 
     const currentPayment = payment;
-    const targetSaleId = saleId || currentPayment.sale_id;
-    const sale = sales.find((s) => s.id === targetSaleId);
-    const customer = customers.find((c) => c.id === sale?.customer_id);
-    const unit = units.find((u) => u.id === sale?.unit_id);
 
     async function generatePdf() {
       setIsLoading(true);
@@ -73,7 +87,7 @@ export default function PrintKwitansiClient() {
             sale={sale}
             unit={unit}
             customer={customer}
-            petugasNama={currentUser?.nama || 'FAHRUL ROZI'}
+            petugasNama={currentUserNama || 'FAHRUL ROZI'}
             baseUrl={window.location.origin}
           />
         ).toBlob();
@@ -95,7 +109,7 @@ export default function PrintKwitansiClient() {
       }
     };
 
-  }, [payment, loading, sales, customers, units, currentUser, saleId]);
+  }, [payment, loading, sale, customer, unit, currentUserNama]);
 
   if (loading) {
     return (

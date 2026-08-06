@@ -266,7 +266,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
         </div>
         <button
           onClick={async () => {
-            const { createClient } = await import('@/lib/supabase/client');
+            const { createClient } = await import('@/lib/sql/client');
             const supabase = createClient();
             await supabase.auth.signOut();
             window.location.href = '/login';

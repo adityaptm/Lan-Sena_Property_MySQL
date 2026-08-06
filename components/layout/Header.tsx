@@ -3,7 +3,7 @@
 import React from 'react';
 import { Menu, Bell, AlertTriangle, CheckCircle, Search, LogOut } from 'lucide-react';
 import { useData } from '@/lib/data-context';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/sql/client';
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;

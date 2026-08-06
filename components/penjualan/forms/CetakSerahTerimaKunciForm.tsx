@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/sql/client';
 
 interface Props {
   saleId: string;

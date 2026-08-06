@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import type {
   Customer, Bank, Location, Block, UnitType, SubsidyType, Unit,
   MarketerType, Marketer, OnlineBooking, InventoryItem, Purchase,
@@ -10,6 +9,48 @@ import type {
   CompanyAsset, Sale, UserProfile, SalesStep, CertificateStep, PriceItem, MarketerRight, CompanySettings,
   SaleAdditionalCost, SalePayment, SaleDiscount
 } from '@/types';
+
+// ─── MySQL API Gateway Helpers ───────────────────────────────────────────────
+async function dbRequest(body: Record<string, any>) {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
+
+async function fetchTable<T>(table: string): Promise<T[]> {
+  try {
+    return await dbRequest({ action: 'select', table }) as T[];
+  } catch (e: any) {
+    console.warn(`Warning fetching ${table}:`, e.message);
+    return [];
+  }
+}
+
+async function dbInsert(table: string, data: Record<string, any>) {
+  return dbRequest({ action: 'insert', table, data });
+}
+
+async function dbUpdate(table: string, id: string, data: Record<string, any>) {
+  return dbRequest({ action: 'update', table, data, filters: [{ type: 'eq', column: 'id', value: id }] });
+}
+
+async function dbDelete(table: string, id: string) {
+  return dbRequest({ action: 'delete', table, filters: [{ type: 'eq', column: 'id', value: id }] });
+}
+
+async function dbSelectSingle(table: string, filters: any[]) {
+  const rows = await dbRequest({ action: 'select', table, filters, single: true });
+  return rows;
+}
+
+async function dbSearch(table: string, orFilter: string) {
+  return dbRequest({ action: 'select', table, filters: [{ type: 'or', value: orFilter }] });
+}
 
 interface DataContextType {
   currentUser: UserProfile | null;
@@ -147,13 +188,8 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const supabase = createClient();
 
-async function fetchTable<T>(table: string): Promise<T[]> {
-  const { data, error } = await supabase.from(table).select('*').limit(1000);
-  if (error) { console.warn(`Warning fetching ${table}:`, error.message); return []; }
-  return (data || []) as T[];
-}
+
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -195,50 +231,87 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single();
-        setCurrentUser(profile || { id: user.id, nama: user.email || 'User', email: user.email || '', role: 'Viewer', is_active: true });
+      // Ambil current user dari session cookie via API
+      const userRes = await fetch('/api/auth/user');
+      const userJson = await userRes.json();
+
+      if (!userJson.user) {
+        // Belum login (atau session sudah tidak valid) — jangan lanjut
+        // memanggil /api/db sama sekali, supaya tidak muncul error
+        // "Unauthorized: Session missing" di console pada halaman publik/login.
+        setCurrentUser(null);
+        setLoading(false);
+        return;
       }
 
-      const [
-        cust, bnk, ss, cs, pi, loc, blk, ut, sub, un,
-        mt, mkt, ob, mr, compSettings, itm, pur, gi, go,
-        cba, coa, bl, cfe, ma, oe, dr, ca, sal, sp, sac, sd, usr
-      ] = await Promise.all([
-        fetchTable<Customer>('customers'),
-        fetchTable<Bank>('banks'),
-        fetchTable<SalesStep>('sales_steps'),
-        fetchTable<CertificateStep>('certificate_steps'),
-        fetchTable<PriceItem>('price_items'),
-        fetchTable<Location>('locations'),
-        fetchTable<Block>('blocks'),
-        fetchTable<UnitType>('unit_types'),
-        fetchTable<SubsidyType>('subsidy_types'),
-        fetchTable<Unit>('units'),
-        fetchTable<MarketerType>('marketer_types'),
-        fetchTable<Marketer>('marketers'),
-        fetchTable<OnlineBooking>('online_bookings'),
-        fetchTable<MarketerRight>('marketer_rights'),
-        fetchTable<CompanySettings>('company_settings'),
-        fetchTable<InventoryItem>('items'),
-        fetchTable<Purchase>('purchases'),
-        fetchTable<GoodsIn>('goods_in'),
-        fetchTable<GoodsOut>('goods_out'),
-        fetchTable<CashBankAccount>('cash_bank_accounts'),
-        fetchTable<ChartOfAccount>('chart_of_accounts'),
-        fetchTable<BankLoan>('bank_loans'),
-        fetchTable<CashflowEntry>('cashflow_entries'),
-        fetchTable<MandorAdvance>('mandor_advances'),
-        fetchTable<OperationalExpense>('operational_expenses'),
-        fetchTable<DisbursementRequest>('disbursement_requests'),
-        fetchTable<CompanyAsset>('company_assets'),
-        fetchTable<Sale>('sales'),
-        fetchTable<SalePayment>('sale_payments'),
-        fetchTable<SaleAdditionalCost>('sale_additional_costs'),
-        fetchTable<SaleDiscount>('sale_discounts'),
-        fetchTable<UserProfile>('users'),
-      ]);
+      setCurrentUser(userJson.user);
+
+      const tables = [
+        'customers', 'banks', 'sales_steps', 'certificate_steps', 'price_items',
+        'locations', 'blocks', 'unit_types', 'subsidy_types', 'units',
+        'marketer_types', 'marketers', 'online_bookings', 'marketer_rights', 'company_settings',
+        'items', 'purchases', 'goods_in', 'goods_out', 'cash_bank_accounts',
+        'chart_of_accounts', 'bank_loans', 'cashflow_entries', 'mandor_advances', 'operational_expenses',
+        'disbursement_requests', 'company_assets', 'sales', 'sale_payments', 'sale_additional_costs',
+        'sale_discounts', 'users'
+      ];
+
+      const batchBody = tables.map(table => ({ action: 'select', table }));
+      const response = await fetch('/api/db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(batchBody),
+      });
+      const results = await response.json();
+
+      if (!response.ok) {
+        // Kalau session ternyata expired/invalid di tengah jalan (401),
+        // treat sebagai belum login alih-alih melempar error fatal ke console.
+        if (response.status === 401) {
+          setCurrentUser(null);
+          setLoading(false);
+          return;
+        }
+        throw new Error(results.error || 'Failed to fetch batch data');
+      }
+
+      const dataMap: Record<string, any[]> = {};
+      tables.forEach((table, index) => {
+        dataMap[table] = results[index]?.data || [];
+      });
+
+      const cust = dataMap['customers'];
+      const bnk = dataMap['banks'];
+      const ss = dataMap['sales_steps'];
+      const cs = dataMap['certificate_steps'];
+      const pi = dataMap['price_items'];
+      const loc = dataMap['locations'];
+      const blk = dataMap['blocks'];
+      const ut = dataMap['unit_types'];
+      const sub = dataMap['subsidy_types'];
+      const un = dataMap['units'];
+      const mt = dataMap['marketer_types'];
+      const mkt = dataMap['marketers'];
+      const ob = dataMap['online_bookings'];
+      const mr = dataMap['marketer_rights'];
+      const compSettings = dataMap['company_settings'];
+      const itm = dataMap['items'];
+      const pur = dataMap['purchases'];
+      const gi = dataMap['goods_in'];
+      const go = dataMap['goods_out'];
+      const cba = dataMap['cash_bank_accounts'];
+      const coa = dataMap['chart_of_accounts'];
+      const bl = dataMap['bank_loans'];
+      const cfe = dataMap['cashflow_entries'];
+      const ma = dataMap['mandor_advances'];
+      const oe = dataMap['operational_expenses'];
+      const dr = dataMap['disbursement_requests'];
+      const ca = dataMap['company_assets'];
+      const sal = dataMap['sales'];
+      const sp = dataMap['sale_payments'];
+      const sac = dataMap['sale_additional_costs'];
+      const sd = dataMap['sale_discounts'];
+      const usr = dataMap['users'];
 
       // Client-side joins mapping
       const mappedUnits = un.map((unit) => {
@@ -248,7 +321,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const subType = sub.find((s) => s.id === unit.subsidy_type_id);
         const sStep = ss.find((s) => s.id === unit.sales_step_id);
         const cStep = cs.find((c) => c.id === unit.certificate_step_id);
-
         return {
           ...unit,
           block_nama: block ? block.nama_blok : undefined,
@@ -265,7 +337,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const unitItem = mappedUnits.find((u) => u.id === s.unit_id);
         const bankItem = bnk.find((b) => b.id === s.bank_id);
         const marketerItem = mkt.find((m) => m.id === s.marketer_id);
-
         return {
           ...s,
           customer_nama: custItem ? custItem.nama : undefined,
@@ -279,10 +350,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
       const mappedCashflow = cfe.map((entry) => {
         const account = cba.find((a) => a.id === entry.account_id);
-        return {
-          ...entry,
-          account_nama: account ? account.nama_akun : undefined,
-        };
+        return { ...entry, account_nama: account ? account.nama_akun : undefined };
       });
 
       setCustomers(cust); setBanks(bnk); setSalesSteps(ss); setCertificateSteps(cs);
@@ -305,34 +373,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // --- Helpers ---
   async function insert(table: string, data: Record<string, any>) {
-    const { error } = await supabase.from(table).insert([data]);
-    if (error) throw new Error(error.message);
+    await dbInsert(table, data);
     await loadAll();
   }
   async function update(table: string, id: string, data: Record<string, any>) {
-    const { error } = await supabase.from(table).update(data).eq('id', id);
-    if (error) throw new Error(error.message);
+    await dbUpdate(table, id, data);
     await loadAll();
   }
   async function remove(table: string, id: string) {
-    const { error } = await supabase.from(table).delete().eq('id', id);
-    if (error) throw new Error(error.message);
+    await dbDelete(table, id);
     await loadAll();
   }
+
 
   // --- Kontak ---
   const addCustomer = (c: Omit<Customer, 'id' | 'created_at'>) => insert('customers', c);
   const updateCustomer = (id: string, c: Partial<Customer>) => update('customers', id, c);
   const deleteCustomer = async (id: string) => {
-    // Hapus fisik semua transaksi customer ini sebelum menghapus customernya agar tidak error FK constraint
     const activeSales = sales.filter((s) => s.customer_id === id);
     for (const s of activeSales) {
-      if (s.unit_id) {
-        // Kembalikan unit ke tersedia
-        await supabase.from('units').update({ status: 'Tersedia' }).eq('id', s.unit_id);
-      }
-      // Hapus data sales dari database
-      await supabase.from('sales').delete().eq('id', s.id);
+      if (s.unit_id) await dbUpdate('units', s.unit_id, { status: 'Tersedia' });
+      await dbDelete('sales', s.id);
     }
     return remove('customers', id);
   };
@@ -340,19 +401,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const searchCustomers = async (query: string): Promise<Customer[]> => {
     const keyword = query.trim();
     if (keyword.length < 2) return [];
-
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .or(`nama.ilike.%${keyword}%,no_hp.ilike.%${keyword}%,nik.ilike.%${keyword}%`)
-      .limit(20);
-
-    if (error) {
-      console.warn('searchCustomers error:', error.message);
+    try {
+      const results = await dbSearch('customers', `nama.ilike.%${keyword}%,no_hp.ilike.%${keyword}%,nik.ilike.%${keyword}%`);
+      return (results || []) as Customer[];
+    } catch (e: any) {
+      console.warn('searchCustomers error:', e.message);
       return [];
     }
-    return (data || []) as Customer[];
   };
+
 
   const addBank = (b: Omit<Bank, 'id' | 'created_at'>) => insert('banks', b);
   const updateBank = (id: string, b: Partial<Bank>) => update('banks', id, b);
@@ -394,8 +451,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!blockId && u.block_nama) {
       let locId = u.location_id || locations[0]?.id;
       if (!locId) {
-        const { data: newLoc, error } = await supabase.from('locations').insert({ nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: 'Perum Benteng Mutiara Mas, Desa Benteng Kec. Cempaka Kab. Purwakarta' }).select().single();
-        if (error) throw new Error(error.message);
+        const [newLoc] = await dbInsert('locations', { nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: 'Perum Benteng Mutiara Mas, Desa Benteng Kec. Cempaka Kab. Purwakarta' });
         locId = newLoc.id;
       }
 
@@ -403,8 +459,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (existingBlock) {
         blockId = existingBlock.id;
       } else {
-        const { data: newBlock, error } = await supabase.from('blocks').insert({ nama_blok: u.block_nama, location_id: locId }).select().single();
-        if (error) throw new Error(error.message);
+        const [newBlock] = await dbInsert('blocks', { nama_blok: u.block_nama, location_id: locId });
         blockId = newBlock.id;
       }
     }
@@ -422,8 +477,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         lb = parseInt(match[1]);
         lt = parseInt(match[2]);
       }
-      const { data: newType, error } = await supabase.from('unit_types').insert({ nama_type: u.unit_type_nama, luas_tanah: lt, luas_bangunan: lb }).select().single();
-      if (error) throw new Error(error.message);
+      const [newType] = await dbInsert('unit_types', { nama_type: u.unit_type_nama, luas_tanah: lt, luas_bangunan: lb });
       unitTypeId = newType.id;
     }
 
@@ -433,8 +487,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (existingSub) {
       subsidyTypeId = existingSub.id;
     } else {
-      const { data: newSub, error } = await supabase.from('subsidy_types').insert({ nama_type: u.kategori_kpr, keterangan: 'Kategori KPR' }).select().single();
-      if (error) throw new Error(error.message);
+      const [newSub] = await dbInsert('subsidy_types', { nama_type: u.kategori_kpr, keterangan: 'Kategori KPR' });
       subsidyTypeId = newSub.id;
     }
 
@@ -444,8 +497,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (existingStep) {
       salesStepId = existingStep.id;
     } else {
-      const { data: newStep, error } = await supabase.from('sales_steps').insert({ nama_step: u.sales_step_nama, urutan: salesSteps.length + 1 }).select().single();
-      if (error) throw new Error(error.message);
+      const [newStep] = await dbInsert('sales_steps', { nama_step: u.sales_step_nama, urutan: salesSteps.length + 1 });
       salesStepId = newStep.id;
     }
 
@@ -481,8 +533,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     } else if (u.block_nama !== undefined) {
       let locId = u.location_id || locations[0]?.id;
       if (!locId) {
-        const { data: newLoc, error } = await supabase.from('locations').insert({ nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: 'Perum Benteng Mutiara Mas, Desa Benteng Kec. Cempaka Kab. Purwakarta' }).select().single();
-        if (error) throw new Error(error.message);
+        const [newLoc] = await dbInsert('locations', { nama_lokasi: 'Perumahan Benteng Mutiara Mas', alamat: 'Perum Benteng Mutiara Mas, Desa Benteng Kec. Cempaka Kab. Purwakarta' });
         locId = newLoc.id;
       }
       let blockId = '';
@@ -490,8 +541,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (existingBlock) {
         blockId = existingBlock.id;
       } else {
-        const { data: newBlock, error } = await supabase.from('blocks').insert({ nama_blok: u.block_nama, location_id: locId }).select().single();
-        if (error) throw new Error(error.message);
+        const [newBlock] = await dbInsert('blocks', { nama_blok: u.block_nama, location_id: locId });
         blockId = newBlock.id;
       }
       updateData.block_id = blockId;
@@ -511,8 +561,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           lb = parseInt(match[1]);
           lt = parseInt(match[2]);
         }
-        const { data: newType, error } = await supabase.from('unit_types').insert({ nama_type: u.unit_type_nama, luas_tanah: lt, luas_bangunan: lb }).select().single();
-        if (error) throw new Error(error.message);
+        const [newType] = await dbInsert('unit_types', { nama_type: u.unit_type_nama, luas_tanah: lt, luas_bangunan: lb });
         unitTypeId = newType.id;
       }
       updateData.unit_type_id = unitTypeId;
@@ -525,8 +574,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (existingSub) {
         subsidyTypeId = existingSub.id;
       } else {
-        const { data: newSub, error } = await supabase.from('subsidy_types').insert({ nama_type: u.kategori_kpr, keterangan: 'Kategori KPR' }).select().single();
-        if (error) throw new Error(error.message);
+        const [newSub] = await dbInsert('subsidy_types', { nama_type: u.kategori_kpr, keterangan: 'Kategori KPR' });
         subsidyTypeId = newSub.id;
       }
       updateData.subsidy_type_id = subsidyTypeId;
@@ -539,8 +587,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (existingStep) {
         salesStepId = existingStep.id;
       } else {
-        const { data: newStep, error } = await supabase.from('sales_steps').insert({ nama_step: u.sales_step_nama, urutan: salesSteps.length + 1 }).select().single();
-        if (error) throw new Error(error.message);
+        const [newStep] = await dbInsert('sales_steps', { nama_step: u.sales_step_nama, urutan: salesSteps.length + 1 });
         salesStepId = newStep.id;
       }
       updateData.sales_step_id = salesStepId;

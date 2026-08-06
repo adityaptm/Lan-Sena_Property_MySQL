@@ -205,7 +205,7 @@ export default function PenggunaPage() {
                 >
                   {row.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                 </button>
-                {isSuperAdmin && (
+                {canManage && (
                   <button
                     onClick={() => { setSelectedUser(row); setShowDeleteModal(true); setError(''); }}
                     className="p-1.5 text-xs font-medium bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-md transition-colors"
