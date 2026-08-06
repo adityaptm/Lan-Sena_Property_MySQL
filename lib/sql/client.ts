@@ -85,8 +85,13 @@ class SupabaseQueryBuilder {
       if (this.action === 'select') {
         body.select = this.selectColumns;
       } else if (this.action === 'insert') {
-        const isArray = Array.isArray(this.payload);
-        body.data = isArray ? this.payload : [this.payload];
+        // Backend /api/db kita menerima SATU object per insert (bukan array).
+        // Supabase asli selalu mengirim insert sebagai array — kita TIDAK
+        // meniru itu di sini, supaya kontraknya konsisten dengan backend kita.
+        // Kalau caller kebetulan kirim array 1 elemen, bongkar dulu di sini
+        // supaya tetap kompatibel dan tidak bikin error "Unknown column".
+        this.payload = Array.isArray(this.payload) ? this.payload[0] : this.payload;
+        body.data = this.payload;
       } else if (this.action === 'update') {
         body.data = this.payload;
       }
@@ -102,10 +107,10 @@ class SupabaseQueryBuilder {
         return onfulfilled ? onfulfilled(errorVal) : errorVal;
       }
 
-      let dataVal = result.data;
-      if (this.action === 'insert' && !Array.isArray(this.payload)) {
-        dataVal = result.data?.[0] || null;
-      }
+      // Backend mengembalikan satu object langsung untuk insert (bukan array
+      // berisi 1 elemen seperti Supabase asli), jadi result.data sudah dalam
+      // bentuk yang benar — tidak perlu di-index [0] lagi.
+      const dataVal = result.data;
 
       const val = { data: dataVal, error: null };
       return onfulfilled ? onfulfilled(val) : val;

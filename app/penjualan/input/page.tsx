@@ -77,7 +77,7 @@ export default function InputPenjualanPage() {
 
   const availableUnitsInBlock = useMemo(() => {
     const filtered = units.filter(
-      (u) => u.block_id === blockId && (u.status === 'Tersedia' || u.status === 'Booking')
+      (u) => u.block_id === blockId && u.status === 'Tersedia'
     );
     return naturalSort(filtered, (u) => u.no_unit || '');
   }, [units, blockId]);
@@ -114,6 +114,17 @@ export default function InputPenjualanPage() {
 
   const totalHarga = formData.harga_kesepakatan - formData.diskon;
 
+  // Auto-hitung Harga Kesepakatan jika skema KPR
+  useEffect(() => {
+    if (formData.metode_bayar === 'KPR' && selectedUnit) {
+      const plafon = selectedUnit.maksimal_kredit || 0;
+      setFormData((prev) => ({
+        ...prev,
+        harga_kesepakatan: plafon + prev.dp_nominal + prev.booking_fee,
+      }));
+    }
+  }, [formData.metode_bayar, formData.dp_nominal, formData.booking_fee, selectedUnit]);
+
   // Begitu unit dipilih, auto-isi harga, DP, booking fee dari data master unit
   const handleUnitChange = (val: string) => {
     setUnitId(val);
@@ -121,7 +132,7 @@ export default function InputPenjualanPage() {
     if (u) {
       setFormData((prev) => ({
         ...prev,
-        harga_kesepakatan: u.harga_dasar || 0,
+        harga_kesepakatan: (u.harga_dasar || 0) + (u.booking_fee || 0),
         dp_nominal: u.uang_muka || 0,
         booking_fee: u.booking_fee || 0,
       }));
@@ -482,12 +493,16 @@ export default function InputPenjualanPage() {
                 <input
                   type="text"
                   required
+                  readOnly={formData.metode_bayar === 'KPR'}
                   value={formatRupiah(formData.harga_kesepakatan)}
                   onChange={(e) => {
+                    if (formData.metode_bayar === 'KPR') return;
                     const cleanVal = e.target.value.replace(/\D/g, '');
                     setFormData({ ...formData, harga_kesepakatan: Number(cleanVal) || 0 });
                   }}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-md text-sm font-semibold text-slate-800 focus:outline-none"
+                  className={`w-full px-3.5 py-2.5 border border-slate-200 rounded-md text-sm font-semibold focus:outline-none ${
+                    formData.metode_bayar === 'KPR' ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-800'
+                  }`}
                 />
               </div>
 

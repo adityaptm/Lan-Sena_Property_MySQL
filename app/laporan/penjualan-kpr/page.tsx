@@ -22,7 +22,7 @@ export default function LaporanPenjualanKPRPage() {
       TotalHarga: s.total_harga,
       Status: s.status,
       KPRStatus: s.kpr_status || '-',
-      Tanggal: s.tanggal_transaksi,
+      Tanggal: s.tanggal_booking || '-',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -38,7 +38,7 @@ export default function LaporanPenjualanKPRPage() {
     { header: 'Bank Partner', accessorKey: (r) => r.bank_nama || '-' },
     { header: 'Omset Transaksi', accessorKey: (r) => <span className="font-bold text-green-600">Rp {r.total_harga.toLocaleString('id-ID')}</span>, sortable: true },
     { header: 'Status KPR', accessorKey: (r) => r.kpr_status || '-' },
-    { header: 'Tanggal', accessorKey: 'tanggal_transaksi', sortable: true },
+    { header: 'Tanggal', accessorKey: (r) => r.tanggal_booking ? new Date(r.tanggal_booking).toLocaleDateString('id-ID') : '-', sortable: true },
   ];
 
   return (

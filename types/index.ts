@@ -139,6 +139,8 @@ export interface Marketer {
   marketer_type_nama?: string;
   no_hp: string;
   email: string;
+  bank_rekening?: string;
+no_rekening?: string;
   is_active: boolean;
   units_handled?: number;
 }
@@ -364,6 +366,17 @@ export interface SaleDiscount {
   sale_id: string;
   tanggal: string;
   nominal: number;
+  keterangan?: string;
+  created_at: string;
+}
+export interface SaleKprSubmission {
+  id: string;
+  sale_id: string;
+  no_referensi?: string;
+  tanggal: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  kredit_acc: number;
+  biaya_tambahan: number;
   keterangan?: string;
   created_at: string;
 }

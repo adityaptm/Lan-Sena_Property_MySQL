@@ -28,10 +28,9 @@ const KWITANSI_HEIGHT = 396.85;
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 8,
-    paddingBottom: 8,
-    paddingLeft: 25,
-    paddingRight: 25,
+    paddingTop: 38, 
+    paddingLeft: 35,
+    paddingRight: 85, // Ditambah agar TTD Petugas bergeser ke kiri dan tidak terpotong
     fontSize: 9,
     fontFamily: 'Arial Narrow',
     lineHeight: 1.15,
@@ -60,7 +59,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'Helvetica-Bold',
     color: '#1a1a1a',
-    marginBottom: 1,
+    marginBottom: 4,
   },
   companySubtitle: {
     fontSize: 8.5,
@@ -73,19 +72,19 @@ const styles = StyleSheet.create({
     fontSize: 7.5,
     textAlign: 'left',
     color: '#333',
-    lineHeight: 1.1,
+    lineHeight: 1.25,
   },
   headerLine: {
     borderBottomWidth: 1.5,
     borderBottomColor: '#2563eb',
-    marginTop: 2,
+    marginTop: 4,
     marginBottom: 4,
   },
 
   // --- JUDUL ---
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 12,
   },
   titleText: {
     fontSize: 10.5,
@@ -133,14 +132,18 @@ const styles = StyleSheet.create({
 
   // --- TTD SECTION ---
   ttdContainer: {
-    marginTop: 2,
-    paddingHorizontal: 10,
+    marginTop: 6,
+    paddingHorizontal: 0, // Dihilangkan padding horizontal internal agar presisi dengan margin page
+  },
+  tanggalContainer: {
+    alignItems: 'center',
+    width: 180, // Dikecilkan sedikit agar muat sempurna di kanan
+    alignSelf: 'flex-end',
+    marginBottom: 2,
   },
   tanggalText: {
-    textAlign: 'right',
     fontSize: 8.5,
-    marginBottom: 2,
-    marginRight: 20,
+    textAlign: 'center',
   },
   signatureRow: {
     flexDirection: 'row',
@@ -148,15 +151,15 @@ const styles = StyleSheet.create({
   },
   signatureBlockLeft: {
     alignItems: 'center',
-    width: 200,
+    width: 180,
   },
   signatureBlockRight: {
     alignItems: 'center',
-    width: 200,
+    width: 180, // Dikecilkan dari 200 ke 180 agar tidak keluar dari margin kanan
   },
   signatureTitle: {
     fontSize: 8.5,
-    marginBottom: 45, // Jarak tempat TTD diperbesar (45pt)
+    marginBottom: 40,
   },
   signatureName: {
     fontSize: 8.5,
@@ -228,7 +231,6 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRU
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>
-            <Text style={styles.companySubtitle}>DEVELOPER &amp; CONTRACTOR</Text>
             <Text style={styles.companyAddress}>
               Perum Benteng Mutiara Mas Ruko No. 16 Babakan Situ 004/002
             </Text>
@@ -307,7 +309,9 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRU
 
         {/* TTD */}
         <View style={styles.ttdContainer}>
-          <Text style={styles.tanggalText}>{formatKotaTanggal(tanggal)}</Text>
+          <View style={styles.tanggalContainer}>
+            <Text style={styles.tanggalText}>{formatKotaTanggal(tanggal)}</Text>
+          </View>
           <View style={styles.signatureRow}>
             <View style={styles.signatureBlockLeft}>
               <Text style={styles.signatureTitle}>Penyetor,</Text>

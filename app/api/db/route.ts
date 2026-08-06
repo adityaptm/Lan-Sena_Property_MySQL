@@ -1,190 +1,210 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { query } from '@/lib/db';
 import { decryptToken } from '@/lib/auth-token';
-import crypto from 'crypto';
 
-const buildWhereClause = (filters: any[]) => {
-  let where = '';
-  const params: any[] = [];
+// --- Keamanan: hanya izinkan nama tabel/kolom alfanumerik + underscore ---
+function validateIdentifier(name: string) {
+  if (!name || !/^[a-zA-Z0-9_]+$/.test(name)) {
+    throw new Error(`Nama tabel/kolom tidak valid: ${name}`);
+  }
+}
 
-  if (filters && filters.length > 0) {
-    const clauses: string[] = [];
-    for (const f of filters) {
-      if (f.type === 'eq') {
-        if (f.value === null) {
-          clauses.push(`\`${f.column}\` IS NULL`);
-        } else {
-          clauses.push(`\`${f.column}\` = ?`);
-          params.push(f.value);
-        }
-      } else if (f.type === 'or') {
-        const orParts = f.value.split(',');
-        const orClauses: string[] = [];
-        for (const part of orParts) {
-          const match = part.match(/([a-zA-Z0-9_]+)\.(ilike|eq)\.(.+)/);
-          if (match) {
-            const col = match[1];
-            const op = match[2];
-            let val = match[3];
-            if (op === 'ilike') {
-              orClauses.push(`\`${col}\` LIKE ?`);
-              val = val.replace(/%/g, '');
-              params.push(`%${val}%`);
-            } else {
-              orClauses.push(`\`${col}\` = ?`);
-              params.push(val);
-            }
-          }
-        }
-        if (orClauses.length > 0) {
-          clauses.push(`(${orClauses.join(' OR ')})`);
-        }
-      }
+// Parse filter gaya "col.op.value,col2.op.value" (dipakai untuk pencarian OR)
+function parseOrFilter(raw: string) {
+  return raw.split(',').map((cond) => {
+    const [column, op, ...rest] = cond.split('.');
+    return { column, op, value: rest.join('.') };
+  });
+}
+
+// Ubah value object/array (mis. field "items") jadi JSON string supaya aman
+// disimpan ke kolom JSON/TEXT, alih-alih bikin mysql2 bingung.
+// undefined -> null (MySQL tidak menerima undefined sama sekali).
+function normalizeValue(v: any) {
+  if (v === undefined) return null;
+  if (v !== null && typeof v === 'object') return JSON.stringify(v);
+  return v;
+}
+
+// Pastikan payload "data" untuk insert/update memang object biasa,
+// bukan array / null / primitif — ini akar penyebab error
+// "Unknown column '0' in 'field list'".
+function assertPlainObject(data: any, context: string) {
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error(
+      `Data untuk "${context}" harus berupa object (bukan array/null/primitif). ` +
+      `Diterima: ${Array.isArray(data) ? 'array' : typeof data} -> ${JSON.stringify(data)?.slice(0, 200)}`
+    );
+  }
+}
+
+async function handleSelect(params: any) {
+  const { table, filters, single } = params;
+  validateIdentifier(table);
+
+  let sql = `SELECT * FROM \`${table}\``;
+  const values: any[] = [];
+  const whereClauses: string[] = [];
+
+  if (Array.isArray(filters)) {
+    const eqFilters = filters.filter((f: any) => f.type === 'eq');
+    const orFilter = filters.find((f: any) => f.type === 'or');
+
+    for (const f of eqFilters) {
+      validateIdentifier(f.column);
+      whereClauses.push(`\`${f.column}\` = ?`);
+      values.push(f.value);
     }
-    if (clauses.length > 0) {
-      where = ` WHERE ${clauses.join(' AND ')}`;
+
+    if (orFilter) {
+      const conds = parseOrFilter(orFilter.value);
+      const orParts: string[] = [];
+      for (const c of conds) {
+        validateIdentifier(c.column);
+        if (c.op === 'ilike') {
+          orParts.push(`LOWER(\`${c.column}\`) LIKE LOWER(?)`);
+        } else if (c.op === 'eq') {
+          orParts.push(`\`${c.column}\` = ?`);
+        } else {
+          orParts.push(`\`${c.column}\` LIKE ?`);
+        }
+        values.push(c.value);
+      }
+      if (orParts.length) whereClauses.push(`(${orParts.join(' OR ')})`);
     }
   }
 
-  return { where, params };
-};
+  if (whereClauses.length) sql += ' WHERE ' + whereClauses.join(' AND ');
+  if (single) sql += ' LIMIT 1';
+
+  const rows = await query(sql, values);
+  return single ? rows[0] || null : rows;
+}
+
+async function handleInsert(params: any) {
+  const { table, data } = params;
+  validateIdentifier(table);
+  assertPlainObject(data, `insert:${table}`);
+
+  const record = { ...data };
+  if (!record.id) record.id = crypto.randomUUID();
+
+  const columns = Object.keys(record);
+  columns.forEach(validateIdentifier);
+
+  const colNames = columns.map((c) => `\`${c}\``).join(', ');
+  const placeholders = columns.map(() => '?').join(', ');
+  const values = columns.map((c) => normalizeValue(record[c]));
+
+  try {
+    await query(`INSERT INTO \`${table}\` (${colNames}) VALUES (${placeholders})`, values);
+  } catch (e: any) {
+    console.error(`[api/db] INSERT gagal pada tabel "${table}". Payload:`, JSON.stringify(record));
+    throw e;
+  }
+
+  const rows = await query(`SELECT * FROM \`${table}\` WHERE id = ?`, [record.id]);
+  return rows[0] || record;
+}
+
+async function handleUpdate(params: any) {
+  const { table, data, filters } = params;
+  validateIdentifier(table);
+  assertPlainObject(data, `update:${table}`);
+
+  const idFilter = Array.isArray(filters) ? filters.find((f: any) => f.column === 'id') : null;
+  if (!idFilter) throw new Error('Update memerlukan filter id');
+
+  const columns = Object.keys(data);
+  columns.forEach(validateIdentifier);
+  if (columns.length === 0) {
+    const rows = await query(`SELECT * FROM \`${table}\` WHERE id = ?`, [idFilter.value]);
+    return rows[0] || null;
+  }
+
+  const setClause = columns.map((c) => `\`${c}\` = ?`).join(', ');
+  const values = columns.map((c) => normalizeValue(data[c]));
+  values.push(idFilter.value);
+
+  try {
+    await query(`UPDATE \`${table}\` SET ${setClause} WHERE id = ?`, values);
+  } catch (e: any) {
+    console.error(`[api/db] UPDATE gagal pada tabel "${table}" id=${idFilter.value}. Payload:`, JSON.stringify(data));
+    throw e;
+  }
+
+  const rows = await query(`SELECT * FROM \`${table}\` WHERE id = ?`, [idFilter.value]);
+  return rows[0] || null;
+}
+
+async function handleDelete(params: any) {
+  const { table, filters } = params;
+  validateIdentifier(table);
+
+  const idFilter = Array.isArray(filters) ? filters.find((f: any) => f.column === 'id') : null;
+  if (!idFilter) throw new Error('Delete memerlukan filter id');
+
+  await query(`DELETE FROM \`${table}\` WHERE id = ?`, [idFilter.value]);
+  return { id: idFilter.value };
+}
+
+async function handleAction(action: any) {
+  if (!action || typeof action !== 'object') {
+    throw new Error(`Request action tidak valid: ${JSON.stringify(action)}`);
+  }
+  switch (action.action) {
+    case 'select':
+      return handleSelect(action);
+    case 'insert':
+      return handleInsert(action);
+    case 'update':
+      return handleUpdate(action);
+    case 'delete':
+      return handleDelete(action);
+    default:
+      throw new Error(`Aksi tidak dikenal: ${action.action}`);
+  }
+}
 
 export async function POST(req: NextRequest) {
+  // --- Cek session ---
+  const token = req.cookies.get('lansena_session')?.value;
+  const session = token ? decryptToken(token) : null;
+
+  if (!session?.id) {
+    return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
+  }
+
+  let body: any;
   try {
-    // Auth Check
-    const token = req.cookies.get('lansena_session')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
-    }
-    const user = decryptToken(token);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
-    }
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Body request tidak valid' }, { status: 400 });
+  }
 
-    const body = await req.json();
-    const isBatch = Array.isArray(body);
-    const requests = isBatch ? body : [body];
-    const results = [];
-
-    for (const reqObj of requests) {
-      const { action, table, select, filters, limit, single, data, orderField, orderAscending } = reqObj;
-
-      if (!table) {
-        results.push({ error: 'Table name is required' });
-        continue;
-      }
-
-      // 1. SELECT action
-      if (action === 'select') {
-        const { where, params: whereParams } = buildWhereClause(filters);
-        
-        let selectCols = '*';
-        let isJoinUsers = false;
-
-        if (select && typeof select === 'string' && select !== '*') {
-          if (select.includes('users(') || select.includes('users(nama)')) {
-            isJoinUsers = true;
-            selectCols = `\`${table}\`.*, \`users\`.\`nama\` AS \`users_nama\``;
-          } else {
-            selectCols = select.split(',').map(c => `\`${c.trim()}\``).join(', ');
+  try {
+    // Batch request (dipakai loadAll di data-context.tsx)
+    if (Array.isArray(body)) {
+      const results = await Promise.all(
+        body.map(async (action) => {
+          try {
+            const data = await handleAction(action);
+            return { data };
+          } catch (e: any) {
+            console.error(`[api/db] Batch error [table=${action?.table}, action=${action?.action}]:`, e.message);
+            return { data: [], error: e.message };
           }
-        }
-
-        let sql = '';
-        if (isJoinUsers && table === 'sale_step_history') {
-          sql = `SELECT ${selectCols} FROM \`${table}\` LEFT JOIN \`users\` ON \`${table}\`.\`changed_by\` = \`users\`.\`id\`${where}`;
-        } else {
-          sql = `SELECT ${selectCols} FROM \`${table}\`${where}`;
-        }
-
-        // Add ordering
-        if (orderField) {
-          sql += ` ORDER BY \`${orderField}\` ${orderAscending !== false ? 'ASC' : 'DESC'}`;
-        }
-
-        if (limit) {
-          sql += ` LIMIT ${Number(limit)}`;
-        }
-
-        let rows = await query(sql, whereParams);
-
-        if (isJoinUsers) {
-          rows = rows.map((r: any) => {
-            const { users_nama, ...rest } = r;
-            return {
-              ...rest,
-              users: users_nama ? { nama: users_nama } : null
-            };
-          });
-        }
-
-        results.push({ data: single ? (rows[0] || null) : rows });
-        continue;
-      }
-
-      // 2. INSERT action
-      if (action === 'insert') {
-        const records = Array.isArray(data) ? data : [data];
-        const insertedRecords: any[] = [];
-
-        for (const rec of records) {
-          // Generate UUID if not present
-          if (!rec.id) {
-            rec.id = crypto.randomUUID();
-          }
-
-          const cols = Object.keys(rec);
-          const placeholders = cols.map(() => '?').join(', ');
-          const values = Object.values(rec);
-
-          const sql = `INSERT INTO \`${table}\` (${cols.map(c => `\`${c}\``).join(', ')}) VALUES (${placeholders})`;
-          await query(sql, values);
-          insertedRecords.push(rec);
-        }
-
-        results.push({ data: insertedRecords });
-        continue;
-      }
-
-      // 3. UPDATE action
-      if (action === 'update') {
-        const { where, params: whereParams } = buildWhereClause(filters);
-        const cols = Object.keys(data);
-        const setClause = cols.map(c => `\`${c}\` = ?`).join(', ');
-        const setValues = Object.values(data);
-
-        const sql = `UPDATE \`${table}\` SET ${setClause}${where}`;
-        await query(sql, [...setValues, ...whereParams]);
-
-        // Fetch updated rows to return
-        const selectSql = `SELECT * FROM \`${table}\`${where}`;
-        const updatedRows = await query(selectSql, whereParams);
-
-        results.push({ data: updatedRows });
-        continue;
-      }
-
-      // 4. DELETE action
-      if (action === 'delete') {
-        const { where, params: whereParams } = buildWhereClause(filters);
-
-        // Fetch rows before deleting
-        const selectSql = `SELECT * FROM \`${table}\`${where}`;
-        const deletedRows = await query(selectSql, whereParams);
-
-        const sql = `DELETE FROM \`${table}\`${where}`;
-        await query(sql, whereParams);
-
-        results.push({ data: deletedRows });
-        continue;
-      }
-
-      results.push({ error: `Unsupported action: ${action}` });
+        })
+      );
+      return NextResponse.json(results);
     }
 
-    return NextResponse.json(isBatch ? results : results[0]);
+    // Single request
+    const data = await handleAction(body);
+    return NextResponse.json({ data });
   } catch (e: any) {
-    console.error('Database API route error:', e);
-    return NextResponse.json({ error: e.message || 'Internal database error' }, { status: 500 });
+    console.error(`[api/db] Error [table=${body?.table}, action=${body?.action}]:`, e.message);
+    return NextResponse.json({ error: e.message || 'Terjadi kesalahan server' }, { status: 500 });
   }
 }

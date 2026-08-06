@@ -32,7 +32,8 @@ async function fetchTable<T>(table: string): Promise<T[]> {
 }
 
 async function dbInsert(table: string, data: Record<string, any>) {
-  return dbRequest({ action: 'insert', table, data });
+  const result = await dbRequest({ action: 'insert', table, data });
+  return Array.isArray(result) ? result : [result];
 }
 
 async function dbUpdate(table: string, id: string, data: Record<string, any>) {
@@ -332,21 +333,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         };
       });
 
+      const mappedMarketers = mkt.map((m: any) => {
+  const mtItem = mt.find((t: any) => t.id === m.marketer_type_id);
+  return {
+    ...m,
+    marketer_type_nama: mtItem ? mtItem.nama_jenis : undefined,
+  };
+});
+
       const mappedSales = sal.map((s) => {
-        const custItem = cust.find((c) => c.id === s.customer_id);
-        const unitItem = mappedUnits.find((u) => u.id === s.unit_id);
-        const bankItem = bnk.find((b) => b.id === s.bank_id);
-        const marketerItem = mkt.find((m) => m.id === s.marketer_id);
-        return {
-          ...s,
-          customer_nama: custItem ? custItem.nama : undefined,
-          unit_no: unitItem ? unitItem.no_unit : undefined,
-          location_nama: unitItem ? unitItem.location_nama : undefined,
-          block_nama: unitItem ? unitItem.block_nama : undefined,
-          bank_nama: bankItem ? bankItem.nama_bank : undefined,
-          marketer_nama: marketerItem ? marketerItem.nama : undefined,
-        };
-      });
+  const custItem = cust.find((c) => c.id === s.customer_id);
+  const unitItem = mappedUnits.find((u) => u.id === s.unit_id);
+  const bankItem = bnk.find((b) => b.id === s.bank_id);
+  const marketerItem = mkt.find((m) => m.id === s.marketer_id);
+  return {
+    ...s,
+    customer_nama: custItem ? custItem.nama : undefined,
+    unit_no: unitItem ? unitItem.no_unit : undefined,
+    location_nama: unitItem ? unitItem.location_nama : undefined,
+    block_nama: unitItem ? unitItem.block_nama : undefined,
+    unit_type_nama: unitItem ? unitItem.unit_type_nama : undefined,
+    subsidy_type_nama: unitItem ? unitItem.subsidy_type_nama : undefined,
+    bank_nama: bankItem ? bankItem.nama_bank : undefined,
+    marketer_nama: marketerItem ? marketerItem.nama : undefined,
+  };
+});
 
       const mappedCashflow = cfe.map((entry) => {
         const account = cba.find((a) => a.id === entry.account_id);
@@ -355,7 +366,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
       setCustomers(cust); setBanks(bnk); setSalesSteps(ss); setCertificateSteps(cs);
       setPriceItems(pi); setLocations(loc); setBlocks(blk); setUnitTypes(ut);
-      setSubsidyTypes(sub); setUnits(mappedUnits); setMarketerTypes(mt); setMarketers(mkt);
+      setSubsidyTypes(sub); setUnits(mappedUnits); setMarketerTypes(mt); setMarketers(mappedMarketers);
       setOnlineBookings(ob); setMarketerRights(mr); setItems(itm); setPurchases(pur);
       setGoodsIn(gi); setGoodsOut(go); setCashBankAccounts(cba); setChartOfAccounts(coa);
       setBankLoans(bl); setCashflowEntries(mappedCashflow); setMandorAdvances(ma);
@@ -685,8 +696,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
-      const urutan = String(sales.length + 1).padStart(4, '0');
-      saleData.no_penjualan = `INV/SALES/${year}/${month}/${urutan}`;
+      const prefix = `INV/SALES/${year}/${month}/`;
+
+      // Cari nomor urutan tertinggi yang sudah ada di database untuk bulan & tahun ini
+      const matchingSales = sales.filter(item => item.no_penjualan && item.no_penjualan.startsWith(prefix));
+      let maxSeq = 0;
+      matchingSales.forEach(item => {
+        const parts = item.no_penjualan!.split('/');
+        const seqStr = parts[parts.length - 1];
+        const seqNum = parseInt(seqStr, 10);
+        if (!isNaN(seqNum) && seqNum > maxSeq) {
+          maxSeq = seqNum;
+        }
+      });
+      const urutan = String(maxSeq + 1).padStart(4, '0');
+      saleData.no_penjualan = `${prefix}${urutan}`;
     }
 
     // Strip virtual/joined fields

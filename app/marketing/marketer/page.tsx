@@ -19,6 +19,8 @@ export default function MarketerPage() {
     marketer_type_id: '',
     no_hp: '',
     email: '',
+    bank_rekening: '',
+    no_rekening: '',
     is_active: true,
   });
 
@@ -28,6 +30,8 @@ export default function MarketerPage() {
       marketer_type_id: marketerTypes[0]?.id || '',
       no_hp: '',
       email: '',
+      bank_rekening: '',
+      no_rekening: '',
       is_active: true,
     });
     setEditingMarketer(null);
@@ -45,6 +49,8 @@ export default function MarketerPage() {
       marketer_type_id: m.marketer_type_id || marketerTypes[0]?.id || '',
       no_hp: m.no_hp || '',
       email: m.email || '',
+      bank_rekening: m.bank_rekening || '',
+      no_rekening: m.no_rekening || '',
       is_active: m.is_active ?? true,
     });
     setIsModalOpen(true);
@@ -53,7 +59,7 @@ export default function MarketerPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nama || !formData.no_hp) return;
-    
+
     if (editingMarketer) {
       await updateMarketerData(editingMarketer.id, formData);
     } else {
@@ -85,6 +91,15 @@ export default function MarketerPage() {
     { header: 'Kategori Marketer', accessorKey: (r) => r.marketer_type_nama || '-', sortable: true },
     { header: 'No. HP / WA', accessorKey: 'no_hp' },
     { header: 'Email', accessorKey: (r) => r.email || '-' },
+    {
+      header: 'Rekening',
+      accessorKey: (r) => (
+        <div className="flex flex-col">
+          <span className="text-slate-700">{r.bank_rekening || '-'}</span>
+          <span className="text-xs text-slate-400 font-mono">{r.no_rekening || '-'}</span>
+        </div>
+      ),
+    },
     {
       header: 'Unit Ditangani',
       accessorKey: (r) => <span className="font-bold text-blue-600">{r.units_handled || 0} unit</span>,
@@ -200,6 +215,29 @@ export default function MarketerPage() {
               className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="marketer@email.com"
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Nama Bank</label>
+              <input
+                type="text"
+                value={formData.bank_rekening}
+                onChange={(e) => setFormData({ ...formData, bank_rekening: e.target.value })}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Contoh: BCA, Mandiri, BRI"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Nomor Rekening</label>
+              <input
+                type="text"
+                value={formData.no_rekening}
+                onChange={(e) => setFormData({ ...formData, no_rekening: e.target.value.replace(/\D/g, '') })}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Untuk pencairan fee marketer"
+              />
+            </div>
           </div>
 
           {editingMarketer && (
