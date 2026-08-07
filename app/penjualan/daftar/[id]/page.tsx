@@ -6,9 +6,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useData } from '@/lib/data-context';
 import { createClient } from '@/lib/sql/client';
-import { ChevronRight, Settings, Printer, Phone, Upload, Eye, FileText, CheckCircle, Clock, Edit3, Trash2, Wallet, Landmark, XCircle } from 'lucide-react';
+import { ChevronRight, Settings, Printer, Phone, Upload, Eye, FileText, CheckCircle, Clock, Edit3, Trash2, Wallet, Landmark, XCircle, Plus } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
-import { SaleAdditionalCost, SalePayment, SaleBillingLetter, SaleStepHistory, SaleKprSubmission } from '@/types';
+import { SaleAdditionalCost, SalePayment, SaleBillingLetter, SaleStepHistory, SaleKprSubmission, MarketingFeeDisbursement } from '@/types';
 import { CetakSerahTerimaKunciForm } from '@/components/penjualan/forms/CetakSerahTerimaKunciForm';
 import { CetakSuratKomplenForm } from '@/components/penjualan/forms/CetakSuratKomplenForm';
 import { PindahUnitForm } from '@/components/penjualan/forms/PindahUnitForm';
@@ -76,7 +76,7 @@ function computeSisaTagihan(
 
 export default function DetailPenjualanPage() {
   const { id } = useParams() as { id: string };
-  const { sales, customers, units, marketers, locations, blocks, banks, currentUser, salesSteps, certificateSteps, refresh, salePayments } = useData();
+  const { sales, customers, units, marketers, locations, blocks, banks, currentUser, salesSteps, certificateSteps, refresh, salePayments, cashBankAccounts } = useData();
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
@@ -93,24 +93,27 @@ export default function DetailPenjualanPage() {
   const [billingLetters, setBillingLetters] = useState<SaleBillingLetter[]>([]);
   const [stepHistory, setStepHistory] = useState<SaleStepHistory[]>([]);
   const [kprSubmissions, setKprSubmissions] = useState<SaleKprSubmission[]>([]);
+  const [marketingDisbursements, setMarketingDisbursements] = useState<MarketingFeeDisbursement[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
 
   const loadExtra = useCallback(async () => {
     if (!id) return;
     setLoadingExtra(true);
     try {
-      const [acRes, payRes, billRes, histRes, kprRes] = await Promise.all([
+      const [acRes, payRes, billRes, histRes, kprRes, mfRes] = await Promise.all([
         supabase.from('sale_additional_costs').select('*').eq('sale_id', id),
         supabase.from('sale_payments').select('*').eq('sale_id', id).order('tanggal', { ascending: true }),
         supabase.from('sale_billing_letters').select('*').eq('sale_id', id),
         supabase.from('sale_step_history').select('*, users(nama)').eq('sale_id', id).order('created_at', { ascending: false }),
         supabase.from('sale_kpr_submissions').select('*').eq('sale_id', id).order('created_at', { ascending: false }),
+        supabase.from('marketing_fee_disbursements').select('*').eq('sale_id', id).order('tanggal', { ascending: true }),
       ]);
 
       if (acRes.data) setAdditionalCosts(acRes.data);
       if (payRes.data) setPayments(payRes.data);
       if (billRes.data) setBillingLetters(billRes.data);
       if (kprRes.data) setKprSubmissions(kprRes.data);
+      if (mfRes.data) setMarketingDisbursements(mfRes.data);
       if (histRes.data) {
         setStepHistory(histRes.data.map((h: any) => ({
           ...h,
@@ -497,19 +500,49 @@ export default function DetailPenjualanPage() {
     }
   };
 
+  const [editingProgresId, setEditingProgresId] = useState<string | null>(null);
+
+  const openProgresModal = () => {
+    setEditingProgresId(null);
+    setProgresForm({ status: '', keterangan: '' });
+    setShowProgresModal(true);
+  };
+
+  const openEditProgresModal = (hist: SaleStepHistory) => {
+    setEditingProgresId(hist.id);
+    setProgresForm({
+      status: hist.status,
+      keterangan: hist.keterangan || '',
+    });
+    setShowProgresModal(true);
+  };
+
   const handleSaveProgres = async () => {
     if (!progresForm.status) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from('sale_step_history').insert({
+      const payload = {
         sale_id: id,
         jenis_step: activeTab as any,
         status: progresForm.status,
         keterangan: progresForm.keterangan || '',
         changed_by: currentUser?.id
-      });
-      if (error) throw error;
+      };
 
+      if (editingProgresId) {
+        const { error } = await supabase
+          .from('sale_step_history')
+          .update(payload)
+          .eq('id', editingProgresId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('sale_step_history')
+          .insert(payload);
+        if (error) throw error;
+      }
+
+      // Update unit status if it's penjualan/sertifikat
       if (activeTab === 'penjualan' && sale?.unit_id) {
         const selectedStep = salesSteps.find(s => s.nama_step === progresForm.status);
         if (selectedStep) {
@@ -525,11 +558,113 @@ export default function DetailPenjualanPage() {
       alert('Progres berhasil disimpan.');
       setShowProgresModal(false);
       setProgresForm({ status: '', keterangan: '' });
+      setEditingProgresId(null);
       await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || 'Gagal menyimpan progres.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteProgres = async (histId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus data progres ini?')) return;
+    try {
+      const { error } = await supabase
+        .from('sale_step_history')
+        .delete()
+        .eq('id', histId);
+      if (error) throw error;
+      alert('Data progres berhasil dihapus.');
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus progres.');
+    }
+  };
+
+  // --- Marketing Fee Disbursements CRUD ---
+  const [showMarketingFeeModal, setShowMarketingFeeModal] = useState(false);
+  const [editingMarketingFeeId, setEditingMarketingFeeId] = useState<string | null>(null);
+  const [marketingFeeForm, setMarketingFeeForm] = useState({
+    tanggal: new Date().toISOString().slice(0, 10),
+    rekening: '',
+    nominal: '',
+    keterangan: '',
+  });
+
+  const openMarketingFeeModal = () => {
+    setEditingMarketingFeeId(null);
+    setMarketingFeeForm({
+      tanggal: new Date().toISOString().slice(0, 10),
+      rekening: '',
+      nominal: '',
+      keterangan: '',
+    });
+    setShowMarketingFeeModal(true);
+  };
+
+  const openEditMarketingFeeModal = (mf: MarketingFeeDisbursement) => {
+    setEditingMarketingFeeId(mf.id);
+    setMarketingFeeForm({
+      tanggal: mf.tanggal,
+      rekening: mf.rekening || '',
+      nominal: String(mf.nominal).replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+      keterangan: mf.keterangan || '',
+    });
+    setShowMarketingFeeModal(true);
+  };
+
+  const handleSaveMarketingFee = async () => {
+    if (!marketingFeeForm.rekening || !marketingFeeForm.nominal) {
+      alert('Semua field bertanda * wajib diisi!');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        sale_id: id,
+        tanggal: marketingFeeForm.tanggal,
+        rekening: marketingFeeForm.rekening,
+        nominal: Number(marketingFeeForm.nominal.replace(/\D/g, '')),
+        keterangan: marketingFeeForm.keterangan || '',
+      };
+
+      if (editingMarketingFeeId) {
+        const { error } = await supabase
+          .from('marketing_fee_disbursements')
+          .update(payload)
+          .eq('id', editingMarketingFeeId);
+        if (error) throw error;
+        alert('Pencairan berhasil diperbarui.');
+      } else {
+        const { error } = await supabase
+          .from('marketing_fee_disbursements')
+          .insert(payload);
+        if (error) throw error;
+        alert('Pencairan berhasil ditambahkan.');
+      }
+
+      setShowMarketingFeeModal(false);
+      await loadExtra();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menyimpan pencairan.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteMarketingFee = async (mfId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus data pencairan ini?')) return;
+    try {
+      const { error } = await supabase
+        .from('marketing_fee_disbursements')
+        .delete()
+        .eq('id', mfId);
+      if (error) throw error;
+      alert('Data pencairan berhasil dihapus.');
+      await loadExtra();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus pencairan.');
     }
   };
 
@@ -867,10 +1002,18 @@ export default function DetailPenjualanPage() {
               )}
               {(activeTab === 'penjualan' || activeTab === 'sertifikat' || activeTab === 'posisi_sertifikat') && (
                 <button
-                  onClick={() => setShowProgresModal(true)}
+                  onClick={openProgresModal}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
                 >
                   + Input Progres
+                </button>
+              )}
+              {activeTab === 'marketing_fee' && (
+                <button
+                  onClick={openMarketingFeeModal}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
+                >
+                  + Input Pencairan Baru
                 </button>
               )}
             </div>
@@ -1125,6 +1268,90 @@ export default function DetailPenjualanPage() {
                   </div>
                 </div>
               </div>
+            ) : activeTab === 'marketing_fee' ? (
+              <div className="space-y-6">
+                {/* Summary Marketing Fee */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-center">
+                    <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Marketing Fee</p>
+                    <p className="text-xl font-bold text-slate-800">{formatRupiah(sale.fee_marketer || 0)}</p>
+                  </div>
+                  <div className="bg-emerald-50 p-4 rounded-md border border-emerald-200 text-center">
+                    <p className="text-xs font-semibold text-emerald-600 mb-1 uppercase tracking-wider font-bold">Sudah Cair</p>
+                    <p className="text-xl font-bold text-emerald-700">
+                      {formatRupiah(marketingDisbursements.reduce((sum, item) => sum + (item.nominal || 0), 0))}
+                    </p>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-md border border-red-200 text-center">
+                    <p className="text-xs font-semibold text-red-600 mb-1 uppercase tracking-wider font-bold">Sisa</p>
+                    <p className="text-xl font-bold text-red-700">
+                      {formatRupiah(Math.max(0, (sale.fee_marketer || 0) - marketingDisbursements.reduce((sum, item) => sum + (item.nominal || 0), 0)))}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Table of Disbursements */}
+                <div>
+                  <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-teal-600" /> Riwayat Pencairan
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left border border-slate-200">
+                      <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-2 w-12 text-center">No</th>
+                          <th className="px-4 py-2 w-32">Tanggal</th>
+                          <th className="px-4 py-2">Nominal</th>
+                          <th className="px-4 py-2">Uang diambil dari</th>
+                          <th className="px-4 py-2">Keterangan</th>
+                          <th className="px-4 py-2 w-28 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {marketingDisbursements.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="text-center py-4 text-slate-500">
+                              Belum ada riwayat pencairan marketing fee.
+                            </td>
+                          </tr>
+                        ) : (
+                          marketingDisbursements.map((mf, i) => (
+                            <tr key={mf.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-2 text-center">{i + 1}</td>
+                              <td className="px-4 py-2">
+                                {new Date(mf.tanggal).toLocaleDateString('id-ID')}
+                              </td>
+                              <td className="px-4 py-2 font-semibold text-emerald-600">
+                                {formatRupiah(mf.nominal)}
+                              </td>
+                              <td className="px-4 py-2">{mf.rekening || '-'}</td>
+                              <td className="px-4 py-2 text-xs text-slate-600">{mf.keterangan || '-'}</td>
+                              <td className="px-4 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    onClick={() => openEditMarketingFeeModal(mf)}
+                                    className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
+                                    title="Edit"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteMarketingFee(mf.id)}
+                                    className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
+                                    title="Hapus"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="space-y-4">
                 <div className="border-l-2 border-slate-200 ml-3 pl-4 space-y-6 mt-4">
@@ -1134,9 +1361,27 @@ export default function DetailPenjualanPage() {
                     stepHistory.filter(h => h.jenis_step === activeTab).map((hist) => (
                       <div key={hist.id} className="relative">
                         <div className="absolute -left-[23px] top-1 w-3 h-3 bg-blue-500 rounded-full border-[3px] border-white shadow-sm" />
-                        <div className="mb-0.5 flex items-center gap-2">
-                          <span className="font-bold text-slate-800 text-sm">{hist.status}</span>
-                          <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">{new Date(hist.created_at).toLocaleString('id-ID')}</span>
+                        <div className="mb-0.5 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800 text-sm">{hist.status}</span>
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">{new Date(hist.created_at).toLocaleString('id-ID')}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => openEditProgresModal(hist)}
+                              className="p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
+                              title="Edit Progres"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProgres(hist.id)}
+                              className="p-1 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded transition-colors"
+                              title="Hapus Progres"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                         <p className="text-sm text-slate-600">{hist.keterangan || 'Tidak ada keterangan tambahan.'}</p>
                         <p className="text-xs text-slate-400 mt-1 flex items-center gap-1"><Clock className="w-3 h-3" /> Diupdate oleh: {hist.changed_by_nama}</p>
@@ -1698,6 +1943,86 @@ export default function DetailPenjualanPage() {
 
             <div className="flex justify-end mt-6 border-t pt-4">
               <button onClick={() => setShowDetailKonsumenModal(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded font-semibold text-sm">Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Input / Edit Pencairan Marketing Fee */}
+      {showMarketingFeeModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4 border-b pb-2">
+              <h3 className="font-bold text-slate-800 text-lg">
+                {editingMarketingFeeId ? 'Edit Pencairan Marketing Fee' : 'Form Input Cicilan'}
+              </h3>
+              <button
+                onClick={() => { setShowMarketingFeeModal(false); setEditingMarketingFeeId(null); }}
+                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Tanggal *</label>
+                <input
+                  type="date"
+                  value={marketingFeeForm.tanggal}
+                  onChange={e => setMarketingFeeForm({ ...marketingFeeForm, tanggal: e.target.value })}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Uang diambil dari *</label>
+                <select
+                  value={marketingFeeForm.rekening}
+                  onChange={e => setMarketingFeeForm({ ...marketingFeeForm, rekening: e.target.value })}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">-- Pilih Rekening --</option>
+                  {cashBankAccounts?.map(r => (
+                    <option key={r.id} value={r.nama_akun}>{r.nama_akun} {r.no_rekening ? `(${r.no_rekening})` : ''}</option>
+                  ))}
+                  {REKENING_OPTIONS.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Sebesar (Rp) *</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 1.000.000"
+                  value={marketingFeeForm.nominal}
+                  onChange={e => setMarketingFeeForm({ ...marketingFeeForm, nominal: formatRibuan(e.target.value) })}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Keterangan</label>
+                <textarea
+                  placeholder="Catatan tambahan (opsional)..."
+                  value={marketingFeeForm.keterangan}
+                  onChange={e => setMarketingFeeForm({ ...marketingFeeForm, keterangan: e.target.value })}
+                  rows={2}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button
+                onClick={() => { setShowMarketingFeeModal(false); setEditingMarketingFeeId(null); }}
+                className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveMarketingFee}
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
+              >
+                {saving ? 'Menyimpan...' : 'Simpan'}
+              </button>
             </div>
           </div>
         </div>

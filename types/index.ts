@@ -399,3 +399,13 @@ export interface CompanySettings {
   npwp?: string;
   created_at?: string;
 }
+
+export interface MarketingFeeDisbursement {
+  id: string;
+  sale_id: string;
+  tanggal: string;
+  nominal: number;
+  rekening?: string;
+  keterangan?: string;
+  created_at?: string;
+}

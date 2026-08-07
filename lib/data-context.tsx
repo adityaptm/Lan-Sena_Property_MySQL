@@ -234,9 +234,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     try {
       // Ambil current user dari session cookie via API
       const userRes = await fetch('/api/auth/user');
-      const userJson = await userRes.json();
+      let userJson: any = { user: null };
+      
+      if (userRes.ok && userRes.headers.get('content-type')?.includes('application/json')) {
+        try {
+          userJson = await userRes.json();
+        } catch (err) {
+          console.warn('Failed to parse user JSON', err);
+        }
+      }
 
-      if (!userJson.user) {
+      if (!userJson?.user) {
         // Belum login (atau session sudah tidak valid) — jangan lanjut
         // memanggil /api/db sama sekali, supaya tidak muncul error
         // "Unauthorized: Session missing" di console pada halaman publik/login.
@@ -263,7 +271,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(batchBody),
       });
-      const results = await response.json();
 
       if (!response.ok) {
         // Kalau session ternyata expired/invalid di tengah jalan (401),
@@ -273,7 +280,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
           return;
         }
-        throw new Error(results.error || 'Failed to fetch batch data');
+        let errMsg = 'Failed to fetch batch data';
+        if (response.headers.get('content-type')?.includes('application/json')) {
+          try {
+            const errJson = await response.json();
+            errMsg = errJson.error || errMsg;
+          } catch {}
+        }
+        throw new Error(errMsg);
+      }
+
+      let results: any = [];
+      if (response.headers.get('content-type')?.includes('application/json')) {
+        try {
+          results = await response.json();
+        } catch (err) {
+          throw new Error('Failed to parse database batch response as JSON');
+        }
+      } else {
+        throw new Error(`Server returned non-JSON response (status: ${response.status})`);
       }
 
       const dataMap: Record<string, any[]> = {};

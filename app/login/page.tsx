@@ -1,23 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/sql/client';
+import { useData } from '@/lib/data-context';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { currentUser, loading: authLoading, refresh } = useData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const supabase = createClient();
 
-  const handleAuth = async (e: React.FormEvent, isSignUp: boolean) => {
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      router.replace('/');
+    }
+  }, [currentUser, authLoading, router]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       setErrorMsg('Email dan kata sandi harus diisi');
@@ -25,34 +31,13 @@ export default function LoginPage() {
     }
     setLoading(true);
     setErrorMsg('');
-    setSuccessMsg('');
     try {
-      if (isSignUp) {
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
-        if (signUpError) {
-          setErrorMsg(signUpError.message === 'Email signups are disabled'
-            ? 'Pendaftaran dinonaktifkan. Buka Supabase → Auth → Configuration → aktifkan "Allow new users to sign up".'
-            : signUpError.message);
-        } else {
-          // Auto-login setelah daftar (bypass email confirmation)
-          const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
-          if (loginErr) {
-            setSuccessMsg('Akun dibuat! Sekarang silakan tekan Login.');
-          } else {
-            window.location.href = '/';
-          }
-        }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setErrorMsg(error.message || 'Email atau password salah.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          setErrorMsg(error.message === 'Email not confirmed'
-            ? 'Email belum dikonfirmasi. Buka Supabase → Auth → Email → matikan "Confirm email".'
-            : error.message === 'Invalid login credentials'
-            ? 'Email atau password salah.'
-            : error.message);
-        } else {
-          window.location.href = '/';
-        }
+        await refresh();
+        window.location.href = '/';
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Terjadi kesalahan sistem');
@@ -60,6 +45,7 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
 
 
   return (
@@ -84,12 +70,6 @@ export default function LoginPage() {
           </div>
         )}
 
-        {successMsg && (
-          <div className="mb-4 p-3 rounded-md bg-green-50 border border-green-200 text-green-700 text-sm text-center">
-            {successMsg}
-          </div>
-        )}
-
         <div className="relative my-6 text-center">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-200" />
@@ -99,17 +79,17 @@ export default function LoginPage() {
           </span>
         </div>
 
-        {/* Email Fallback Form */}
-          <form className="space-y-4">
+        {/* Email Form */}
+        <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Email Address
+              Email Address / ID Login
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
-                type="email"
-                placeholder="admin@lansenaproperty.com"
+                type="text"
+                placeholder="admin@lansenaproperty.com atau admin"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -146,8 +126,7 @@ export default function LoginPage() {
 
           <div className="pt-2">
             <button
-              type="button"
-              onClick={(e) => handleAuth(e, false)}
+              type="submit"
               disabled={loading}
               className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
             >
