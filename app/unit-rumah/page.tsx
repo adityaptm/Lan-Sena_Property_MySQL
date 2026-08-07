@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Unit } from '@/types';
 import { Plus, Edit3, Trash2, Home, Settings, Layers } from 'lucide-react';
 import { formatRupiah, parseRupiah } from '@/lib/format';
+import { AddressSelector } from '@/components/ui/AddressSelector';
 
 export default function UnitRumahPage() {
   const {
@@ -62,7 +63,7 @@ export default function UnitRumahPage() {
     location_id: '',
     block_id: '',
     block_nama: '',
-    unit_type_nama: '30/60',
+    unit_type_nama: '',
     kategori_kpr: 'Subsidi',
     sales_step_nama: 'Kantor',
     certificate_step_id: '',
@@ -83,6 +84,10 @@ export default function UnitRumahPage() {
     location_id: '',
     alamat: '',
     kode_lokasi: '',
+    kampung_dusun: '',
+    rt: '',
+    rw: '',
+    kelurahan_id: null as string | null,
   });
 
   const openAddUnitModal = () => {
@@ -92,7 +97,7 @@ export default function UnitRumahPage() {
       location_id: locations[0]?.id || '',
       block_id: '',
       block_nama: '',
-      unit_type_nama: '30/60',
+      unit_type_nama: '',
       kategori_kpr: 'Subsidi',
       sales_step_nama: 'Kantor',
       certificate_step_id: certificateSteps[0]?.id || '',
@@ -128,7 +133,10 @@ export default function UnitRumahPage() {
 
   const handleUnitSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!unitForm.no_unit) return;
+    if (!unitForm.no_unit || !unitForm.location_id || !unitForm.block_id || !unitForm.unit_type_nama) {
+      alert('Nomor Unit, Perumahan, Blok, dan Tipe Unit wajib diisi.');
+      return;
+    }
 
     if (editingUnitId) {
       updateUnit(editingUnitId, unitForm);
@@ -150,14 +158,11 @@ export default function UnitRumahPage() {
         } else if (masterSubTab === 'priceItem') {
           await updatePriceItem(editingMasterId, { nama_item: masterFormText, nominal: masterFormExtra.nominal });
         } else if (masterSubTab === 'location') {
-          await updateLocation(editingMasterId, { nama_lokasi: masterFormText, alamat: masterFormExtra.alamat || masterFormText, kode_lokasi: masterFormExtra.kode_lokasi });
+          await updateLocation(editingMasterId, { nama_lokasi: masterFormText, alamat: masterFormExtra.alamat || masterFormText, kode_lokasi: masterFormExtra.kode_lokasi, kampung_dusun: masterFormExtra.kampung_dusun, rt: masterFormExtra.rt, rw: masterFormExtra.rw, kelurahan_id: masterFormExtra.kelurahan_id || undefined });
         } else if (masterSubTab === 'block') {
           await updateBlock(editingMasterId, { location_id: masterFormExtra.location_id, nama_blok: masterFormText });
         } else if (masterSubTab === 'unitType') {
-          const typeMatch = masterFormText.match(/(\d+)\s*\/\s*(\d+)/);
-          const lb = typeMatch ? parseInt(typeMatch[1]) : masterFormExtra.luas_bangunan;
-          const lt = typeMatch ? parseInt(typeMatch[2]) : masterFormExtra.luas_tanah;
-          await updateUnitType(editingMasterId, { nama_type: masterFormText, luas_tanah: lt, luas_bangunan: lb });
+          await updateUnitType(editingMasterId, { nama_type: masterFormText, luas_tanah: masterFormExtra.luas_tanah, luas_bangunan: masterFormExtra.luas_bangunan });
         } else if (masterSubTab === 'subsidyType') {
           await updateSubsidyType(editingMasterId, { nama_type: masterFormText });
         }
@@ -171,16 +176,13 @@ export default function UnitRumahPage() {
           await addPriceItem({ nama_item: masterFormText, nominal: masterFormExtra.nominal });
         } else if (masterSubTab === 'location') {
           if (!masterFormText) return;
-          await addLocation({ nama_lokasi: masterFormText, alamat: masterFormExtra.alamat || masterFormText, kode_lokasi: masterFormExtra.kode_lokasi });
+          await addLocation({ nama_lokasi: masterFormText, alamat: masterFormExtra.alamat || masterFormText, kode_lokasi: masterFormExtra.kode_lokasi, kampung_dusun: masterFormExtra.kampung_dusun, rt: masterFormExtra.rt, rw: masterFormExtra.rw, kelurahan_id: masterFormExtra.kelurahan_id || undefined });
         } else if (masterSubTab === 'block') {
           if (!masterFormText || !masterFormExtra.location_id) { alert('Pilih Perumahan terlebih dahulu!'); return; }
           await addBlock({ location_id: masterFormExtra.location_id, nama_blok: masterFormText });
         } else if (masterSubTab === 'unitType') {
           if (!masterFormText) return;
-          const typeMatch = masterFormText.match(/(\d+)\s*\/\s*(\d+)/);
-          const lb = typeMatch ? parseInt(typeMatch[1]) : masterFormExtra.luas_bangunan;
-          const lt = typeMatch ? parseInt(typeMatch[2]) : masterFormExtra.luas_tanah;
-          await addUnitType({ nama_type: masterFormText, luas_tanah: lt, luas_bangunan: lb });
+          await addUnitType({ nama_type: masterFormText, luas_tanah: masterFormExtra.luas_tanah, luas_bangunan: masterFormExtra.luas_bangunan });
         } else if (masterSubTab === 'subsidyType') {
           if (!masterFormText) return;
           await addSubsidyType({ nama_type: masterFormText, keterangan: 'Skema pembiayaan' });
@@ -190,7 +192,7 @@ export default function UnitRumahPage() {
       setIsMasterModalOpen(false);
       setEditingMasterId(null);
       setMasterFormText('');
-      setMasterFormExtra({ luas_tanah: 72, luas_bangunan: 36, nominal: 10000000, location_id: '', alamat: '', kode_lokasi: '' });
+      setMasterFormExtra({ luas_tanah: 72, luas_bangunan: 36, nominal: 10000000, location_id: '', alamat: '', kode_lokasi: '', kampung_dusun: '', rt: '', rw: '', kelurahan_id: null });
     } catch (err: any) {
       alert('Gagal menyimpan master data: ' + err.message);
     }
@@ -207,7 +209,7 @@ export default function UnitRumahPage() {
       setMasterFormExtra(prev => ({ ...prev, nominal: item.nominal || 0 }));
     } else if (tab === 'location') {
       setMasterFormText(item.nama_lokasi || '');
-      setMasterFormExtra(prev => ({ ...prev, alamat: item.alamat || '', kode_lokasi: item.kode_lokasi || '' }));
+      setMasterFormExtra(prev => ({ ...prev, alamat: item.alamat || '', kode_lokasi: item.kode_lokasi || '', kampung_dusun: item.kampung_dusun || '', rt: item.rt || '', rw: item.rw || '', kelurahan_id: item.kelurahan_id || null }));
     } else if (tab === 'block') {
       setMasterFormText(item.nama_blok || '');
       setMasterFormExtra(prev => ({ ...prev, location_id: item.location_id || '' }));
@@ -342,7 +344,7 @@ export default function UnitRumahPage() {
                 onClick={() => {
                   setMasterSubTab('location');
                   setMasterFormText('');
-                  setMasterFormExtra({ luas_tanah: 72, luas_bangunan: 36, nominal: 10000000, location_id: '', alamat: '', kode_lokasi: '' });
+                  setMasterFormExtra({ luas_tanah: 72, luas_bangunan: 36, nominal: 10000000, location_id: '', alamat: '', kode_lokasi: '', kampung_dusun: '', rt: '', rw: '', kelurahan_id: null });
                   setIsMasterModalOpen(true);
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-xs transition shadow-sm"
@@ -354,7 +356,7 @@ export default function UnitRumahPage() {
                 onClick={() => {
                   setMasterSubTab('block');
                   setMasterFormText('');
-                  setMasterFormExtra({ luas_tanah: 72, luas_bangunan: 36, nominal: 10000000, location_id: locations[0]?.id || '', alamat: '', kode_lokasi: '' });
+                  setMasterFormExtra({ luas_tanah: 72, luas_bangunan: 36, nominal: 10000000, location_id: locations[0]?.id || '', alamat: '', kode_lokasi: '', kampung_dusun: '', rt: '', rw: '', kelurahan_id: null });
                   setIsMasterModalOpen(true);
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-md text-xs transition shadow-sm"
@@ -429,7 +431,7 @@ export default function UnitRumahPage() {
               onClick={() => {
                 setEditingMasterId(null);
                 setMasterFormText('');
-                setMasterFormExtra({ luas_tanah: 72, luas_bangunan: 36, nominal: 10000000, location_id: locations[0]?.id || '', alamat: '', kode_lokasi: '' });
+                setMasterFormExtra({ luas_tanah: 72, luas_bangunan: 36, nominal: 10000000, location_id: locations[0]?.id || '', alamat: '', kode_lokasi: '', kampung_dusun: '', rt: '', rw: '', kelurahan_id: null });
                 setIsMasterModalOpen(true);
               }}
               className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-blue-600 rounded-md text-xs font-bold transition border border-slate-300"
@@ -751,18 +753,41 @@ export default function UnitRumahPage() {
                 onChange={(e) => setUnitForm({ ...unitForm, unit_type_nama: e.target.value })}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
               >
-                <option value="30/60">30/60</option>
-                <option value="36/72">36/72</option>
-                <option value="45/78">45/78</option>
-                <option value="70/70">70/70</option>
-                <option value="67/67">67/67</option>
-                <option value="45/54">45/54</option>
-                <option value="Ruko">Ruko</option>
+                <option value="">-- Pilih Tipe Unit --</option>
+                {unitTypes.map((t) => (
+                  <option key={t.id} value={t.nama_type}>
+                    {t.nama_type}
+                  </option>
+                ))}
               </select>
             </div>
-            <div>
-              {/* Spacer or any other field */}
-            </div>
+            {(() => {
+              const selectedType = unitTypes.find(t => t.nama_type === unitForm.unit_type_nama);
+              return (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Luas Tanah (m²)</label>
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={selectedType ? selectedType.luas_tanah : '-'}
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-md text-sm text-slate-500 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Luas Bangunan (m²)</label>
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={selectedType ? selectedType.luas_bangunan : '-'}
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-md text-sm text-slate-500 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -887,6 +912,21 @@ export default function UnitRumahPage() {
                   maxLength={5}
                 />
               </div>
+              <AddressSelector
+                kelurahanId={masterFormExtra.kelurahan_id}
+                kampungDusun={masterFormExtra.kampung_dusun}
+                rt={masterFormExtra.rt}
+                rw={masterFormExtra.rw}
+                onChange={(val) => {
+                  setMasterFormExtra({
+                    ...masterFormExtra,
+                    kelurahan_id: val.kelurahanId,
+                    kampung_dusun: val.kampungDusun,
+                    rt: val.rt,
+                    rw: val.rw,
+                  });
+                }}
+              />
             </>
           )}
 
@@ -908,48 +948,74 @@ export default function UnitRumahPage() {
             </div>
           )}
 
-          {/* UnitType: preset dropdown + luas manual untuk Ruko */}
+          {/* UnitType: preset dropdown + decoupled inputs for luas_tanah & luas_bangunan */}
           {masterSubTab === 'unitType' && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Pilih Tipe *</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Preset Tipe (Opsional)</label>
                 <select
-                  required
-                  value={masterFormText}
                   onChange={(e) => {
                     const val = e.target.value;
+                    if (!val) return;
                     setMasterFormText(val);
                     const m = val.match(/(\d+)\s*\/\s*(\d+)/);
-                    if (m) setMasterFormExtra({ ...masterFormExtra, luas_bangunan: parseInt(m[1]), luas_tanah: parseInt(m[2]) });
+                    if (m) {
+                      setMasterFormExtra({
+                        ...masterFormExtra,
+                        luas_bangunan: parseInt(m[1]),
+                        luas_tanah: parseInt(m[2]),
+                      });
+                    } else if (val === 'Ruko') {
+                      setMasterFormExtra({
+                        ...masterFormExtra,
+                        luas_bangunan: 60,
+                        luas_tanah: 60,
+                      });
+                    }
                   }}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-500 focus:outline-none"
                 >
-                  <option value="">-- Pilih Tipe --</option>
-                  <option value="30/60">30/60</option>
-                  <option value="36/72">36/72</option>
-                  <option value="45/78">45/78</option>
-                  <option value="70/70">70/70</option>
-                  <option value="67/67">67/67</option>
-                  <option value="45/54">45/54</option>
-                  <option value="Ruko">Ruko</option>
+                  <option value="">-- Pilih Preset (Opsional) --</option>
+                  <option value="30/60">Preset 30/60 (LB 30, LT 60)</option>
+                  <option value="36/72">Preset 36/72 (LB 36, LT 72)</option>
+                  <option value="45/78">Preset 45/78 (LB 45, LT 78)</option>
+                  <option value="70/70">Preset 70/70 (LB 70, LT 70)</option>
+                  <option value="67/67">Preset 67/67 (LB 67, LT 67)</option>
+                  <option value="45/54">Preset 45/54 (LB 45, LT 54)</option>
+                  <option value="Ruko">Preset Ruko (LB 60, LT 60)</option>
                 </select>
               </div>
-              {masterFormText === 'Ruko' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Luas Tanah (m²)</label>
-                    <input type="number" value={masterFormExtra.luas_tanah}
-                      onChange={(e) => setMasterFormExtra({ ...masterFormExtra, luas_tanah: Number(e.target.value) })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Luas Bangunan (m²)</label>
-                    <input type="number" value={masterFormExtra.luas_bangunan}
-                      onChange={(e) => setMasterFormExtra({ ...masterFormExtra, luas_bangunan: Number(e.target.value) })}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:outline-none" />
-                  </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Nama Tipe *</label>
+                <input
+                  type="text"
+                  required
+                  value={masterFormText}
+                  onChange={(e) => setMasterFormText(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
+                  placeholder="Contoh: 30/60, Ruko 2 Lantai, dll."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Luas Tanah (m²)</label>
+                  <input
+                    type="number"
+                    value={masterFormExtra.luas_tanah}
+                    onChange={(e) => setMasterFormExtra({ ...masterFormExtra, luas_tanah: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:outline-none"
+                  />
                 </div>
-              )}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Luas Bangunan (m²)</label>
+                  <input
+                    type="number"
+                    value={masterFormExtra.luas_bangunan}
+                    onChange={(e) => setMasterFormExtra({ ...masterFormExtra, luas_bangunan: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:outline-none"
+                  />
+                </div>
+              </div>
             </div>
           )}
 

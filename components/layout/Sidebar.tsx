@@ -23,9 +23,10 @@ import {
 } from 'lucide-react';
 import { useData } from '@/lib/data-context';
 import type { UserRole } from '@/types';
+import { canAccessModule, ModuleName } from '@/lib/permissions';
 
 interface NavGroup {
-  title: string;
+  title: ModuleName;
   icon: React.ElementType;
   roles?: UserRole[];
   items: {
@@ -202,6 +203,10 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
 
         {/* Dynamic Groups */}
         {NAV_MENU.map((group) => {
+          if (!canAccessModule(currentUser?.role, group.title)) {
+            return null;
+          }
+
           const Icon = group.icon;
           const isOpen = !!openGroups[group.title];
           const hasActiveItem = group.items.some((item) => isLinkActive(item.href));

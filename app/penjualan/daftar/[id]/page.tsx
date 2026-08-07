@@ -7,8 +7,10 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useData } from '@/lib/data-context';
 import { createClient } from '@/lib/sql/client';
 import { ChevronRight, Settings, Printer, Phone, Upload, Eye, FileText, CheckCircle, Clock, Edit3, Trash2, Wallet, Landmark, XCircle, Plus } from 'lucide-react';
-import { formatRupiah } from '@/lib/format';
-import { SaleAdditionalCost, SalePayment, SaleBillingLetter, SaleStepHistory, SaleKprSubmission, MarketingFeeDisbursement } from '@/types';
+import { formatRupiah, bulanKeRomawi } from '@/lib/format';
+import { FullAddress } from '@/components/ui/FullAddress';
+
+import { SaleAdditionalCost, SalePayment, SaleBillingLetter, SaleStepHistory, SaleKprSubmission, MarketingFeeDisbursement, SaleDiscount } from '@/types';
 import { CetakSerahTerimaKunciForm } from '@/components/penjualan/forms/CetakSerahTerimaKunciForm';
 import { CetakSuratKomplenForm } from '@/components/penjualan/forms/CetakSuratKomplenForm';
 import { PindahUnitForm } from '@/components/penjualan/forms/PindahUnitForm';
@@ -94,19 +96,21 @@ export default function DetailPenjualanPage() {
   const [stepHistory, setStepHistory] = useState<SaleStepHistory[]>([]);
   const [kprSubmissions, setKprSubmissions] = useState<SaleKprSubmission[]>([]);
   const [marketingDisbursements, setMarketingDisbursements] = useState<MarketingFeeDisbursement[]>([]);
+  const [discounts, setDiscounts] = useState<SaleDiscount[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
 
   const loadExtra = useCallback(async () => {
     if (!id) return;
     setLoadingExtra(true);
     try {
-      const [acRes, payRes, billRes, histRes, kprRes, mfRes] = await Promise.all([
+      const [acRes, payRes, billRes, histRes, kprRes, mfRes, discRes] = await Promise.all([
         supabase.from('sale_additional_costs').select('*').eq('sale_id', id),
         supabase.from('sale_payments').select('*').eq('sale_id', id).order('tanggal', { ascending: true }),
         supabase.from('sale_billing_letters').select('*').eq('sale_id', id),
         supabase.from('sale_step_history').select('*, users(nama)').eq('sale_id', id).order('created_at', { ascending: false }),
         supabase.from('sale_kpr_submissions').select('*').eq('sale_id', id).order('created_at', { ascending: false }),
         supabase.from('marketing_fee_disbursements').select('*').eq('sale_id', id).order('tanggal', { ascending: true }),
+        supabase.from('sale_discounts').select('*').eq('sale_id', id).order('tanggal', { ascending: true }),
       ]);
 
       if (acRes.data) setAdditionalCosts(acRes.data);
@@ -114,6 +118,7 @@ export default function DetailPenjualanPage() {
       if (billRes.data) setBillingLetters(billRes.data);
       if (kprRes.data) setKprSubmissions(kprRes.data);
       if (mfRes.data) setMarketingDisbursements(mfRes.data);
+      if (discRes.data) setDiscounts(discRes.data);
       if (histRes.data) {
         setStepHistory(histRes.data.map((h: any) => ({
           ...h,
@@ -176,6 +181,15 @@ export default function DetailPenjualanPage() {
   // Menyimpan id submission KPR yang sedang diedit. null = mode tambah baru.
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
 
+  // States untuk modal/form diskon potongan
+  const [showDiskonModal, setShowDiskonModal] = useState(false);
+  const [diskonForm, setDiskonForm] = useState({
+    tanggal: new Date().toISOString().slice(0, 10),
+    nominal: '',
+    keterangan: '',
+  });
+  const [editingDiskonId, setEditingDiskonId] = useState<string | null>(null);
+
   const [showUploadDokumenModal, setShowUploadDokumenModal] = useState(false);
   const [showDetailKonsumenModal, setShowDetailKonsumenModal] = useState(false);
   const [uploadingKtp, setUploadingKtp] = useState(false);
@@ -212,6 +226,31 @@ export default function DetailPenjualanPage() {
       await triggerRefresh();
     } catch (err: any) {
       alert(err.message || `Gagal mengupload ${type.toUpperCase()}`);
+    } finally {
+      if (type === 'ktp') setUploadingKtp(false);
+      else setUploadingKk(false);
+    }
+  };
+
+  const handleDeleteFile = async (type: 'ktp' | 'kk') => {
+    if (!customer?.id) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus file Scan ${type.toUpperCase()} milik ${customer.nama}?`)) return;
+
+    if (type === 'ktp') setUploadingKtp(true);
+    else setUploadingKk(true);
+
+    try {
+      const field = type === 'ktp' ? 'scan_ktp_url' : 'scan_kk_url';
+      const { error } = await supabase
+        .from('customers')
+        .update({ [field]: null })
+        .eq('id', customer.id);
+
+      if (error) throw error;
+      alert(`File Scan ${type.toUpperCase()} berhasil dihapus!`);
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err.message || `Gagal menghapus file ${type.toUpperCase()}`);
     } finally {
       if (type === 'ktp') setUploadingKtp(false);
       else setUploadingKk(false);
@@ -344,6 +383,78 @@ export default function DetailPenjualanPage() {
     }
   };
 
+  const openDiskonModal = () => {
+    setEditingDiskonId(null);
+    setDiskonForm({
+      tanggal: new Date().toISOString().slice(0, 10),
+      nominal: '',
+      keterangan: '',
+    });
+    setShowDiskonModal(true);
+  };
+
+  const openEditDiskonModal = (d: SaleDiscount) => {
+    setEditingDiskonId(d.id);
+    setDiskonForm({
+      tanggal: d.tanggal,
+      nominal: String(d.nominal).replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+      keterangan: d.keterangan || '',
+    });
+    setShowDiskonModal(true);
+  };
+
+  const handleSaveDiskon = async () => {
+    if (!diskonForm.tanggal || !diskonForm.nominal) {
+      alert('Tanggal dan Nominal wajib diisi.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const nominalValue = Number(diskonForm.nominal.replace(/\D/g, ''));
+      const payload = {
+        sale_id: id,
+        tanggal: diskonForm.tanggal,
+        nominal: nominalValue,
+        keterangan: diskonForm.keterangan || '',
+      };
+
+      if (editingDiskonId) {
+        const { error } = await supabase
+          .from('sale_discounts')
+          .update(payload)
+          .eq('id', editingDiskonId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('sale_discounts')
+          .insert(payload);
+        if (error) throw error;
+      }
+
+      setShowDiskonModal(false);
+      setEditingDiskonId(null);
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err?.message || 'Gagal menyimpan diskon.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteDiskon = async (diskonId: string) => {
+    if (!confirm('Yakin ingin menghapus diskon ini?')) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('sale_discounts').delete().eq('id', diskonId);
+      if (error) throw error;
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err?.message || 'Gagal menghapus diskon.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveAngsuran = async () => {
     if (!angsuranForm.tanggal || !angsuranForm.bank_tujuan || !angsuranForm.nominal || !angsuranForm.diterima_dari) {
       alert('Tanggal, Uang Masuk ke, Sebesar, dan Diterima Dari wajib diisi.');
@@ -373,8 +484,8 @@ export default function DetailPenjualanPage() {
       }
       const dateObj = new Date(angsuranForm.tanggal);
       const year = dateObj.getFullYear();
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const prefix = `INV/INCOME/${year}/${month}/`;
+      const monthRomawi = bulanKeRomawi(dateObj.getMonth() + 1);
+      const prefix = `INV/INCOME/${year}/${monthRomawi}/`;
 
       // Cari nomor urutan tertinggi yang sudah ada di database untuk bulan & tahun ini
       const matchingPayments = salePayments.filter(p => p.no_kwitansi && p.no_kwitansi.startsWith(prefix));
@@ -424,7 +535,7 @@ export default function DetailPenjualanPage() {
       const kreditAccValue = Number(approvalForm.kredit_acc.replace(/\D/g, ''));
       const kprStatusMap: Record<string, string> = {
         ACCEPTED: 'SP3K',
-        REJECTED: 'Wawancara',
+        REJECTED: 'REJECTED',
         PENDING: 'Wawancara',
       };
 
@@ -445,11 +556,32 @@ export default function DetailPenjualanPage() {
         // (supaya status KPR & kredit pengajuan di halaman ini ikut ter-update)
         const isLatest = kprSubmissions[0]?.id === editingSubmissionId;
         if (isLatest) {
-          await supabase.from('sales').update({
+          const updateFields: any = {
             bank_id: approvalForm.bank_id,
             kredit_pengajuan: kreditAccValue,
             kpr_status: kprStatusMap[approvalForm.status] || sale?.kpr_status,
-          }).eq('id', id);
+          };
+          if (approvalForm.status === 'REJECTED') {
+            updateFields.status = 'Batal';
+          }
+          await supabase.from('sales').update(updateFields).eq('id', id);
+        }
+
+        if (approvalForm.status === 'REJECTED') {
+          const kantorStep = salesSteps.find(s => s.nama_step.toLowerCase() === 'kantor');
+          if (sale?.unit_id) {
+            await supabase.from('units').update({
+              status: 'Tersedia',
+              sales_step_id: kantorStep?.id || null
+            }).eq('id', sale.unit_id);
+          }
+          await supabase.from('sale_step_history').insert({
+            sale_id: id,
+            jenis_step: 'penjualan',
+            status: 'Batal',
+            keterangan: 'KPR Ditolak oleh Bank. Transaksi dibatalkan secara otomatis.',
+            changed_by: currentUser?.id
+          });
         }
 
         setShowApprovalModal(false);
@@ -485,11 +617,32 @@ export default function DetailPenjualanPage() {
       }
 
       // Sinkronkan ke sales: bank tujuan, kredit_pengajuan & kpr_status ikut status approval terbaru
-      await supabase.from('sales').update({
+      const updateFields: any = {
         bank_id: approvalForm.bank_id,
         kredit_pengajuan: kreditAccValue,
         kpr_status: kprStatusMap[approvalForm.status] || sale?.kpr_status,
-      }).eq('id', id);
+      };
+      if (approvalForm.status === 'REJECTED') {
+        updateFields.status = 'Batal';
+      }
+      await supabase.from('sales').update(updateFields).eq('id', id);
+
+      if (approvalForm.status === 'REJECTED') {
+        const kantorStep = salesSteps.find(s => s.nama_step.toLowerCase() === 'kantor');
+        if (sale?.unit_id) {
+          await supabase.from('units').update({
+            status: 'Tersedia',
+            sales_step_id: kantorStep?.id || null
+          }).eq('id', sale.unit_id);
+        }
+        await supabase.from('sale_step_history').insert({
+          sale_id: id,
+          jenis_step: 'penjualan',
+          status: 'Batal',
+          keterangan: 'KPR Ditolak oleh Bank. Transaksi dibatalkan secara otomatis.',
+          changed_by: currentUser?.id
+        });
+      }
 
       setShowApprovalModal(false);
       await triggerRefresh();
@@ -696,7 +849,8 @@ export default function DetailPenjualanPage() {
 
   // Calculations
   const totalBiayaTambahan = additionalCosts.reduce((sum, item) => sum + (item.nominal || 0), 0);
-  const totalHargaFinal = (sale.harga_jual_awal || sale.total_harga) - (sale.potongan || 0) + totalBiayaTambahan;
+  const totalDiscounts = discounts.reduce((sum, item) => sum + (item.nominal || 0), 0);
+  const totalHargaFinal = (sale.harga_jual_awal || sale.total_harga) - (sale.potongan || 0) - totalDiscounts + totalBiayaTambahan;
   const uangMasuk = payments.reduce((sum, item) => sum + (item.nominal || 0), 0);
   const isKpr = sale.metode_bayar === 'KPR';
   const kreditAccTerbaru = kprSubmissions[0]?.kredit_acc || 0;
@@ -791,7 +945,15 @@ export default function DetailPenjualanPage() {
             </div>
             <div className="grid grid-cols-[130px_10px_1fr]">
               <span className="font-semibold text-slate-600">Domisili</span><span>:</span>
-              <span>{customer?.domisili || customer?.alamat || '-'}</span>
+              <span>
+                <FullAddress
+                  kelurahanId={customer?.kelurahan_id}
+                  kampungDusun={customer?.kampung_dusun}
+                  rt={customer?.rt}
+                  rw={customer?.rw}
+                  fallback={customer?.domisili || customer?.alamat || '-'}
+                />
+              </span>
             </div>
             <div className="grid grid-cols-[130px_10px_1fr]">
               <span className="font-semibold text-slate-600">NPWP</span><span>:</span>
@@ -799,11 +961,29 @@ export default function DetailPenjualanPage() {
             </div>
             <div className="grid grid-cols-[130px_10px_1fr]">
               <span className="font-semibold text-slate-600">Scan KTP</span><span>:</span>
-              <span>{customer?.scan_ktp_url ? <a href={customer.scan_ktp_url} target="_blank" className="text-blue-600 hover:underline">Lihat File</a> : '-'}</span>
+              <div className="flex items-center gap-2">
+                {customer?.scan_ktp_url ? (
+                  <>
+                    <a href={customer.scan_ktp_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-semibold">Lihat File</a>
+                    <button onClick={() => handleDeleteFile('ktp')} className="text-xs text-red-500 hover:underline font-medium" title="Hapus Scan KTP">(Hapus)</button>
+                  </>
+                ) : (
+                  <span className="text-slate-400">-</span>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-[130px_10px_1fr]">
               <span className="font-semibold text-slate-600">Scan KK</span><span>:</span>
-              <span>{customer?.scan_kk_url ? <a href={customer.scan_kk_url} target="_blank" className="text-blue-600 hover:underline">Lihat File</a> : '-'}</span>
+              <div className="flex items-center gap-2">
+                {customer?.scan_kk_url ? (
+                  <>
+                    <a href={customer.scan_kk_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-semibold">Lihat File</a>
+                    <button onClick={() => handleDeleteFile('kk')} className="text-xs text-red-500 hover:underline font-medium" title="Hapus Scan KK">(Hapus)</button>
+                  </>
+                ) : (
+                  <span className="text-slate-400">-</span>
+                )}
+              </div>
             </div>
           </div>
           <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 flex items-center gap-4 text-xs font-semibold text-blue-600">
@@ -1155,6 +1335,74 @@ export default function DetailPenjualanPage() {
                           <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
                             <td colSpan={2} className="px-4 py-3 text-right">TOTAL BIAYA TAMBAHAN</td>
                             <td className="px-4 py-3 text-right text-green-700">{formatRupiah(totalBiayaTambahan)}</td>
+                            <td></td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Daftar Potongan (Diskon) */}
+                <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                      <Trash2 className="w-4 h-4 text-rose-500" /> Daftar Potongan (Diskon)
+                    </h4>
+                    <button
+                      onClick={openDiskonModal}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-xs transition shadow-sm"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Tambah Diskon</span>
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left border border-slate-200">
+                      <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-2 w-12 text-center">No</th>
+                          <th className="px-4 py-2 w-32">Tanggal</th>
+                          <th className="px-4 py-2">Keterangan</th>
+                          <th className="px-4 py-2 text-right">Nominal</th>
+                          <th className="px-4 py-2 w-28 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {discounts.length === 0 ? (
+                          <tr><td colSpan={5} className="text-center py-4 text-slate-500">Belum ada potongan diskon.</td></tr>
+                        ) : (
+                          discounts.map((d, i) => (
+                            <tr key={d.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-2 text-center">{i + 1}</td>
+                              <td className="px-4 py-2">{new Date(d.tanggal).toLocaleDateString('id-ID')}</td>
+                              <td className="px-4 py-2">{d.keterangan || '-'}</td>
+                              <td className="px-4 py-2 text-right font-semibold text-rose-600">-{formatRupiah(d.nominal)}</td>
+                              <td className="px-4 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    onClick={() => openEditDiskonModal(d)}
+                                    className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
+                                    title="Edit"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteDiskon(d.id)}
+                                    className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
+                                    title="Hapus"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                        {discounts.length > 0 && (
+                          <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
+                            <td colSpan={3} className="px-4 py-3 text-right">TOTAL DISKON (POTONGAN)</td>
+                            <td className="px-4 py-3 text-right text-rose-700">-{formatRupiah(totalDiscounts)}</td>
                             <td></td>
                           </tr>
                         )}
@@ -1768,8 +2016,11 @@ export default function DetailPenjualanPage() {
                 <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded border">
                   {customer.scan_ktp_url ? (
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-green-600 font-medium">✓ Sudah diupload</span>
-                      <a href={customer.scan_ktp_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Lihat File</a>
+                      <span className="text-green-600 font-medium">✓ File Tersedia</span>
+                      <div className="flex items-center gap-3">
+                        <a href={customer.scan_ktp_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-bold">Lihat File</a>
+                        <button type="button" onClick={() => handleDeleteFile('ktp')} className="text-red-600 hover:underline font-semibold">Hapus File</button>
+                      </div>
                     </div>
                   ) : (
                     <span className="text-xs text-slate-400 mb-1">Belum ada file KTP.</span>
@@ -1780,7 +2031,7 @@ export default function DetailPenjualanPage() {
                     disabled={uploadingKtp || uploadingKk}
                     className="text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
-                  {uploadingKtp && <span className="text-[10px] text-blue-600 font-medium animate-pulse">Mengupload...</span>}
+                  {uploadingKtp && <span className="text-[10px] text-blue-600 font-medium animate-pulse">Memproses...</span>}
                 </div>
               </div>
 
@@ -1789,8 +2040,11 @@ export default function DetailPenjualanPage() {
                 <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded border">
                   {customer.scan_kk_url ? (
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-green-600 font-medium">✓ Sudah diupload</span>
-                      <a href={customer.scan_kk_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Lihat File</a>
+                      <span className="text-green-600 font-medium">✓ File Tersedia</span>
+                      <div className="flex items-center gap-3">
+                        <a href={customer.scan_kk_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-bold">Lihat File</a>
+                        <button type="button" onClick={() => handleDeleteFile('kk')} className="text-red-600 hover:underline font-semibold">Hapus File</button>
+                      </div>
                     </div>
                   ) : (
                     <span className="text-xs text-slate-400 mb-1">Belum ada file KK.</span>
@@ -1801,7 +2055,7 @@ export default function DetailPenjualanPage() {
                     disabled={uploadingKtp || uploadingKk}
                     className="text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
-                  {uploadingKk && <span className="text-[10px] text-blue-600 font-medium animate-pulse">Mengupload...</span>}
+                  {uploadingKk && <span className="text-[10px] text-blue-600 font-medium animate-pulse">Memproses...</span>}
                 </div>
               </div>
             </div>
@@ -1868,10 +2122,28 @@ export default function DetailPenjualanPage() {
                 <h4 className="font-bold text-teal-700 border-b border-teal-100 pb-1 mb-2 uppercase text-xs tracking-wider">Alamat</h4>
                 <div className="space-y-2">
                   <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Alamat KTP</span><span>:</span><span className="text-slate-800">{customer.alamat_ktp || '-'}</span>
+                    <span className="text-slate-500">Alamat KTP</span><span>:</span>
+                    <span className="text-slate-800">
+                      <FullAddress
+                        kelurahanId={customer.kelurahan_id}
+                        kampungDusun={customer.kampung_dusun}
+                        rt={customer.rt}
+                        rw={customer.rw}
+                        fallback={customer.alamat_ktp || '-'}
+                      />
+                    </span>
                   </div>
                   <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Alamat Domisili</span><span>:</span><span className="text-slate-800">{customer.alamat_domisili || customer.domisili || customer.alamat || '-'}</span>
+                    <span className="text-slate-500">Alamat Domisili</span><span>:</span>
+                    <span className="text-slate-800">
+                      <FullAddress
+                        kelurahanId={customer.kelurahan_id}
+                        kampungDusun={customer.kampung_dusun}
+                        rt={customer.rt}
+                        rw={customer.rw}
+                        fallback={customer.alamat_domisili || customer.domisili || customer.alamat || '-'}
+                      />
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1924,12 +2196,26 @@ export default function DetailPenjualanPage() {
                 <h4 className="font-bold text-teal-700 border-b border-teal-100 pb-1 mb-2 uppercase text-xs tracking-wider">Dokumen &amp; Catatan</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
                   <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Scan KTP</span><span>:</span>
-                    <span>{customer.scan_ktp_url ? <a href={customer.scan_ktp_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Lihat KTP</a> : '-'}</span>
+                    <span className="text-slate-500 font-semibold">Scan KTP</span><span>:</span>
+                    <div className="flex items-center gap-2">
+                      {customer.scan_ktp_url ? (
+                        <>
+                          <a href={customer.scan_ktp_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-bold">Lihat KTP</a>
+                          <button type="button" onClick={() => handleDeleteFile('ktp')} className="text-xs text-red-500 hover:underline font-medium">(Hapus)</button>
+                        </>
+                      ) : <span className="text-slate-400">-</span>}
+                    </div>
                   </div>
                   <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Scan KK</span><span>:</span>
-                    <span>{customer.scan_kk_url ? <a href={customer.scan_kk_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Lihat KK</a> : '-'}</span>
+                    <span className="text-slate-500 font-semibold">Scan KK</span><span>:</span>
+                    <div className="flex items-center gap-2">
+                      {customer.scan_kk_url ? (
+                        <>
+                          <a href={customer.scan_kk_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-bold">Lihat KK</a>
+                          <button type="button" onClick={() => handleDeleteFile('kk')} className="text-xs text-red-500 hover:underline font-medium">(Hapus)</button>
+                        </>
+                      ) : <span className="text-slate-400">-</span>}
+                    </div>
                   </div>
                 </div>
                 {customer.catatan && (
@@ -2018,6 +2304,71 @@ export default function DetailPenjualanPage() {
               </button>
               <button
                 onClick={handleSaveMarketingFee}
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
+              >
+                {saving ? 'Menyimpan...' : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Input / Edit Diskon (Potongan) */}
+      {showDiskonModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4 border-b pb-2">
+              <h3 className="font-bold text-slate-800 text-lg">
+                {editingDiskonId ? 'Edit Potongan Diskon' : 'Tambah Potongan Diskon'}
+              </h3>
+              <button
+                onClick={() => { setShowDiskonModal(false); setEditingDiskonId(null); }}
+                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Tanggal *</label>
+                <input
+                  type="date"
+                  value={diskonForm.tanggal}
+                  onChange={e => setDiskonForm({ ...diskonForm, tanggal: e.target.value })}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Sebesar (Rp) *</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 1.000.000"
+                  value={diskonForm.nominal}
+                  onChange={e => setDiskonForm({ ...diskonForm, nominal: formatRibuan(e.target.value) })}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Keterangan</label>
+                <textarea
+                  placeholder="Alasan / catatan diskon (opsional)..."
+                  value={diskonForm.keterangan}
+                  onChange={e => setDiskonForm({ ...diskonForm, keterangan: e.target.value })}
+                  rows={2}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button
+                onClick={() => { setShowDiskonModal(false); setEditingDiskonId(null); }}
+                className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveDiskon}
                 disabled={saving}
                 className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
               >

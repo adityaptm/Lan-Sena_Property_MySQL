@@ -43,6 +43,10 @@ export interface Customer {
   alamat_domisili_pasangan?: string;
   bank_rekening_kpr?: string;
   nomor_rekening_kpr?: string;
+  kampung_dusun?: string;
+  rt?: string;
+  rw?: string;
+  kelurahan_id?: string;
 }
 
 export interface Bank {
@@ -80,6 +84,10 @@ export interface Location {
   nama_lokasi: string;
   alamat: string;
   kode_lokasi?: string;
+  kampung_dusun?: string;
+  rt?: string;
+  rw?: string;
+  kelurahan_id?: string;
 }
 
 export interface Block {
@@ -119,8 +127,11 @@ export interface Unit {
   nop?: string; // Nomor Objek Pajak
   // Joined fields for composite table
   location_nama?: string;
+  location_kode_lokasi?: string;
   block_nama?: string;
   unit_type_nama?: string;
+  luas_tanah?: number;
+  luas_bangunan?: number;
   subsidy_type_nama?: string;
   sales_step_nama?: string;
   certificate_step_nama?: string;

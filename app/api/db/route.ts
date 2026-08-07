@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { query } from '@/lib/db';
 import { decryptToken } from '@/lib/auth-token';
+import { hasPermission, canModifyUser, ActionType } from '@/lib/permissions';
 
 // --- Keamanan: hanya izinkan nama tabel/kolom alfanumerik + underscore ---
 function validateIdentifier(name: string) {
@@ -18,24 +19,60 @@ function parseOrFilter(raw: string) {
   });
 }
 
-// Ubah value object/array (mis. field "items") jadi JSON string supaya aman
-// disimpan ke kolom JSON/TEXT, alih-alih bikin mysql2 bingung.
-// undefined -> null (MySQL tidak menerima undefined sama sekali).
+// Ubah value object/array (mis. field "items") jadi JSON string
 function normalizeValue(v: any) {
   if (v === undefined) return null;
   if (v !== null && typeof v === 'object') return JSON.stringify(v);
   return v;
 }
 
-// Pastikan payload "data" untuk insert/update memang object biasa,
-// bukan array / null / primitif — ini akar penyebab error
-// "Unknown column '0' in 'field list'".
 function assertPlainObject(data: any, context: string) {
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     throw new Error(
       `Data untuk "${context}" harus berupa object (bukan array/null/primitif). ` +
       `Diterima: ${Array.isArray(data) ? 'array' : typeof data} -> ${JSON.stringify(data)?.slice(0, 200)}`
     );
+  }
+}
+
+async function verifyPermission(action: any, session: { role: string; id: string }) {
+  if (!action || typeof action !== 'object') {
+    throw new Error('Request action tidak valid');
+  }
+
+  const { table, action: actType, data, filters } = action;
+
+  if (!table || !actType) {
+    throw new Error('Nama tabel dan action wajib diisi');
+  }
+
+  // 1. Pengecekan standar RBAC via lib/permissions.ts
+  const allowed = hasPermission(session.role, table, actType as ActionType);
+  if (!allowed) {
+    throw new Error(
+      `Akses ditolak: role ${session.role} tidak memiliki izin '${actType}' pada tabel '${table}'.`
+    );
+  }
+
+  // 2. Proteksi Khusus Tabel Users
+  if (table === 'users' && actType !== 'select') {
+    let targetUserRole: string | undefined = undefined;
+
+    if (actType === 'update' || actType === 'delete') {
+      const idFilter = Array.isArray(filters) ? filters.find((f: any) => f.column === 'id') : null;
+      if (idFilter) {
+        const rows = await query('SELECT role FROM users WHERE id = ?', [idFilter.value]);
+        if (rows.length > 0) {
+          targetUserRole = rows[0].role;
+        }
+      }
+    }
+
+    const newDataRole = data?.role;
+    const userCheck = canModifyUser(session.role, targetUserRole, newDataRole);
+    if (!userCheck.allowed) {
+      throw new Error(userCheck.reason || 'Akses ditolak untuk modifikasi user.');
+    }
   }
 }
 
@@ -189,10 +226,11 @@ export async function POST(req: NextRequest) {
       const results = await Promise.all(
         body.map(async (action) => {
           try {
+            await verifyPermission(action, session as any);
             const data = await handleAction(action);
             return { data };
           } catch (e: any) {
-            console.error(`[api/db] Batch error [table=${action?.table}, action=${action?.action}]:`, e.message);
+            console.error(`[api/db] Batch item forbidden/error [table=${action?.table}, action=${action?.action}]:`, e.message);
             return { data: [], error: e.message };
           }
         })
@@ -201,10 +239,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Single request
+    await verifyPermission(body, session as any);
     const data = await handleAction(body);
     return NextResponse.json({ data });
   } catch (e: any) {
     console.error(`[api/db] Error [table=${body?.table}, action=${body?.action}]:`, e.message);
-    return NextResponse.json({ error: e.message || 'Terjadi kesalahan server' }, { status: 500 });
+    const status = e.message.startsWith('Akses ditolak') ? 403 : 500;
+    return NextResponse.json({ error: e.message || 'Terjadi kesalahan server' }, { status });
   }
 }

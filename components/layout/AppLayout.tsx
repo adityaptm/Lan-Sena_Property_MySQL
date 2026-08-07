@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useData } from '@/lib/data-context';
+import { canAccessModule, ModuleName } from '@/lib/permissions';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -13,8 +14,36 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !currentUser && pathname !== '/login') {
+    if (loading) return;
+
+    if (!currentUser && pathname !== '/login') {
       router.replace('/login');
+      return;
+    }
+
+    if (currentUser) {
+      const role = currentUser.role;
+
+      // Viewer only has access to '/' (Dashboard)
+      if (role === 'Viewer' && pathname !== '/' && pathname !== '/login') {
+        router.replace('/');
+        return;
+      }
+
+      // Check module permissions by pathname
+      let requiredModule: ModuleName | null = null;
+      if (pathname.startsWith('/kontak')) requiredModule = 'Kontak';
+      else if (pathname.startsWith('/unit-rumah')) requiredModule = 'Unit Rumah';
+      else if (pathname.startsWith('/marketing')) requiredModule = 'Marketing';
+      else if (pathname.startsWith('/gudang')) requiredModule = 'Gudang';
+      else if (pathname.startsWith('/keuangan')) requiredModule = 'Keuangan';
+      else if (pathname.startsWith('/penjualan')) requiredModule = 'Penjualan';
+      else if (pathname.startsWith('/laporan')) requiredModule = 'Laporan';
+      else if (pathname.startsWith('/pengguna')) requiredModule = 'Pengguna';
+
+      if (requiredModule && !canAccessModule(role, requiredModule)) {
+        router.replace('/');
+      }
     }
   }, [loading, currentUser, pathname, router]);
 

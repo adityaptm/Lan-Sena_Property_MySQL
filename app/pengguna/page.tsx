@@ -61,19 +61,32 @@ export default function PenggunaPage() {
     }
   };
 
+  const [editPassword, setEditPassword] = useState('');
+
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
     setLoading(true);
     setError('');
+    setSuccess('');
     try {
-      // Admin tidak bisa mengubah role menjadi Super Admin
-      if (isAdmin && selectedUser.role === 'Super Admin') {
-        throw new Error('Admin tidak dapat mengubah role menjadi Super Admin.');
-      }
-      await updateUser(selectedUser.id, { nama: selectedUser.nama, role: selectedUser.role });
-      setSuccess('Data pengguna berhasil diperbarui.');
-      setTimeout(() => { setShowEditModal(false); setSelectedUser(null); setSuccess(''); }, 1200);
+      const res = await fetch('/api/admin/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          nama: selectedUser.nama,
+          role: selectedUser.role,
+          password: editPassword,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Gagal memperbarui user');
+
+      setSuccess('Data pengguna & kata sandi berhasil diperbarui.');
+      setEditPassword('');
+      await refresh();
+      setTimeout(() => { setShowEditModal(false); setSelectedUser(null); setSuccess(''); }, 1500);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -330,6 +343,18 @@ export default function PenggunaPage() {
               >
                 {availableRoles.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Reset / Ganti Kata Sandi (Opsional)</label>
+              <input
+                type="text"
+                placeholder="Kosongkan jika tidak ingin me-reset password"
+                value={editPassword}
+                onChange={e => setEditPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Gunakan fitur ini jika pegawai lupa password akun mereka.</p>
             </div>
 
             <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">

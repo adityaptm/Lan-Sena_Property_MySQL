@@ -194,7 +194,10 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
 
   const noSurat = `${urutan}/${kodeLokasi}/SPPR/${bulan}/${tahun}`;
   const isKPR = sale.metode_bayar === 'KPR';
-  const kprAmount = isKPR ? (sale.total_harga - sale.dp_nominal) : 0;
+  const dpNominal = Number(sale.dp_nominal) || Number(unit?.uang_muka) || 0;
+  const bookingFee = Number(sale.booking_fee) || Number(unit?.booking_fee) || 0;
+  const uangMuka = dpNominal + bookingFee;
+  const kprAmount = isKPR ? (Number(sale.total_harga || 0) - uangMuka) : 0;
 
   return (
     <Document>
@@ -245,9 +248,9 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
           <View style={styles.row}><Text style={styles.labelCell}>Blok/Kavling</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.block_nama || '-'}</Text></View>
           <View style={styles.row}><Text style={styles.labelCell}>Type</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.unit_type_nama || '-'}</Text></View>
           <View style={styles.row}><Text style={styles.labelCell}>Nomor Unit</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.no_unit || '-'}</Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>Luas Tanah</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.luas_tanah || '-'}</Text></View>
+          <View style={styles.row}><Text style={styles.labelCell}>Luas Tanah</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.luas_tanah ? `${unit.luas_tanah} m²` : '-'}</Text></View>
           <View style={styles.row}><Text style={styles.labelCell}>Tanah Lebih / Harga</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}></Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>Jumlah Kewajiban / Uang Muka</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{formatRupiah(sale?.total_harga || 0)} / {formatRupiah(sale?.dp_nominal || 0)}</Text></View>
+          <View style={styles.row}><Text style={styles.labelCell}>Jumlah Kewajiban / Uang Muka</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{formatRupiah(sale?.total_harga || 0)} / {formatRupiah(uangMuka)}</Text></View>
         </View>
 
         <Text style={styles.paragraph}>

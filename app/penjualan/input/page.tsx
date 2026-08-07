@@ -215,7 +215,7 @@ export default function InputPenjualanPage() {
       }
 
       // 4. Simpan Transaksi Penjualan (unit_id sudah pasti valid, tidak ada lagi create-unit di sini)
-      await addSale({
+      const newSale = await addSale({
         customer_id: custId || '',
         customer_nama: custNama,
         unit_id: unitId,
@@ -237,7 +237,11 @@ export default function InputPenjualanPage() {
         tanggal_booking: new Date().toISOString().slice(0, 10),
       });
 
-      router.push('/penjualan/daftar');
+      if (newSale?.id) {
+        router.push(`/penjualan/daftar/${newSale.id}`);
+      } else {
+        router.push('/penjualan/daftar');
+      }
     } catch (err: any) {
       console.error(err);
       alert(`Terjadi kesalahan saat menyimpan data: ${err?.message || 'Cek console log.'}`);

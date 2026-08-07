@@ -12,8 +12,10 @@ import * as XLSX from 'xlsx';
 export default function LaporanPenjualanKPRPage() {
   const { sales } = useData();
 
+  const filteredSales = React.useMemo(() => sales.filter((s) => s.status !== 'Batal'), [sales]);
+
   const handleExportExcel = () => {
-    const data = sales.map((s) => ({
+    const data = filteredSales.map((s) => ({
       Konsumen: s.customer_nama,
       Unit: s.unit_no,
       Lokasi: s.location_nama,
@@ -69,7 +71,7 @@ export default function LaporanPenjualanKPRPage() {
 
       <DataTable
         title="Rekapitulasi Penjualan"
-        data={sales}
+        data={filteredSales}
         columns={columns}
         searchPlaceholder="Cari konsumen, unit, bank..."
         exportFileName="Laporan_Penjualan_KPR_Lansena"

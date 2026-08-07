@@ -8,6 +8,9 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { Customer } from '@/types';
 import { Plus, UserPlus, Edit3, Trash2 } from 'lucide-react';
+import { AddressSelector } from '@/components/ui/AddressSelector';
+import { FullAddress } from '@/components/ui/FullAddress';
+
 
 export default function CustomerPage() {
   const { customers, addCustomer, updateCustomer, deleteCustomer } = useData();
@@ -38,17 +41,21 @@ export default function CustomerPage() {
     nik_pasangan: '',
     no_hp_pasangan: '',
     alamat_domisili_pasangan: '',
+    kampung_dusun: '',
+    rt: '',
+    rw: '',
+    kelurahan_id: null as string | null,
   });
 
   // Format angka jadi "5.000.000" otomatis saat diketik, tanpa titik manual dari user
-  const formatAngkaRibuan = (raw: string) => {
-    const clean = raw.replace(/\D/g, '');
+  const formatAngkaRibuan = (raw: any) => {
+    const clean = String(raw || '').replace(/\D/g, '');
     if (!clean) return '';
     return Number(clean).toLocaleString('id-ID');
   };
 
-  const handlePendapatanChange = (raw: string) => {
-    const clean = raw.replace(/\D/g, '');
+  const handlePendapatanChange = (raw: any) => {
+    const clean = String(raw || '').replace(/\D/g, '');
     setFormData({ ...formData, pendapatan_per_bulan: clean });
   };
 
@@ -78,6 +85,10 @@ export default function CustomerPage() {
     nik_pasangan: '',
     no_hp_pasangan: '',
     alamat_domisili_pasangan: '',
+    kampung_dusun: '',
+    rt: '',
+    rw: '',
+    kelurahan_id: null as string | null,
   };
 
   const openAddModal = () => {
@@ -112,17 +123,27 @@ export default function CustomerPage() {
       nik_pasangan: c.nik_pasangan || '',
       no_hp_pasangan: c.no_hp_pasangan || '',
       alamat_domisili_pasangan: c.alamat_domisili_pasangan || '',
+      kampung_dusun: c.kampung_dusun || '',
+      rt: c.rt || '',
+      rw: c.rw || '',
+      kelurahan_id: c.kelurahan_id || null,
     });
     setIsModalOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nama || !formData.nik || !formData.no_hp || !formData.tanggal_lahir || !formData.alamat_ktp) return;
+    if (!formData.nama || !formData.nik || !formData.no_hp || !formData.tanggal_lahir || !formData.kelurahan_id) {
+      alert('Mohon lengkapi Nama, NIK, No. HP, Tanggal Lahir, dan Wilayah Administratif alamat.');
+      return;
+    }
 
+    const fallbackAddress = `${formData.kampung_dusun || ''} RT ${formData.rt || '000'} RW ${formData.rw || '000'}`.trim();
     const finalData = {
       ...formData,
-      alamat: formData.alamat_ktp, // fallback compatibility
+      alamat: fallbackAddress,
+      alamat_ktp: fallbackAddress,
+      kelurahan_id: formData.kelurahan_id || undefined,
     };
 
     if (editingId) {
@@ -142,7 +163,18 @@ export default function CustomerPage() {
     },
     { header: 'No. WhatsApp / HP', accessorKey: 'no_hp' },
     { header: 'Pekerjaan', accessorKey: (r) => r.pekerjaan || '-' },
-    { header: 'Alamat KTP', accessorKey: (r) => r.alamat_ktp || r.alamat || '-' },
+    {
+      header: 'Alamat Lengkap',
+      accessorKey: (r) => (
+        <FullAddress
+          kelurahanId={r.kelurahan_id}
+          kampungDusun={r.kampung_dusun}
+          rt={r.rt}
+          rw={r.rw}
+          fallback={r.alamat_ktp || r.alamat}
+        />
+      ),
+    },
     {
       header: 'Status Pernikahan',
       accessorKey: (r) => <span className="text-xs">{r.status_pernikahan || 'Belum Menikah'}</span>,
@@ -320,16 +352,23 @@ export default function CustomerPage() {
             </div>
           </div>
 
-          {/* Alamat KTP & Domisili */}
+          {/* Alamat KTP */}
           <div>
-            <label className="block font-semibold text-slate-600 mb-1">Alamat KTP *</label>
-            <textarea
-              rows={2}
-              required
-              value={formData.alamat_ktp}
-              onChange={(e) => setFormData({ ...formData, alamat_ktp: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="Tulis alamat lengkap sesuai KTP..."
+            <label className="block font-semibold text-slate-600 mb-1">Alamat KTP (Sesuai Wilayah Administratif) *</label>
+            <AddressSelector
+              kelurahanId={formData.kelurahan_id}
+              kampungDusun={formData.kampung_dusun}
+              rt={formData.rt}
+              rw={formData.rw}
+              onChange={(val) => {
+                setFormData({
+                  ...formData,
+                  kelurahan_id: val.kelurahanId,
+                  kampung_dusun: val.kampungDusun,
+                  rt: val.rt,
+                  rw: val.rw,
+                });
+              }}
             />
           </div>
 

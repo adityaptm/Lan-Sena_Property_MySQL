@@ -152,7 +152,7 @@ interface DataContextType {
 
   // Penjualan
   sales: Sale[];
-  addSale: (s: Omit<Sale, 'id' | 'created_at'>) => Promise<void>;
+  addSale: (s: Omit<Sale, 'id' | 'created_at'>) => Promise<any>;
   updateSale: (id: string, s: Partial<Sale>) => Promise<void>;
   updateSaleStatus: (id: string, status: Sale['status']) => Promise<void>;
   updateKprStatus: (id: string, status: Sale['kpr_status']) => Promise<void>;
@@ -351,7 +351,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           ...unit,
           block_nama: block ? block.nama_blok : undefined,
           location_nama: locItem ? locItem.nama_lokasi : undefined,
+          location_kode_lokasi: locItem ? locItem.kode_lokasi : undefined,
           unit_type_nama: uType ? uType.nama_type : undefined,
+          luas_tanah: uType ? uType.luas_tanah : undefined,
+          luas_bangunan: uType ? uType.luas_bangunan : undefined,
           subsidy_type_nama: subType ? subType.nama_type : undefined,
           sales_step_nama: sStep ? sStep.nama_step : undefined,
           certificate_step_nama: cStep ? cStep.nama_step : undefined,
@@ -409,8 +412,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // --- Helpers ---
   async function insert(table: string, data: Record<string, any>) {
-    await dbInsert(table, data);
+    const res = await dbInsert(table, data);
     await loadAll();
+    return res[0];
   }
   async function update(table: string, id: string, data: Record<string, any>) {
     await dbUpdate(table, id, data);
@@ -757,9 +761,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       harga_jual_pajak: saleData.harga_jual_pajak,
     };
 
-    await insert('sales', dbData);
+    const inserted = await insert('sales', dbData);
     const statusMap: Record<string, Unit['status']> = { Lunas: 'Lunas', Akad: 'Akad', DP: 'DP', Booking: 'Booking' };
     if (s.unit_id) await update('units', s.unit_id, { status: statusMap[s.status] || 'Booking' });
+    return inserted;
   };
 
   const updateSale = (id: string, s: Partial<Sale>) => update('sales', id, s);
