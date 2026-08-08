@@ -231,7 +231,7 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
 
         <View style={styles.table}>
           <View style={styles.row}><Text style={styles.labelCell}>Nama</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.nama || '-'}</Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>Alamat</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.domisili || customer?.alamat || '-'}</Text></View>
+          <View style={styles.row}><Text style={styles.labelCell}>Alamat</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.alamatLengkap || '-'}</Text></View>
           <View style={styles.row}><Text style={styles.labelCell}>No. Telp/HP</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.no_hp || '-'}</Text></View>
           <View style={styles.row}><Text style={styles.labelCell}>Pekerjaan</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.pekerjaan || '-'}</Text></View>
           <View style={styles.row}><Text style={styles.labelCell}>Instansi</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellNormal}>{customer?.instansi || '-'}</Text></View>

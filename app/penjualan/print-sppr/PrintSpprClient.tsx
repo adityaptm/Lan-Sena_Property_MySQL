@@ -15,25 +15,41 @@ export default function PrintSpprClient({ id }: Props) {
   const [isLoading, setIsLoading] = useState(true);
 
   const sale = sales.find((s) => s.id === id);
+  // Sesuaikan field ini kalau nama kolom relasi di tipe Sale lo beda
+  // (misal customerId, id_customer, dst)
   const customer = customers.find((c) => c.id === sale?.customer_id);
   const unit = units.find((u) => u.id === sale?.unit_id);
 
   useEffect(() => {
+    if (!sale || !customer || !unit) return;
+
     async function generatePdf() {
-      if (!sale) return;
+      // Narrowing ulang di dalam closure supaya TypeScript yakin
+      // customer & unit tidak undefined di sini
+      if (!customer || !unit) return;
 
       setIsLoading(true);
 
       try {
         const { pdf } = await import('@react-pdf/renderer');
-        const { SpprDocument } = await import(
-          '@/components/pdf/SpprDocument'
-        );
+        const { SpprDocument } = await import('@/components/pdf/SpprDocument');
+        const { resolveFullAddress } = await import('@/lib/resolveFullAddress');
+
+        // Resolve alamat lengkap (Kel/Kec/Kab/Provinsi) dulu, sebelum render PDF
+        const alamatLengkap = await resolveFullAddress({
+          kelurahanId: customer.kelurahan_id,
+          kampungDusun: customer.kampung_dusun,
+          rt: customer.rt,
+          rw: customer.rw,
+          fallback: customer.alamat_ktp || customer.alamat,
+        });
+
+        const customerWithAddress = { ...customer, alamatLengkap };
 
         const blob = await pdf(
           <SpprDocument
             sale={sale}
-            customer={customer}
+            customer={customerWithAddress}
             unit={unit}
             baseUrl={window.location.origin}
           />
@@ -55,6 +71,7 @@ export default function PrintSpprClient({ id }: Props) {
         URL.revokeObjectURL(pdfUrl);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sale, customer, unit]);
 
   if (loading) {

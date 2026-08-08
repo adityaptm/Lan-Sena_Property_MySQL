@@ -195,14 +195,10 @@ export function SuratKomplenDocument({
             ))}
           </View>
 
-          {/* LOKASI DAN TANGGAL */}
-          <Text style={styles.dateLocation}>
-            Purwakarta, {formatTanggalIndo(tanggalKomplen)}
-          </Text>
-
           {/* TANDA TANGAN */}
-          <View style={styles.signatureSection}>
+          <View style={[styles.signatureSection, { marginTop: 25 }]}>
             <View style={styles.signatureBox}>
+              <Text>Purwakarta, {formatTanggalIndo(tanggalKomplen)}</Text>
               <Text>Yang Menerima,</Text>
               <View style={styles.space} />
               <Text style={{ fontFamily: 'Helvetica-Bold' }}>
@@ -211,6 +207,7 @@ export function SuratKomplenDocument({
             </View>
 
             <View style={styles.signatureBox}>
+              <Text> </Text>
               <Text>Yang Mengajukan,</Text>
               <View style={styles.space} />
               <Text style={{ fontFamily: 'Helvetica-Bold' }}>
