@@ -319,7 +319,7 @@ export interface Sale {
   booking_fee: number;
   dp_nominal: number;
   metode_bayar: 'Cash' | 'Cash Bertahap' | 'Cash Keras' | 'KPR';
-  kpr_status?: 'Berkas Lengkap' | 'Wawancara' | 'OTS' | 'SP3K' | 'Akad';
+  kpr_status?: 'Berkas Lengkap' | 'Wawancara' | 'OTS' | 'SP3K' | 'Akad' | 'ACCEPTED' | 'REJECTED' | string;
   status: 'Booking' | 'DP' | 'Akad' | 'Lunas' | 'Batal';
   marketing_user_id?: string;
   created_at: string;
