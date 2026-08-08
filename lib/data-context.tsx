@@ -5,7 +5,7 @@ import type {
   Customer, Bank, Location, Block, UnitType, SubsidyType, Unit,
   MarketerType, Marketer, OnlineBooking, InventoryItem, Purchase,
   GoodsIn, GoodsOut, CashBankAccount, ChartOfAccount, BankLoan,
-  CashflowEntry, MandorAdvance, OperationalExpense, DisbursementRequest,
+  CashflowEntry, MandorAdvance, Mandor, OperationalExpense, DisbursementRequest,
   CompanyAsset, Sale, UserProfile, SalesStep, CertificateStep, PriceItem, MarketerRight, CompanySettings,
   SaleAdditionalCost, SalePayment, SaleDiscount
 } from '@/types';
@@ -134,14 +134,31 @@ interface DataContextType {
   // Keuangan
   cashBankAccounts: CashBankAccount[];
   addCashBankAccount: (acc: Omit<CashBankAccount, 'id'>) => Promise<void>;
+  updateCashBankAccount: (id: string, acc: Partial<CashBankAccount>) => Promise<void>;
+  deleteCashBankAccount: (id: string) => Promise<void>;
   chartOfAccounts: ChartOfAccount[];
   addChartOfAccount: (coa: Omit<ChartOfAccount, 'id'>) => Promise<void>;
+  updateChartOfAccount: (id: string, coa: Partial<ChartOfAccount>) => Promise<void>;
+  deleteChartOfAccount: (id: string) => Promise<void>;
   bankLoans: BankLoan[];
   addBankLoan: (bl: Omit<BankLoan, 'id'>) => Promise<void>;
+  updateBankLoan: (id: string, bl: Partial<BankLoan>) => Promise<void>;
+  deleteBankLoan: (id: string) => Promise<void>;
   cashflowEntries: CashflowEntry[];
   addCashflowEntry: (cfe: Omit<CashflowEntry, 'id'>) => Promise<void>;
+  updateCashflowEntry: (id: string, cfe: Partial<CashflowEntry>) => Promise<void>;
+  deleteCashflowEntry: (id: string) => Promise<void>;
   mandorAdvances: MandorAdvance[];
   addMandorAdvance: (ma: Omit<MandorAdvance, 'id'>) => Promise<void>;
+  updateMandorAdvance: (id: string, ma: Partial<MandorAdvance>) => Promise<void>;
+  deleteMandorAdvance: (id: string) => Promise<void>;
+
+  // Progress Pekerjaan Mandor
+  mandors: Mandor[];
+  addMandor: (m: Omit<Mandor, 'id' | 'created_at'>) => Promise<void>;
+  updateMandor: (id: string, m: Partial<Mandor>) => Promise<void>;
+  deleteMandor: (id: string) => Promise<void>;
+
   operationalExpenses: OperationalExpense[];
   addOperationalExpense: (oe: Omit<OperationalExpense, 'id'>) => Promise<void>;
   disbursementRequests: DisbursementRequest[];
@@ -149,6 +166,8 @@ interface DataContextType {
   updateDisbursementStatus: (id: string, status: 'Diajukan' | 'Disetujui' | 'Dicairkan' | 'Ditolak') => Promise<void>;
   companyAssets: CompanyAsset[];
   addCompanyAsset: (ca: Omit<CompanyAsset, 'id'>) => Promise<void>;
+  updateCompanyAsset: (id: string, ca: Partial<CompanyAsset>) => Promise<void>;
+  deleteCompanyAsset: (id: string) => Promise<void>;
 
   // Penjualan
   sales: Sale[];
@@ -189,9 +208,6 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-
-
-
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -219,6 +235,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [bankLoans, setBankLoans] = useState<BankLoan[]>([]);
   const [cashflowEntries, setCashflowEntries] = useState<CashflowEntry[]>([]);
   const [mandorAdvances, setMandorAdvances] = useState<MandorAdvance[]>([]);
+  const [mandors, setMandors] = useState<Mandor[]>([]);
   const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([]);
   const [disbursementRequests, setDisbursementRequests] = useState<DisbursementRequest[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
@@ -235,7 +252,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // Ambil current user dari session cookie via API
       const userRes = await fetch('/api/auth/user');
       let userJson: any = { user: null };
-      
+
       if (userRes.ok && userRes.headers.get('content-type')?.includes('application/json')) {
         try {
           userJson = await userRes.json();
@@ -260,7 +277,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         'locations', 'blocks', 'unit_types', 'subsidy_types', 'units',
         'marketer_types', 'marketers', 'online_bookings', 'marketer_rights', 'company_settings',
         'items', 'purchases', 'goods_in', 'goods_out', 'cash_bank_accounts',
-        'chart_of_accounts', 'bank_loans', 'cashflow_entries', 'mandor_advances', 'operational_expenses',
+        'chart_of_accounts', 'bank_loans', 'cashflow_entries', 'mandor_advances', 'mandors', 'operational_expenses',
         'disbursement_requests', 'company_assets', 'sales', 'sale_payments', 'sale_additional_costs',
         'sale_discounts', 'users'
       ];
@@ -330,6 +347,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const bl = dataMap['bank_loans'];
       const cfe = dataMap['cashflow_entries'];
       const ma = dataMap['mandor_advances'];
+      const mnd = dataMap['mandors'];
       const oe = dataMap['operational_expenses'];
       const dr = dataMap['disbursement_requests'];
       const ca = dataMap['company_assets'];
@@ -362,30 +380,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
 
       const mappedMarketers = mkt.map((m: any) => {
-  const mtItem = mt.find((t: any) => t.id === m.marketer_type_id);
-  return {
-    ...m,
-    marketer_type_nama: mtItem ? mtItem.nama_jenis : undefined,
-  };
-});
+        const mtItem = mt.find((t: any) => t.id === m.marketer_type_id);
+        return {
+          ...m,
+          marketer_type_nama: mtItem ? mtItem.nama_jenis : undefined,
+        };
+      });
 
       const mappedSales = sal.map((s) => {
-  const custItem = cust.find((c) => c.id === s.customer_id);
-  const unitItem = mappedUnits.find((u) => u.id === s.unit_id);
-  const bankItem = bnk.find((b) => b.id === s.bank_id);
-  const marketerItem = mkt.find((m) => m.id === s.marketer_id);
-  return {
-    ...s,
-    customer_nama: custItem ? custItem.nama : undefined,
-    unit_no: unitItem ? unitItem.no_unit : undefined,
-    location_nama: unitItem ? unitItem.location_nama : undefined,
-    block_nama: unitItem ? unitItem.block_nama : undefined,
-    unit_type_nama: unitItem ? unitItem.unit_type_nama : undefined,
-    subsidy_type_nama: unitItem ? unitItem.subsidy_type_nama : undefined,
-    bank_nama: bankItem ? bankItem.nama_bank : undefined,
-    marketer_nama: marketerItem ? marketerItem.nama : undefined,
-  };
-});
+        const custItem = cust.find((c) => c.id === s.customer_id);
+        const unitItem = mappedUnits.find((u) => u.id === s.unit_id);
+        const bankItem = bnk.find((b) => b.id === s.bank_id);
+        const marketerItem = mkt.find((m) => m.id === s.marketer_id);
+        return {
+          ...s,
+          customer_nama: custItem ? custItem.nama : undefined,
+          unit_no: unitItem ? unitItem.no_unit : undefined,
+          location_nama: unitItem ? unitItem.location_nama : undefined,
+          block_nama: unitItem ? unitItem.block_nama : undefined,
+          unit_type_nama: unitItem ? unitItem.unit_type_nama : undefined,
+          subsidy_type_nama: unitItem ? unitItem.subsidy_type_nama : undefined,
+          bank_nama: bankItem ? bankItem.nama_bank : undefined,
+          marketer_nama: marketerItem ? marketerItem.nama : undefined,
+        };
+      });
 
       const mappedCashflow = cfe.map((entry) => {
         const account = cba.find((a) => a.id === entry.account_id);
@@ -397,7 +415,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setSubsidyTypes(sub); setUnits(mappedUnits); setMarketerTypes(mt); setMarketers(mappedMarketers);
       setOnlineBookings(ob); setMarketerRights(mr); setItems(itm); setPurchases(pur);
       setGoodsIn(gi); setGoodsOut(go); setCashBankAccounts(cba); setChartOfAccounts(coa);
-      setBankLoans(bl); setCashflowEntries(mappedCashflow); setMandorAdvances(ma);
+      setBankLoans(bl); setCashflowEntries(mappedCashflow); setMandorAdvances(ma); setMandors(mnd);
       setOperationalExpenses(oe); setDisbursementRequests(dr); setCompanyAssets(ca);
       setSales(mappedSales); setSalePayments(sp); setSaleAdditionalCosts(sac); setSaleDiscounts(sd);
       setUsers(usr); setCompanySettings(compSettings[0] || null);
@@ -425,7 +443,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     await loadAll();
   }
 
-
   // --- Kontak ---
   const addCustomer = (c: Omit<Customer, 'id' | 'created_at'>) => insert('customers', c);
   const updateCustomer = (id: string, c: Partial<Customer>) => update('customers', id, c);
@@ -449,7 +466,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return [];
     }
   };
-
 
   const addBank = (b: Omit<Bank, 'id' | 'created_at'>) => insert('banks', b);
   const updateBank = (id: string, b: Partial<Bank>) => update('banks', id, b);
@@ -486,7 +502,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // --- Unit ---
   const addUnit = async (u: any) => {
-    // 1. Resolve Location & Block
     let blockId = u.block_id || '';
     if (!blockId && u.block_nama) {
       let locId = u.location_id || locations[0]?.id;
@@ -504,7 +519,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 2. Resolve Unit Type
     let unitTypeId = '';
     const existingType = unitTypes.find(t => t.nama_type.toLowerCase() === u.unit_type_nama.toLowerCase());
     if (existingType) {
@@ -521,7 +535,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       unitTypeId = newType.id;
     }
 
-    // 3. Resolve Subsidy/KPR Category
     let subsidyTypeId = '';
     const existingSub = subsidyTypes.find(s => s.nama_type.toLowerCase() === u.kategori_kpr.toLowerCase());
     if (existingSub) {
@@ -531,7 +544,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       subsidyTypeId = newSub.id;
     }
 
-    // 4. Resolve Sales Step
     let salesStepId = '';
     const existingStep = salesSteps.find(s => s.nama_step.toLowerCase() === u.sales_step_nama.toLowerCase());
     if (existingStep) {
@@ -541,7 +553,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       salesStepId = newStep.id;
     }
 
-    // 5. Insert unit
     await insert('units', {
       no_unit: u.no_unit,
       block_id: blockId,
@@ -567,7 +578,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (u.status !== undefined) updateData.status = u.status;
     if (u.certificate_step_id !== undefined) updateData.certificate_step_id = u.certificate_step_id || null;
 
-    // Resolve location & block if block_nama or block_id changed
     if (u.block_id !== undefined) {
       updateData.block_id = u.block_id;
     } else if (u.block_nama !== undefined) {
@@ -587,7 +597,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       updateData.block_id = blockId;
     }
 
-    // Resolve unit type if unit_type_nama changed
     if (u.unit_type_nama !== undefined) {
       let unitTypeId = '';
       const existingType = unitTypes.find(t => t.nama_type.toLowerCase() === u.unit_type_nama.toLowerCase());
@@ -607,7 +616,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       updateData.unit_type_id = unitTypeId;
     }
 
-    // Resolve subsidy/KPR if changed
     if (u.kategori_kpr !== undefined) {
       let subsidyTypeId = '';
       const existingSub = subsidyTypes.find(s => s.nama_type.toLowerCase() === u.kategori_kpr.toLowerCase());
@@ -620,7 +628,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       updateData.subsidy_type_id = subsidyTypeId;
     }
 
-    // Resolve sales step if changed
     if (u.sales_step_nama !== undefined) {
       let salesStepId = '';
       const existingStep = salesSteps.find(s => s.nama_step.toLowerCase() === u.sales_step_nama.toLowerCase());
@@ -637,7 +644,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteUnit = async (id: string) => {
-    // Cek apakah unit masih direferensikan oleh sales yang aktif
     const activeSale = sales.find((s) => s.unit_id === id && s.status !== 'Batal');
     if (activeSale) {
       throw new Error(
@@ -698,8 +704,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // --- Keuangan ---
   const addCashBankAccount = (acc: Omit<CashBankAccount, 'id'>) => insert('cash_bank_accounts', acc);
+  const updateCashBankAccount = (id: string, acc: Partial<CashBankAccount>) => update('cash_bank_accounts', id, acc);
+  const deleteCashBankAccount = (id: string) => remove('cash_bank_accounts', id);
   const addChartOfAccount = (coa: Omit<ChartOfAccount, 'id'>) => insert('chart_of_accounts', coa);
+  const updateChartOfAccount = (id: string, coa: Partial<ChartOfAccount>) => update('chart_of_accounts', id, coa);
+  const deleteChartOfAccount = (id: string) => remove('chart_of_accounts', id);
   const addBankLoan = (bl: Omit<BankLoan, 'id'>) => insert('bank_loans', bl);
+  const updateBankLoan = (id: string, bl: Partial<BankLoan>) => update('bank_loans', id, bl);
+  const deleteBankLoan = (id: string) => remove('bank_loans', id);
 
   const addCashflowEntry = async (cfe: Omit<CashflowEntry, 'id'>) => {
     await insert('cashflow_entries', cfe);
@@ -709,17 +721,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       await update('cash_bank_accounts', acc.id, { saldo: acc.saldo + delta });
     }
   };
+  const updateCashflowEntry = (id: string, cfe: Partial<CashflowEntry>) => update('cashflow_entries', id, cfe);
+  const deleteCashflowEntry = (id: string) => remove('cashflow_entries', id);
 
   const addMandorAdvance = (ma: Omit<MandorAdvance, 'id'>) => insert('mandor_advances', ma);
+  const updateMandorAdvance = (id: string, ma: Partial<MandorAdvance>) => update('mandor_advances', id, ma);
+  const deleteMandorAdvance = (id: string) => remove('mandor_advances', id);
+
+  // --- Progress Pekerjaan Mandor ---
+  const addMandor = (m: Omit<Mandor, 'id' | 'created_at'>) => insert('mandors', m);
+  const updateMandor = (id: string, m: Partial<Mandor>) => update('mandors', id, m);
+  const deleteMandor = (id: string) => remove('mandors', id);
+
   const addOperationalExpense = (oe: Omit<OperationalExpense, 'id'>) => insert('operational_expenses', oe);
   const addDisbursementRequest = (dr: Omit<DisbursementRequest, 'id'>) => insert('disbursement_requests', dr);
   const updateDisbursementStatus = (id: string, status: 'Diajukan' | 'Disetujui' | 'Dicairkan' | 'Ditolak') =>
     update('disbursement_requests', id, { status_approval: status });
   const addCompanyAsset = (ca: Omit<CompanyAsset, 'id'>) => insert('company_assets', ca);
+  const updateCompanyAsset = (id: string, ca: Partial<CompanyAsset>) => update('company_assets', id, ca);
+  const deleteCompanyAsset = (id: string) => remove('company_assets', id);
 
   // --- Penjualan ---
   const addSale = async (s: Omit<Sale, 'id' | 'created_at'>) => {
-    // Auto-generate no_penjualan jika belum ada
     let saleData = { ...s };
     if (!saleData.no_penjualan) {
       const now = new Date();
@@ -727,7 +750,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const prefix = `INV/SALES/${year}/${month}/`;
 
-      // Cari nomor urutan tertinggi yang sudah ada di database untuk bulan & tahun ini
       const matchingSales = sales.filter(item => item.no_penjualan && item.no_penjualan.startsWith(prefix));
       let maxSeq = 0;
       matchingSales.forEach(item => {
@@ -742,7 +764,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       saleData.no_penjualan = `${prefix}${urutan}`;
     }
 
-    // Strip virtual/joined fields
     const dbData = {
       customer_id: saleData.customer_id,
       unit_id: saleData.unit_id,
@@ -829,11 +850,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       onlineBookings, addOnlineBooking, convertBookingToSale, marketerRights,
       items, addItem, updateItem, purchases, addPurchase, updatePurchaseStatus,
       goodsIn, addGoodsIn, goodsOut, addGoodsOut,
-      cashBankAccounts, addCashBankAccount, chartOfAccounts, addChartOfAccount,
-      bankLoans, addBankLoan, cashflowEntries, addCashflowEntry,
-      mandorAdvances, addMandorAdvance, operationalExpenses, addOperationalExpense,
+      cashBankAccounts, addCashBankAccount, updateCashBankAccount, deleteCashBankAccount,
+      chartOfAccounts, addChartOfAccount, updateChartOfAccount, deleteChartOfAccount,
+      bankLoans, addBankLoan, updateBankLoan, deleteBankLoan,
+      cashflowEntries, addCashflowEntry, updateCashflowEntry, deleteCashflowEntry,
+      mandorAdvances, addMandorAdvance, updateMandorAdvance, deleteMandorAdvance,
+      mandors, addMandor, updateMandor, deleteMandor,
+      operationalExpenses, addOperationalExpense,
       disbursementRequests, addDisbursementRequest, updateDisbursementStatus,
-      companyAssets, addCompanyAsset,
+      companyAssets, addCompanyAsset, updateCompanyAsset, deleteCompanyAsset,
       sales,
       addSale,
       updateSale,

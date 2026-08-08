@@ -18,6 +18,7 @@ interface DataTableProps<T> {
   exportFileName?: string;
   actions?: (row: T) => React.ReactNode;
   headerAction?: React.ReactNode;
+  footer?: React.ReactNode;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -28,6 +29,7 @@ export function DataTable<T extends Record<string, any>>({
   exportFileName = 'Lansena_Export',
   actions,
   headerAction,
+  footer,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortColumnIndex, setSortColumnIndex] = useState<number | null>(null);
@@ -212,6 +214,7 @@ export function DataTable<T extends Record<string, any>>({
             </tbody>
           </table>
         </div>
+        {footer}
       </div>
 
       {/* Pagination Controls */}

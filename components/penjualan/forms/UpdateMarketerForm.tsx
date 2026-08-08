@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+ import React, { useState } from 'react';
 import { createClient } from '@/lib/sql/client';
 import { Marketer, Sale, MarketerRight } from '@/types';
 import { formatRupiah } from '@/lib/format';

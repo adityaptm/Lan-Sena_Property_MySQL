@@ -200,6 +200,18 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
           <LayoutDashboard className="w-4 h-4" />
           <span>Dashboard</span>
         </Link>
+        <Link
+          href="/dashboard-progress"
+          onClick={() => setMobileOpen(false)}
+          className={`flex items-center gap-3 px-5 py-2.5 text-sm font-medium transition-colors border-l-4 ${
+            isLinkActive('/dashboard-progress')
+              ? 'bg-[#2D3748] text-white border-blue-500'
+              : 'border-transparent text-slate-300 hover:bg-[#2D3748] hover:text-white'
+          }`}
+        >
+          <Building2 className="w-4 h-4 text-emerald-400" />
+          <span>Dashboard Progress</span>
+        </Link>
 
         {/* Dynamic Groups */}
         {NAV_MENU.map((group) => {

@@ -344,6 +344,9 @@ export const INITIAL_CHART_OF_ACCOUNTS: ChartOfAccount[] = [
 export const INITIAL_BANK_LOANS: BankLoan[] = [
   {
     id: 'bl1',
+    account_id: 'cba2',
+    total_hutang: 5000000000,
+    total_terbayar: 1800000000,
     bank_id: 'b1',
     bank_nama: 'Bank BTN',
     nominal_pinjaman: 5000000000,

@@ -244,12 +244,17 @@ export interface ChartOfAccount {
 
 export interface BankLoan {
   id: string;
-  bank_id: string;
+  account_id: string;
   bank_nama?: string;
-  nominal_pinjaman: number;
-  bunga: number;
-  tenor: number;
-  sisa_hutang: number;
+  keterangan?: string;
+  total_hutang: number;
+  total_terbayar: number;
+  // Legacy fields (optional backward compat)
+  bank_id?: string;
+  nominal_pinjaman?: number;
+  bunga?: number;
+  tenor?: number;
+  sisa_hutang?: number;
 }
 
 export interface CashflowEntry {
@@ -291,11 +296,13 @@ export interface DisbursementRequest {
 
 export interface CompanyAsset {
   id: string;
+  nomor_aset?: string;
   nama_aset: string;
+  keterangan?: string;
   nilai_perolehan: number;
   tanggal_perolehan: string;
   penyusutan: number;
-  kondisi: 'Baik' | 'Perlu Perbaikan' | 'Rusak';
+  kondisi?: 'Baik' | 'Perlu Perbaikan' | 'Rusak';
 }
 
 export interface Sale {
@@ -418,5 +425,14 @@ export interface MarketingFeeDisbursement {
   nominal: number;
   rekening?: string;
   keterangan?: string;
+  created_at?: string;
+}
+export interface Mandor {
+  id: string;
+  nama_mandor: string;
+  spesialis?: string;
+  total_pekerjaan: number;
+  belum_selesai: number;
+  selesai: number;
   created_at?: string;
 }
