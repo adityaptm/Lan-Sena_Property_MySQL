@@ -523,8 +523,6 @@ export default function DetailPenjualanPage() {
     }
   };
 
-  // Simpan hasil Approval Pengajuan KPR: mode edit (update submission yang ada)
-  // atau mode tambah baru (insert + catat biaya tambahan ke sale_additional_costs).
   const handleSaveApproval = async () => {
     if (!approvalForm.tanggal || !approvalForm.bank_id || !approvalForm.status || !approvalForm.kredit_acc) {
       alert('Tanggal, Bank Tujuan, Status, dan Kredit Acc wajib diisi.');
@@ -563,6 +561,13 @@ export default function DetailPenjualanPage() {
           };
           if (approvalForm.status === 'REJECTED') {
             updateFields.status = 'Batal';
+          } else if (approvalForm.status === 'ACCEPTED') {
+            updateFields.status = 'Akad';
+            updateFields.kpr_status = 'Akad';
+          } else if (approvalForm.status === 'PENDING') {
+            if (sale?.status === 'Batal') {
+              updateFields.status = 'Booking';
+            }
           }
           await supabase.from('sales').update(updateFields).eq('id', id);
         }
@@ -582,6 +587,36 @@ export default function DetailPenjualanPage() {
             keterangan: 'KPR Ditolak oleh Bank. Transaksi dibatalkan secara otomatis.',
             changed_by: currentUser?.id
           });
+        } else if (approvalForm.status === 'ACCEPTED') {
+          const akadStep = salesSteps.find(s => s.nama_step.toLowerCase().includes('akad'));
+          if (sale?.unit_id) {
+            await supabase.from('units').update({
+              status: 'Akad',
+              sales_step_id: akadStep?.id || null
+            }).eq('id', sale.unit_id);
+          }
+          await supabase.from('sale_step_history').insert({
+            sale_id: id,
+            jenis_step: 'penjualan',
+            status: 'Akad',
+            keterangan: 'KPR disetujui oleh Bank (ACCEPTED).',
+            changed_by: currentUser?.id
+          });
+        } else if (approvalForm.status === 'PENDING') {
+          if (sale?.unit_id) {
+            const bookingStep = salesSteps.find(s => s.nama_step.toLowerCase().includes('booking'));
+            await supabase.from('units').update({
+              status: 'Booking',
+              sales_step_id: bookingStep?.id || null
+            }).eq('id', sale.unit_id);
+          }
+          await supabase.from('sale_step_history').insert({
+            sale_id: id,
+            jenis_step: 'penjualan',
+            status: 'Wawancara',
+            keterangan: 'KPR dalam proses pengajuan (PENDING/WAITING).',
+            changed_by: currentUser?.id
+          });
         }
 
         setShowApprovalModal(false);
@@ -590,7 +625,7 @@ export default function DetailPenjualanPage() {
         return;
       }
 
-      // Mode tambah baru (logika lama, tidak berubah)
+      // Mode tambah baru
       const biayaTambahanValue = Number(approvalForm.biaya_tambahan.replace(/\D/g, '')) || 0;
       const noReferensi = `KPR/${new Date(approvalForm.tanggal).getFullYear()}/${String(new Date(approvalForm.tanggal).getMonth() + 1).padStart(2, '0')}/${String(kprSubmissions.length + 1).padStart(4, '0')}`;
 
@@ -624,6 +659,13 @@ export default function DetailPenjualanPage() {
       };
       if (approvalForm.status === 'REJECTED') {
         updateFields.status = 'Batal';
+      } else if (approvalForm.status === 'ACCEPTED') {
+        updateFields.status = 'Akad';
+        updateFields.kpr_status = 'Akad';
+      } else if (approvalForm.status === 'PENDING') {
+        if (sale?.status === 'Batal') {
+          updateFields.status = 'Booking';
+        }
       }
       await supabase.from('sales').update(updateFields).eq('id', id);
 
@@ -640,6 +682,36 @@ export default function DetailPenjualanPage() {
           jenis_step: 'penjualan',
           status: 'Batal',
           keterangan: 'KPR Ditolak oleh Bank. Transaksi dibatalkan secara otomatis.',
+          changed_by: currentUser?.id
+        });
+      } else if (approvalForm.status === 'ACCEPTED') {
+        const akadStep = salesSteps.find(s => s.nama_step.toLowerCase().includes('akad'));
+        if (sale?.unit_id) {
+          await supabase.from('units').update({
+            status: 'Akad',
+            sales_step_id: akadStep?.id || null
+          }).eq('id', sale.unit_id);
+        }
+        await supabase.from('sale_step_history').insert({
+          sale_id: id,
+          jenis_step: 'penjualan',
+          status: 'Akad',
+          keterangan: 'KPR disetujui oleh Bank (ACCEPTED).',
+          changed_by: currentUser?.id
+        });
+      } else if (approvalForm.status === 'PENDING') {
+        if (sale?.unit_id) {
+          const bookingStep = salesSteps.find(s => s.nama_step.toLowerCase().includes('booking'));
+          await supabase.from('units').update({
+            status: 'Booking',
+            sales_step_id: bookingStep?.id || null
+          }).eq('id', sale.unit_id);
+        }
+        await supabase.from('sale_step_history').insert({
+          sale_id: id,
+          jenis_step: 'penjualan',
+          status: 'Wawancara',
+          keterangan: 'KPR dalam proses pengajuan (PENDING/WAITING).',
           changed_by: currentUser?.id
         });
       }

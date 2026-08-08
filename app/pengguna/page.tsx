@@ -379,7 +379,7 @@ export default function PenggunaPage() {
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-700 font-semibold mb-1">⚠️ Perhatian — Tindakan ini tidak bisa dibatalkan!</p>
               <p className="text-sm text-red-600">
-                Akun <strong>{selectedUser.nama}</strong> ({selectedUser.email}) akan dihapus secara permanen dari sistem dan Supabase Auth.
+                Akun <strong>{selectedUser.nama}</strong> ({selectedUser.email}) akan dihapus secara permanen dari sistem.
               </p>
             </div>
             <div className="flex justify-end gap-3 pt-2">
