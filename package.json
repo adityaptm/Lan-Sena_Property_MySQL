@@ -6,7 +6,8 @@
     "dev": "next dev -p 4000",
     "build": "next build",
     "start": "next start -p 4000",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:ensure": "node scripts/ensure-db-tables.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

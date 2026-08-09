@@ -5,9 +5,10 @@ import React from 'react';
 interface BadgeProps {
   variant?: 'emerald' | 'teal' | 'amber' | 'rose' | 'sky' | 'indigo' | 'purple' | 'slate';
   children: React.ReactNode;
+  className?: string;
 }
 
-export function Badge({ variant = 'teal', children }: BadgeProps) {
+export function Badge({ variant = 'teal', children, className = '' }: BadgeProps) {
   const variantStyles = {
     emerald: 'bg-green-50 text-green-700 border-green-200',
     teal: 'bg-teal-50 text-teal-700 border-teal-200',
@@ -21,7 +22,7 @@ export function Badge({ variant = 'teal', children }: BadgeProps) {
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${variantStyles} tracking-wide`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${variantStyles} tracking-wide ${className}`}
     >
       {children}
     </span>

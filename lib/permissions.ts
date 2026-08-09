@@ -59,6 +59,7 @@ export const ALL_TABLES = [
   'kabupaten_kota',
   'kecamatan',
   'kelurahan',
+  'trash',
 ] as const;
 
 export type TableName = (typeof ALL_TABLES)[number];

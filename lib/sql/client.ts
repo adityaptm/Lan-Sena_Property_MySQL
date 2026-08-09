@@ -44,6 +44,11 @@ class SupabaseQueryBuilder {
     return this;
   }
 
+  skipTrash(value = true) {
+    (this as any).skipTrashFlag = value;
+    return this;
+  }
+
   eq(column: string, value: any) {
     this.filters.push({ type: 'eq', column, value });
     return this;
@@ -94,6 +99,10 @@ class SupabaseQueryBuilder {
         body.data = this.payload;
       } else if (this.action === 'update') {
         body.data = this.payload;
+      } else if (this.action === 'delete') {
+        if ((this as any).skipTrashFlag) {
+          body.skipTrash = true;
+        }
       }
 
       const res = await fetch('/api/db', {

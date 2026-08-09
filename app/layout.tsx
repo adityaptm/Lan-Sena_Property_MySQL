@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { DataProvider } from '@/lib/data-context';
+import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata: Metadata = {
   title: 'Lansena Property Sistem',
@@ -16,9 +17,11 @@ export default function RootLayout({
   return (
     <html lang="id" className="h-full antialiased">
       <body className="min-h-full bg-[#F5F6F8] text-slate-800 font-sans">
-        <DataProvider>
-          {children}
-        </DataProvider>
+        <AuthProvider>
+          <DataProvider>
+            {children}
+          </DataProvider>
+        </AuthProvider>
       </body>
     </html>
   );

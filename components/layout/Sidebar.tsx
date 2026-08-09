@@ -109,7 +109,10 @@ const NAV_MENU: NavGroup[] = [
   {
     title: 'Pengguna',
     icon: UserCheck,
-    items: [{ label: 'Manajemen User', href: '/pengguna' }],
+    items: [
+      { label: 'Manajemen User', href: '/pengguna' },
+      { label: 'Kotak Sampah (Trash)', href: '/pengaturan/trash', roles: ['Super Admin'] },
+    ],
   },
 ];
 
@@ -244,6 +247,9 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
               {isOpen && (
                 <div className="mt-1 space-y-0.5">
                   {group.items.map((item) => {
+                    if (item.roles && (!currentUser?.role || !item.roles.includes(currentUser.role as UserRole))) {
+                      return null;
+                    }
                     const active = isLinkActive(item.href);
                     return (
                       <Link

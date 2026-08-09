@@ -1,4 +1,10 @@
-export type UserRole = 'Super Admin' | 'Admin' | 'Marketing' | 'Gudang' | 'Finance' | 'Viewer';
+export type UserRole =
+  | "Super Admin"
+  | "Admin"
+  | "Marketing"
+  | "Gudang"
+  | "Finance"
+  | "Viewer";
 
 export interface UserProfile {
   id: string;
@@ -16,10 +22,10 @@ export interface Customer {
   alamat: string; // compatibility
   no_hp: string;
   email?: string;
-  status: 'Leads' | 'Deal' | 'Batal';
+  status: "Leads" | "Deal" | "Batal";
   catatan?: string;
   created_at: string;
-  
+
   // New fields
   is_registered_before?: boolean;
   tempat_lahir?: string;
@@ -122,7 +128,7 @@ export interface Unit {
   maksimal_kredit?: number;
   uang_muka?: number;
   booking_fee?: number;
-  status: 'Tersedia' | 'Booking' | 'DP' | 'Akad' | 'Lunas';
+  status: "Tersedia" | "Booking" | "DP" | "Akad" | "Lunas";
   created_at: string;
   nop?: string; // Nomor Objek Pajak
   // Joined fields for composite table
@@ -151,7 +157,7 @@ export interface Marketer {
   no_hp: string;
   email: string;
   bank_rekening?: string;
-no_rekening?: string;
+  no_rekening?: string;
   is_active: boolean;
   units_handled?: number;
 }
@@ -164,7 +170,7 @@ export interface OnlineBooking {
   unit_id: string;
   unit_no?: string;
   tanggal_booking: string;
-  status: 'Baru' | 'Diproses' | 'Deal' | 'Batal';
+  status: "Baru" | "Diproses" | "Deal" | "Batal";
   sumber: string;
 }
 
@@ -177,7 +183,7 @@ export interface MarketerRight {
   unit_no?: string;
   persen_fee: number;
   nominal_fee: number;
-  status_pencairan: 'Belum' | 'Sebagian' | 'Lunas';
+  status_pencairan: "Belum" | "Sebagian" | "Lunas";
 }
 
 export interface InventoryItem {
@@ -189,25 +195,38 @@ export interface InventoryItem {
   min_stok: number;
   harga_satuan: number;
 }
-
-export interface PurchaseItem {
-  id: string;
-  item_id: string;
-  item_nama?: string;
-  qty: number;
-  harga_satuan: number;
-}
-
 export interface Purchase {
   id: string;
   no_po: string;
   supplier: string;
+  toko_alamat?: string;
+  toko_telepon?: string;
   tanggal: string;
+  lokasi?: string;
+  blok?: string;
+  catatan?: string;
+  termin?: string;
+  biaya_pengiriman: number;
+  pajak: number;
+  metode_pembayaran?: string;
+  penerima?: string;
+  alamat_kirim?: string;
+  admin?: string;
   total_harga: number;
-  status: 'Draft' | 'Approved' | 'Received';
-  items?: PurchaseItem[];
+  status: "Belum ditanggapi" | "Disetujui" | "Selesai" | "Ditolak";
+  created_at?: string;
+  items: PurchaseItem[];
 }
 
+export interface PurchaseItem {
+  id: string;
+  purchase_id: string;
+  item_id: string;
+  qty: number;
+  harga_satuan: number;
+  nama_barang?: string;
+  satuan?: string;
+}
 export interface GoodsIn {
   id: string;
   purchase_id?: string;
@@ -230,7 +249,7 @@ export interface GoodsOut {
 export interface CashBankAccount {
   id: string;
   nama_akun: string;
-  jenis: 'Kas' | 'Bank';
+  jenis: "Kas" | "Bank";
   no_rekening?: string;
   saldo: number;
 }
@@ -239,7 +258,7 @@ export interface ChartOfAccount {
   id: string;
   kode_akun: string;
   nama_akun: string;
-  kategori: 'Aset' | 'Kewajiban' | 'Ekuitas' | 'Pendapatan' | 'Beban';
+  kategori: "Aset" | "Kewajiban" | "Ekuitas" | "Pendapatan" | "Beban";
 }
 
 export interface BankLoan {
@@ -262,7 +281,7 @@ export interface CashflowEntry {
   account_id: string;
   account_nama?: string;
   tanggal: string;
-  jenis: 'Masuk' | 'Keluar';
+  jenis: "Masuk" | "Keluar";
   nominal: number;
   keterangan: string;
 }
@@ -273,7 +292,7 @@ export interface MandorAdvance {
   tanggal: string;
   nominal: number;
   keterangan: string;
-  status: 'Belum Lunas' | 'Lunas';
+  status: "Belum Lunas" | "Lunas";
 }
 
 export interface OperationalExpense {
@@ -290,7 +309,7 @@ export interface DisbursementRequest {
   jenis_pengajuan: string;
   nominal: number;
   tanggal: string;
-  status_approval: 'Diajukan' | 'Disetujui' | 'Dicairkan' | 'Ditolak';
+  status_approval: "Diajukan" | "Disetujui" | "Dicairkan" | "Ditolak";
   requested_by: string;
 }
 
@@ -302,7 +321,7 @@ export interface CompanyAsset {
   nilai_perolehan: number;
   tanggal_perolehan: string;
   penyusutan: number;
-  kondisi?: 'Baik' | 'Perlu Perbaikan' | 'Rusak';
+  kondisi?: "Baik" | "Perlu Perbaikan" | "Rusak";
 }
 
 export interface Sale {
@@ -325,9 +344,17 @@ export interface Sale {
   diskon?: number;
   booking_fee: number;
   dp_nominal: number;
-  metode_bayar: 'Cash' | 'Cash Bertahap' | 'Cash Keras' | 'KPR';
-  kpr_status?: 'Berkas Lengkap' | 'Wawancara' | 'OTS' | 'SP3K' | 'Akad' | 'ACCEPTED' | 'REJECTED' | string;
-  status: 'Booking' | 'DP' | 'Akad' | 'Lunas' | 'Batal';
+  metode_bayar: "Cash" | "Cash Bertahap" | "Cash Keras" | "KPR";
+  kpr_status?:
+    | "Berkas Lengkap"
+    | "Wawancara"
+    | "OTS"
+    | "SP3K"
+    | "Akad"
+    | "ACCEPTED"
+    | "REJECTED"
+    | string;
+  status: "Booking" | "DP" | "Akad" | "Lunas" | "Batal";
   marketing_user_id?: string;
   created_at: string;
   // New Sales Features
@@ -372,7 +399,12 @@ export interface SaleBillingLetter {
 export interface SaleStepHistory {
   id: string;
   sale_id: string;
-  jenis_step: 'penjualan' | 'sertifikat' | 'posisi_sertifikat' | 'marketing_fee' | 'pindah_unit';
+  jenis_step:
+    | "penjualan"
+    | "sertifikat"
+    | "posisi_sertifikat"
+    | "marketing_fee"
+    | "pindah_unit";
   status: string;
   keterangan?: string;
   changed_by?: string;
@@ -392,7 +424,7 @@ export interface SaleKprSubmission {
   sale_id: string;
   no_referensi?: string;
   tanggal: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
   kredit_acc: number;
   biaya_tambahan: number;
   keterangan?: string;
@@ -436,3 +468,35 @@ export interface Mandor {
   selesai: number;
   created_at?: string;
 }
+
+export interface TrashItem {
+  id: string;
+  source_table: string;
+  record_id: string;
+  record_label?: string;
+  record_data: string;
+  deleted_by?: string;
+  deleted_by_nama?: string;
+  deleted_at: string;
+}
+
+export interface MarketingFee {
+  id: string;
+  marketer_type_id: string;
+  kategori_unit: string;
+  booking_fee: number | null;
+  akad_fee: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const KATEGORI_UNIT_LIST = [
+  "30/72",
+  "33/66",
+  "36/72 (BATA MERAH)",
+  "36/72 (BATA RINGAN)",
+  "36/72 (BATAKO)",
+  "RUKO",
+  "Subsidi",
+] as const;
+
