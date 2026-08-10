@@ -1,16 +1,27 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { useData } from '@/lib/data-context';
-import { DataTable, Column } from '@/components/ui/DataTable';
-import { Modal } from '@/components/ui/Modal';
-import { Badge } from '@/components/ui/Badge';
-import { Customer } from '@/types';
-import { Plus, UserPlus, Edit3, Trash2 } from 'lucide-react';
-import { AddressSelector } from '@/components/ui/AddressSelector';
-import { FullAddress } from '@/components/ui/FullAddress';
+import React, { useState } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { useData } from "@/lib/data-context";
+import { DataTable, Column } from "@/components/ui/DataTable";
+import { Modal } from "@/components/ui/Modal";
+import { Badge } from "@/components/ui/Badge";
+import { Customer } from "@/types";
+import {
+  Plus,
+  Edit3,
+  Trash2,
+  User,
+  MapPin,
+  Briefcase,
+  Heart,
+  Tag,
+} from "lucide-react";
+import { AddressSelector } from "@/components/ui/AddressSelector";
+import { FullAddress } from "@/components/ui/FullAddress";
 
+const INPUT =
+  "w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition";
 
 export default function CustomerPage() {
   const { customers, addCustomer, updateCustomer, deleteCustomer } = useData();
@@ -18,76 +29,76 @@ export default function CustomerPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    nama: '',
-    nik: '',
-    alamat: '',
-    no_hp: '',
-    email: '',
-    status: 'Leads' as 'Leads' | 'Deal' | 'Batal',
+    nama: "",
+    nik: "",
+    alamat: "",
+    no_hp: "",
+    email: "",
+    status: "Leads" as "Leads" | "Deal" | "Batal",
     is_registered_before: false,
-    tempat_lahir: '',
-    tanggal_lahir: '',
-    alamat_ktp: '',
-    alamat_domisili: '',
-    pekerjaan: '',
-    instansi: '',
-    pendapatan_per_bulan: '',
-    npwp: '',
-    status_pernikahan: 'Belum Menikah',
-    nama_pasangan: '',
-    tempat_lahir_pasangan: '',
-    tanggal_lahir_pasangan: '',
-    pekerjaan_pasangan: '',
-    nik_pasangan: '',
-    no_hp_pasangan: '',
-    alamat_domisili_pasangan: '',
-    kampung_dusun: '',
-    rt: '',
-    rw: '',
+    tempat_lahir: "",
+    tanggal_lahir: "",
+    alamat_ktp: "",
+    alamat_domisili: "",
+    pekerjaan: "",
+    instansi: "",
+    pendapatan_per_bulan: "",
+    npwp: "",
+    status_pernikahan: "Belum Menikah",
+    nama_pasangan: "",
+    tempat_lahir_pasangan: "",
+    tanggal_lahir_pasangan: "",
+    pekerjaan_pasangan: "",
+    nik_pasangan: "",
+    no_hp_pasangan: "",
+    alamat_domisili_pasangan: "",
+    kampung_dusun: "",
+    rt: "",
+    rw: "",
     kelurahan_id: null as string | null,
   });
 
   // Format angka jadi "5.000.000" otomatis saat diketik, tanpa titik manual dari user
   const formatAngkaRibuan = (raw: any) => {
-    const clean = String(raw || '').replace(/\D/g, '');
-    if (!clean) return '';
-    return Number(clean).toLocaleString('id-ID');
+    const clean = String(raw || "").replace(/\D/g, "");
+    if (!clean) return "";
+    return Number(clean).toLocaleString("id-ID");
   };
 
   const handlePendapatanChange = (raw: any) => {
-    const clean = String(raw || '').replace(/\D/g, '');
+    const clean = String(raw || "").replace(/\D/g, "");
     setFormData({ ...formData, pendapatan_per_bulan: clean });
   };
 
-  const isMenikah = formData.status_pernikahan === 'Sudah Menikah';
+  const isMenikah = formData.status_pernikahan === "Sudah Menikah";
 
   const emptyForm = {
-    nama: '',
-    nik: '',
-    alamat: '',
-    no_hp: '',
-    email: '',
-    status: 'Leads' as 'Leads' | 'Deal' | 'Batal',
+    nama: "",
+    nik: "",
+    alamat: "",
+    no_hp: "",
+    email: "",
+    status: "Leads" as "Leads" | "Deal" | "Batal",
     is_registered_before: false,
-    tempat_lahir: '',
-    tanggal_lahir: '',
-    alamat_ktp: '',
-    alamat_domisili: '',
-    pekerjaan: '',
-    instansi: '',
-    pendapatan_per_bulan: '',
-    npwp: '',
-    status_pernikahan: 'Belum Menikah',
-    nama_pasangan: '',
-    tempat_lahir_pasangan: '',
-    tanggal_lahir_pasangan: '',
-    pekerjaan_pasangan: '',
-    nik_pasangan: '',
-    no_hp_pasangan: '',
-    alamat_domisili_pasangan: '',
-    kampung_dusun: '',
-    rt: '',
-    rw: '',
+    tempat_lahir: "",
+    tanggal_lahir: "",
+    alamat_ktp: "",
+    alamat_domisili: "",
+    pekerjaan: "",
+    instansi: "",
+    pendapatan_per_bulan: "",
+    npwp: "",
+    status_pernikahan: "Belum Menikah",
+    nama_pasangan: "",
+    tempat_lahir_pasangan: "",
+    tanggal_lahir_pasangan: "",
+    pekerjaan_pasangan: "",
+    nik_pasangan: "",
+    no_hp_pasangan: "",
+    alamat_domisili_pasangan: "",
+    kampung_dusun: "",
+    rt: "",
+    rw: "",
     kelurahan_id: null as string | null,
   };
 
@@ -102,30 +113,30 @@ export default function CustomerPage() {
     setFormData({
       nama: c.nama,
       nik: c.nik,
-      alamat: c.alamat || '',
+      alamat: c.alamat || "",
       no_hp: c.no_hp,
-      email: c.email || '',
+      email: c.email || "",
       status: c.status,
       is_registered_before: !!c.is_registered_before,
-      tempat_lahir: c.tempat_lahir || '',
-      tanggal_lahir: c.tanggal_lahir || '',
-      alamat_ktp: c.alamat_ktp || '',
-      alamat_domisili: c.alamat_domisili || '',
-      pekerjaan: c.pekerjaan || '',
-      instansi: c.instansi || '',
-      pendapatan_per_bulan: c.pendapatan_per_bulan || '',
-      npwp: c.npwp || '',
-      status_pernikahan: c.status_pernikahan || 'Belum Menikah',
-      nama_pasangan: c.nama_pasangan || '',
-      tempat_lahir_pasangan: c.tempat_lahir_pasangan || '',
-      tanggal_lahir_pasangan: c.tanggal_lahir_pasangan || '',
-      pekerjaan_pasangan: c.pekerjaan_pasangan || '',
-      nik_pasangan: c.nik_pasangan || '',
-      no_hp_pasangan: c.no_hp_pasangan || '',
-      alamat_domisili_pasangan: c.alamat_domisili_pasangan || '',
-      kampung_dusun: c.kampung_dusun || '',
-      rt: c.rt || '',
-      rw: c.rw || '',
+      tempat_lahir: c.tempat_lahir || "",
+      tanggal_lahir: c.tanggal_lahir || "",
+      alamat_ktp: c.alamat_ktp || "",
+      alamat_domisili: c.alamat_domisili || "",
+      pekerjaan: c.pekerjaan || "",
+      instansi: c.instansi || "",
+      pendapatan_per_bulan: c.pendapatan_per_bulan || "",
+      npwp: c.npwp || "",
+      status_pernikahan: c.status_pernikahan || "Belum Menikah",
+      nama_pasangan: c.nama_pasangan || "",
+      tempat_lahir_pasangan: c.tempat_lahir_pasangan || "",
+      tanggal_lahir_pasangan: c.tanggal_lahir_pasangan || "",
+      pekerjaan_pasangan: c.pekerjaan_pasangan || "",
+      nik_pasangan: c.nik_pasangan || "",
+      no_hp_pasangan: c.no_hp_pasangan || "",
+      alamat_domisili_pasangan: c.alamat_domisili_pasangan || "",
+      kampung_dusun: c.kampung_dusun || "",
+      rt: c.rt || "",
+      rw: c.rw || "",
       kelurahan_id: c.kelurahan_id || null,
     });
     setIsModalOpen(true);
@@ -133,12 +144,21 @@ export default function CustomerPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nama || !formData.nik || !formData.no_hp || !formData.tanggal_lahir || !formData.kelurahan_id) {
-      alert('Mohon lengkapi Nama, NIK, No. HP, Tanggal Lahir, dan Wilayah Administratif alamat.');
+    if (
+      !formData.nama ||
+      !formData.nik ||
+      !formData.no_hp ||
+      !formData.tanggal_lahir ||
+      !formData.kelurahan_id
+    ) {
+      alert(
+        "Mohon lengkapi Nama, NIK, No. HP, Tanggal Lahir, dan Wilayah Administratif alamat.",
+      );
       return;
     }
 
-    const fallbackAddress = `${formData.kampung_dusun || ''} RT ${formData.rt || '000'} RW ${formData.rw || '000'}`.trim();
+    const fallbackAddress =
+      `${formData.kampung_dusun || ""} RT ${formData.rt || "000"} RW ${formData.rw || "000"}`.trim();
     const finalData = {
       ...formData,
       alamat: fallbackAddress,
@@ -155,16 +175,29 @@ export default function CustomerPage() {
   };
 
   const columns: Column<Customer>[] = [
-    { header: 'Nama Customer', accessorKey: 'nama', sortable: true },
     {
-      header: 'NIK / KTP',
-      accessorKey: (r) => <span className="font-mono text-xs text-slate-500">{r.nik}</span>,
+      header: "Nama Customer",
+      accessorKey: (r) => (
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0 text-xs font-bold">
+            {r.nama?.charAt(0).toUpperCase() || "?"}
+          </div>
+          <span className="font-semibold text-slate-800">{r.nama}</span>
+        </div>
+      ),
       sortable: true,
     },
-    { header: 'No. WhatsApp / HP', accessorKey: 'no_hp' },
-    { header: 'Pekerjaan', accessorKey: (r) => r.pekerjaan || '-' },
     {
-      header: 'Alamat Lengkap',
+      header: "NIK / KTP",
+      accessorKey: (r) => (
+        <span className="font-mono text-xs text-slate-500">{r.nik}</span>
+      ),
+      sortable: true,
+    },
+    { header: "No. WhatsApp / HP", accessorKey: "no_hp" },
+    { header: "Pekerjaan", accessorKey: (r) => r.pekerjaan || "-" },
+    {
+      header: "Alamat Lengkap",
       accessorKey: (r) => (
         <FullAddress
           kelurahanId={r.kelurahan_id}
@@ -176,13 +209,25 @@ export default function CustomerPage() {
       ),
     },
     {
-      header: 'Status Pernikahan',
-      accessorKey: (r) => <span className="text-xs">{r.status_pernikahan || 'Belum Menikah'}</span>,
+      header: "Status Pernikahan",
+      accessorKey: (r) => (
+        <span className="text-xs text-slate-500">
+          {r.status_pernikahan || "Belum Menikah"}
+        </span>
+      ),
     },
     {
-      header: 'Status',
+      header: "Status",
       accessorKey: (r) => (
-        <Badge variant={r.status === 'Deal' ? 'emerald' : r.status === 'Leads' ? 'sky' : 'rose'}>
+        <Badge
+          variant={
+            r.status === "Deal"
+              ? "emerald"
+              : r.status === "Leads"
+                ? "sky"
+                : "rose"
+          }
+        >
           {r.status}
         </Badge>
       ),
@@ -190,86 +235,131 @@ export default function CustomerPage() {
     },
   ];
 
+  const STATUS_STATS: { label: Customer["status"]; dot: string }[] = [
+    { label: "Leads", dot: "bg-sky-500" },
+    { label: "Deal", dot: "bg-emerald-500" },
+    { label: "Batal", dot: "bg-rose-500" },
+  ];
+
   return (
     <AppLayout>
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Data Customer & Leads</h1>
-          <p className="text-xs text-slate-400 mt-1">Daftar calon pembeli dan konsumen deal perumahan Lansena</p>
-        </div>
-      </div>
-
-      <DataTable
-        title="Daftar Customer"
-        data={customers}
-        columns={columns}
-        searchPlaceholder="Cari nama, NIK, No HP..."
-        exportFileName="Data_Customer_Lansena"
-        headerAction={
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md text-sm transition shadow-md"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Customer</span>
-          </button>
-        }
-        actions={(row) => (
-          <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => openEditModal(row)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition"
-              title="Edit Data"
-            >
-              <Edit3 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={async () => {
-                if (!window.confirm(`Hapus data customer "${row.nama}"? PERHATIAN: Semua transaksi aktif atas nama customer ini akan otomatis dibatalkan dan unit akan dikembalikan ke status Tersedia.`)) return;
-                try {
-                  await deleteCustomer(row.id);
-                } catch (err: any) {
-                  alert(err.message || 'Gagal menghapus customer.');
-                }
-              }}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-slate-50 transition"
-              title="Hapus Data"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+              Data Customer & Leads
+            </h1>
+            <p className="text-sm text-slate-400 mt-1">
+              Daftar calon pembeli dan konsumen deal perumahan Lansena
+            </p>
           </div>
-        )}
-      />
+        </div>
+
+        {/* Status overview strip — presentational only, derived from existing `customers` data */}
+        <div className="flex flex-wrap items-center gap-2">
+          {STATUS_STATS.map((s) => {
+            const count = customers.filter((c) => c.status === s.label).length;
+            return (
+              <div
+                key={s.label}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs shadow-sm"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                <span className="text-slate-500 font-medium">{s.label}</span>
+                <span className="font-bold text-slate-800">{count}</span>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg text-xs shadow-sm">
+            <span className="text-slate-300 font-medium">Total Customer</span>
+            <span className="font-bold text-white">{customers.length}</span>
+          </div>
+        </div>
+
+        <DataTable
+          title="Daftar Customer"
+          data={customers}
+          columns={columns}
+          searchPlaceholder="Cari nama, NIK, No HP..."
+          exportFileName="Data_Customer_Lansena"
+          headerAction={
+            <button
+              onClick={openAddModal}
+              className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md text-sm transition shadow-md"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Customer</span>
+            </button>
+          }
+          actions={(row) => (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                onClick={() => openEditModal(row)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                title="Edit Data"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      `Hapus data customer "${row.nama}"? PERHATIAN: Semua transaksi aktif atas nama customer ini akan otomatis dibatalkan dan unit akan dikembalikan ke status Tersedia.`,
+                    )
+                  )
+                    return;
+                  try {
+                    await deleteCustomer(row.id);
+                  } catch (err: any) {
+                    alert(err.message || "Gagal menghapus customer.");
+                  }
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                title="Hapus Data"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        />
+      </div>
 
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingId ? 'Edit Customer' : 'Tambah Customer Baru'}
+        title={editingId ? "Edit Customer" : "Tambah Customer Baru"}
         maxWidth="2xl"
       >
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar text-xs">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-5 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar"
+        >
           {/* Question / Status */}
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-2">
-            <label className="block font-semibold text-slate-700 mb-2">
+          <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-100">
+            <label className="block text-xs font-semibold text-slate-700 mb-2">
               Sudah pernah terdaftar sebagai Mandor/Suplier/Marketer?
             </label>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-600">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-600">
                 <input
                   type="radio"
                   name="is_registered_before"
                   checked={!formData.is_registered_before}
-                  onChange={() => setFormData({ ...formData, is_registered_before: false })}
+                  onChange={() =>
+                    setFormData({ ...formData, is_registered_before: false })
+                  }
                   className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
                 />
                 <span>Belum pernah</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-600">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-600">
                 <input
                   type="radio"
                   name="is_registered_before"
                   checked={formData.is_registered_before}
-                  onChange={() => setFormData({ ...formData, is_registered_before: true })}
+                  onChange={() =>
+                    setFormData({ ...formData, is_registered_before: true })
+                  }
                   className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
                 />
                 <span>Sudah pernah</span>
@@ -277,261 +367,308 @@ export default function CustomerPage() {
             </div>
           </div>
 
-          {/* Nama & NIK */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">Nama Lengkap *</label>
-              <input
-                type="text"
-                required
-                value={formData.nama}
-                onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Nama Lengkap"
-              />
+          {/* Identitas Diri */}
+          <FormGroup icon={User} color="blue" title="Identitas Diri">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Nama Lengkap" required>
+                <input
+                  type="text"
+                  required
+                  value={formData.nama}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nama: e.target.value })
+                  }
+                  className={INPUT}
+                  placeholder="Nama Lengkap"
+                />
+              </Field>
+              <Field label="NIK (Nomor Induk Kependudukan)" required>
+                <input
+                  type="text"
+                  required
+                  value={formData.nik}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nik: e.target.value })
+                  }
+                  className={INPUT}
+                  placeholder="16 Digit NIK"
+                />
+              </Field>
             </div>
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">NIK (Nomor Induk Kependudukan) *</label>
-              <input
-                type="text"
-                required
-                value={formData.nik}
-                onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="16 Digit NIK"
-              />
-            </div>
-          </div>
 
-          {/* Tempat & Tanggal Lahir */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">Tempat Lahir</label>
-              <input
-                type="text"
-                value={formData.tempat_lahir}
-                onChange={(e) => setFormData({ ...formData, tempat_lahir: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Kota / Kabupaten"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Tempat Lahir">
+                <input
+                  type="text"
+                  value={formData.tempat_lahir}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tempat_lahir: e.target.value })
+                  }
+                  className={INPUT}
+                  placeholder="Kota / Kabupaten"
+                />
+              </Field>
+              <Field label="Tanggal Lahir" required>
+                <input
+                  type="date"
+                  required
+                  value={formData.tanggal_lahir}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tanggal_lahir: e.target.value })
+                  }
+                  className={INPUT}
+                />
+              </Field>
             </div>
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">Tanggal Lahir *</label>
-              <input
-                type="date"
-                required
-                value={formData.tanggal_lahir}
-                onChange={(e) => setFormData({ ...formData, tanggal_lahir: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-          </div>
 
-          {/* No HP & Email */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">No. Handphone / WhatsApp *</label>
-              <input
-                type="text"
-                required
-                value={formData.no_hp}
-                onChange={(e) => setFormData({ ...formData, no_hp: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Contoh: 0812..."
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="No. Handphone / WhatsApp" required>
+                <input
+                  type="text"
+                  required
+                  value={formData.no_hp}
+                  onChange={(e) =>
+                    setFormData({ ...formData, no_hp: e.target.value })
+                  }
+                  className={INPUT}
+                  placeholder="Contoh: 0812..."
+                />
+              </Field>
+              <Field label="Email">
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  className={INPUT}
+                  placeholder="alamat@email.com"
+                />
+              </Field>
             </div>
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="alamat@email.com"
-              />
-            </div>
-          </div>
+          </FormGroup>
 
-          {/* Alamat KTP */}
-          <div>
-            <label className="block font-semibold text-slate-600 mb-1">Alamat KTP (Sesuai Wilayah Administratif) *</label>
-            <AddressSelector
-              kelurahanId={formData.kelurahan_id}
-              kampungDusun={formData.kampung_dusun}
-              rt={formData.rt}
-              rw={formData.rw}
-              onChange={(val) => {
-                setFormData({
-                  ...formData,
-                  kelurahan_id: val.kelurahanId,
-                  kampung_dusun: val.kampungDusun,
-                  rt: val.rt,
-                  rw: val.rw,
-                });
-              }}
-            />
-          </div>
+          {/* Alamat */}
+          <FormGroup icon={MapPin} color="teal" title="Alamat KTP">
+            <Field label="Wilayah Administratif" required>
+              <AddressSelector
+                kelurahanId={formData.kelurahan_id}
+                kampungDusun={formData.kampung_dusun}
+                rt={formData.rt}
+                rw={formData.rw}
+                onChange={(val) => {
+                  setFormData({
+                    ...formData,
+                    kelurahan_id: val.kelurahanId,
+                    kampung_dusun: val.kampungDusun,
+                    rt: val.rt,
+                    rw: val.rw,
+                  });
+                }}
+              />
+            </Field>
+          </FormGroup>
 
-          {/* Pekerjaan & Institusi */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">Pekerjaan</label>
-              <input
-                type="text"
-                value={formData.pekerjaan}
-                onChange={(e) => setFormData({ ...formData, pekerjaan: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Pekerjaan saat ini"
-              />
+          {/* Pekerjaan & Keuangan */}
+          <FormGroup
+            icon={Briefcase}
+            color="amber"
+            title="Pekerjaan & Keuangan"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Pekerjaan">
+                <input
+                  type="text"
+                  value={formData.pekerjaan}
+                  onChange={(e) =>
+                    setFormData({ ...formData, pekerjaan: e.target.value })
+                  }
+                  className={INPUT}
+                  placeholder="Pekerjaan saat ini"
+                />
+              </Field>
+              <Field label="Institusi / Perusahaan">
+                <input
+                  type="text"
+                  value={formData.instansi}
+                  onChange={(e) =>
+                    setFormData({ ...formData, instansi: e.target.value })
+                  }
+                  className={INPUT}
+                  placeholder="Nama Perusahaan / Instansi"
+                />
+              </Field>
             </div>
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">Institusi / Perusahaan</label>
-              <input
-                type="text"
-                value={formData.instansi}
-                onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Nama Perusahaan / Instansi"
-              />
-            </div>
-          </div>
 
-          {/* Pendapatan & NPWP */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">Pendapatan per Bulan</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={formatAngkaRibuan(formData.pendapatan_per_bulan)}
-                onChange={(e) => handlePendapatanChange(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Contoh: 5.000.000"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Pendapatan per Bulan">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formatAngkaRibuan(formData.pendapatan_per_bulan)}
+                  onChange={(e) => handlePendapatanChange(e.target.value)}
+                  className={INPUT}
+                  placeholder="Contoh: 5.000.000"
+                />
+              </Field>
+              <Field label="NPWP">
+                <input
+                  type="text"
+                  value={formData.npwp}
+                  onChange={(e) =>
+                    setFormData({ ...formData, npwp: e.target.value })
+                  }
+                  className={INPUT}
+                  placeholder="Nomor NPWP"
+                />
+              </Field>
             </div>
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">NPWP</label>
-              <input
-                type="text"
-                value={formData.npwp}
-                onChange={(e) => setFormData({ ...formData, npwp: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Nomor NPWP"
-              />
-            </div>
-          </div>
+          </FormGroup>
 
-          {/* Status Pernikahan & Status Prospek */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">Sudah Menikah?</label>
-              <select
-                value={formData.status_pernikahan}
-                onChange={(e) => setFormData({ ...formData, status_pernikahan: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
-              >
-                <option value="Belum Menikah">Belum Menikah</option>
-                <option value="Sudah Menikah">Sudah Menikah</option>
-                <option value="Cerai Hidup">Cerai Hidup</option>
-                <option value="Cerai Mati">Cerai Mati</option>
-              </select>
+          {/* Status */}
+          <FormGroup icon={Tag} color="violet" title="Status">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Sudah Menikah?">
+                <select
+                  value={formData.status_pernikahan}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      status_pernikahan: e.target.value,
+                    })
+                  }
+                  className={INPUT}
+                >
+                  <option value="Belum Menikah">Belum Menikah</option>
+                  <option value="Sudah Menikah">Sudah Menikah</option>
+                  <option value="Cerai Hidup">Cerai Hidup</option>
+                  <option value="Cerai Mati">Cerai Mati</option>
+                </select>
+              </Field>
+              <Field label="Status Prospek">
+                <select
+                  value={formData.status}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value as any })
+                  }
+                  className={INPUT}
+                >
+                  <option value="Leads">Leads (Calon Pembeli)</option>
+                  <option value="Deal">Deal (Sudah Transaksi)</option>
+                  <option value="Batal">Batal / Unqualified</option>
+                </select>
+              </Field>
             </div>
-            <div>
-              <label className="block font-semibold text-slate-600 mb-1">Status Prospek</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none"
-              >
-                <option value="Leads">Leads (Calon Pembeli)</option>
-                <option value="Deal">Deal (Sudah Transaksi)</option>
-                <option value="Batal">Batal / Unqualified</option>
-              </select>
-            </div>
-          </div>
+          </FormGroup>
 
           {/* Biodata Pasangan - hanya muncul kalau status "Sudah Menikah" */}
           {isMenikah && (
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
-              <label className="block font-semibold text-slate-700">Biodata Pasangan (Suami/Istri)</label>
-
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">Nama Pasangan</label>
+            <FormGroup
+              icon={Heart}
+              color="rose"
+              title="Biodata Pasangan (Suami/Istri)"
+            >
+              <Field label="Nama Pasangan">
                 <input
                   type="text"
                   value={formData.nama_pasangan}
-                  onChange={(e) => setFormData({ ...formData, nama_pasangan: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onChange={(e) =>
+                    setFormData({ ...formData, nama_pasangan: e.target.value })
+                  }
+                  className={INPUT}
                   placeholder="Nama lengkap pasangan"
                 />
-              </div>
+              </Field>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-600 mb-1">Tempat Lahir Pasangan</label>
+                <Field label="Tempat Lahir Pasangan">
                   <input
                     type="text"
                     value={formData.tempat_lahir_pasangan}
-                    onChange={(e) => setFormData({ ...formData, tempat_lahir_pasangan: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tempat_lahir_pasangan: e.target.value,
+                      })
+                    }
+                    className={INPUT}
                   />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-600 mb-1">Tanggal Lahir Pasangan</label>
+                </Field>
+                <Field label="Tanggal Lahir Pasangan">
                   <input
                     type="date"
                     value={formData.tanggal_lahir_pasangan}
-                    onChange={(e) => setFormData({ ...formData, tanggal_lahir_pasangan: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tanggal_lahir_pasangan: e.target.value,
+                      })
+                    }
+                    className={INPUT}
                   />
-                </div>
+                </Field>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-600 mb-1">Pekerjaan Pasangan</label>
+                <Field label="Pekerjaan Pasangan">
                   <input
                     type="text"
                     value={formData.pekerjaan_pasangan}
-                    onChange={(e) => setFormData({ ...formData, pekerjaan_pasangan: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        pekerjaan_pasangan: e.target.value,
+                      })
+                    }
+                    className={INPUT}
                   />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-600 mb-1">NIK Pasangan</label>
+                </Field>
+                <Field label="NIK Pasangan">
                   <input
                     type="text"
                     value={formData.nik_pasangan}
-                    onChange={(e) => setFormData({ ...formData, nik_pasangan: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setFormData({ ...formData, nik_pasangan: e.target.value })
+                    }
+                    className={INPUT}
                   />
-                </div>
+                </Field>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">No. Handphone Pasangan</label>
+              <Field label="No. Handphone Pasangan">
                 <input
                   type="text"
-                  value={(formData as any).no_hp_pasangan || ''}
-                  onChange={(e) => setFormData({ ...formData, no_hp_pasangan: e.target.value } as any)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={(formData as any).no_hp_pasangan || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      no_hp_pasangan: e.target.value,
+                    } as any)
+                  }
+                  className={INPUT}
                   placeholder="Contoh: 0812..."
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block font-semibold text-slate-600 mb-1">Alamat Domisili Pasangan</label>
+              <Field label="Alamat Domisili Pasangan">
                 <textarea
                   rows={2}
                   value={formData.alamat_domisili_pasangan}
-                  onChange={(e) => setFormData({ ...formData, alamat_domisili_pasangan: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      alamat_domisili_pasangan: e.target.value,
+                    })
+                  }
+                  className={INPUT}
                 />
-              </div>
-            </div>
+              </Field>
+            </FormGroup>
           )}
 
-          <p className="text-[10px] text-slate-400 font-medium">*) Wajib diisi.</p>
+          <p className="text-[11px] text-slate-400 font-medium">
+            *) Wajib diisi.
+          </p>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
             <button
@@ -551,5 +688,63 @@ export default function CustomerPage() {
         </form>
       </Modal>
     </AppLayout>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Small presentational helpers (no data/logic — purely layout & styling) */
+/* ---------------------------------------------------------------------- */
+
+const GROUP_COLOR: Record<string, { bg: string; text: string }> = {
+  blue: { bg: "bg-blue-50", text: "text-blue-600" },
+  teal: { bg: "bg-teal-50", text: "text-teal-600" },
+  amber: { bg: "bg-amber-50", text: "text-amber-600" },
+  violet: { bg: "bg-violet-50", text: "text-violet-600" },
+  rose: { bg: "bg-rose-50", text: "text-rose-600" },
+};
+
+function FormGroup({
+  icon: Icon,
+  color,
+  title,
+  children,
+}: {
+  icon: React.ElementType;
+  color: keyof typeof GROUP_COLOR;
+  title: string;
+  children: React.ReactNode;
+}) {
+  const c = GROUP_COLOR[color];
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2.5">
+        <span
+          className={`w-7 h-7 rounded-md ${c.bg} ${c.text} flex items-center justify-center shrink-0`}
+        >
+          <Icon className="w-3.5 h-3.5" />
+        </span>
+        <p className="text-xs font-bold text-slate-700">{title}</p>
+      </div>
+      <div className="space-y-3 pl-9.5 sm:pl-[38px]">{children}</div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-slate-600 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+    </div>
   );
 }
