@@ -163,6 +163,24 @@ export default function UnitRumahPage() {
       return;
     }
 
+    // Cek duplikasi No Unit dalam Blok yang sama.
+    // Selaras dengan UNIQUE KEY (block_id, no_unit) di database —
+    // ini validasi lapis pertama di client, DB tetap jadi pengaman terakhir.
+    const isDuplicate = units.some(
+      (u) =>
+        u.block_id === unitForm.block_id &&
+        u.no_unit.trim().toLowerCase() ===
+          unitForm.no_unit.trim().toLowerCase() &&
+        u.id !== editingUnitId, // abaikan unit yang sedang diedit sendiri
+    );
+
+    if (isDuplicate) {
+      alert(
+        `Unit "${unitForm.no_unit}" di blok ini sudah terdaftar. Gunakan nomor unit lain.`,
+      );
+      return;
+    }
+
     if (editingUnitId) {
       updateUnit(editingUnitId, unitForm);
     } else {

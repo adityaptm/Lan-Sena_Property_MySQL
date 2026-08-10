@@ -231,7 +231,6 @@ export default function DetailPenjualanPage() {
   const [activeTab, setActiveTab] = useState("angsuran");
 
   // Modal States
-  const [showPotonganModal, setShowPotonganModal] = useState(false);
   const [showBiayaModal, setShowBiayaModal] = useState(false);
   const [showSerahTerimaModal, setShowSerahTerimaModal] = useState(false);
   const [showKomplenModal, setShowKomplenModal] = useState(false);
@@ -245,10 +244,6 @@ export default function DetailPenjualanPage() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const [potonganForm, setPotonganForm] = useState({
-    nominal: "",
-    keterangan: "",
-  });
   const [progresForm, setProgresForm] = useState({
     status: "",
     keterangan: "",
@@ -388,17 +383,6 @@ export default function DetailPenjualanPage() {
     setShowAngsuranModal(true);
   };
 
-  // Buka modal Potongan, selalu diisi dengan nilai potongan yang sedang berlaku
-  const openPotonganModal = () => {
-    setPotonganForm({
-      nominal: sale?.potongan
-        ? String(sale.potongan).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-        : "",
-      keterangan: "",
-    });
-    setShowPotonganModal(true);
-  };
-
   // Buka modal Approval Pengajuan KPR, default bank & kredit_acc dari data sale/unit saat ini
   const openApprovalModal = () => {
     setEditingSubmissionId(null);
@@ -488,26 +472,6 @@ export default function DetailPenjualanPage() {
       await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || "Gagal membatalkan pengajuan.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSavePotongan = async () => {
-    setSaving(true);
-    try {
-      const nominalValue = potonganForm.nominal
-        ? Number(potonganForm.nominal.replace(/\D/g, ""))
-        : 0;
-      await supabase
-        .from("sales")
-        .update({ potongan: nominalValue })
-        .eq("id", id);
-      setShowPotonganModal(false);
-      setPotonganForm({ nominal: "", keterangan: "" });
-      await triggerRefresh();
-    } catch (err: any) {
-      alert(err?.message || "Gagal menyimpan potongan.");
     } finally {
       setSaving(false);
     }
@@ -1143,7 +1107,6 @@ export default function DetailPenjualanPage() {
   );
   const totalHargaFinal =
     (sale.harga_jual_awal || sale.total_harga) -
-    (sale.potongan || 0) -
     totalDiscounts +
     totalBiayaTambahan;
   const uangMasuk = payments.reduce(
@@ -1571,19 +1534,11 @@ export default function DetailPenjualanPage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-[160px_10px_1fr]">
-                  <span className="font-semibold text-slate-600">Potongan</span>
+                  <span className="font-semibold text-slate-600">Diskon</span>
                   <span>:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-red-500">
-                      - {formatRupiah(sale.potongan || 0)}
-                    </span>
-                    <button
-                      onClick={openPotonganModal}
-                      className="text-[10px] text-blue-600 hover:underline"
-                    >
-                      (Ubah/Hapus)
-                    </button>
-                  </div>
+                  <span className="text-rose-600">
+                    - {formatRupiah(totalDiscounts)}
+                  </span>
                 </div>
                 <div className="grid grid-cols-[160px_10px_1fr]">
                   <span className="font-semibold text-slate-600">
@@ -1704,7 +1659,7 @@ export default function DetailPenjualanPage() {
                   {TABS.find((t) => t.id === activeTab)?.label}
                 </h3>
                 {activeTab === "angsuran" && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 justify-end">
                     <button
                       onClick={openAngsuranModal}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
@@ -1712,16 +1667,16 @@ export default function DetailPenjualanPage() {
                       + Input Angsuran Baru
                     </button>
                     <button
-                      onClick={openPotonganModal}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-semibold"
-                    >
-                      + Input Potongan
-                    </button>
-                    <button
                       onClick={() => setShowBiayaModal(true)}
                       className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold"
                     >
                       + Input Biaya Tambahan
+                    </button>
+                    <button
+                      onClick={openDiskonModal}
+                      className="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded text-xs font-semibold"
+                    >
+                      + Input Diskon
                     </button>
                   </div>
                 )}
@@ -1986,19 +1941,10 @@ export default function DetailPenjualanPage() {
 
                   {/* Daftar Potongan (Diskon) */}
                   <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                        <Trash2 className="w-4 h-4 text-rose-500" /> Daftar
-                        Potongan (Diskon)
-                      </h4>
-                      <button
-                        onClick={openDiskonModal}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-xs transition shadow-sm"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Tambah Diskon</span>
-                      </button>
-                    </div>
+                    <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                      <Trash2 className="w-4 h-4 text-rose-500" /> Daftar
+                      Potongan (Diskon)
+                    </h4>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm text-left border border-slate-200">
                         <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
@@ -2438,77 +2384,6 @@ export default function DetailPenjualanPage() {
           </div>
         </div>
       </AppLayout>
-
-      {/* Modal Potongan */}
-      {showPotonganModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="font-bold text-slate-800 text-lg mb-4">
-              Ubah Potongan Harga
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Nominal Potongan (Rp)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: 5.000.000"
-                  value={potonganForm.nominal}
-                  onChange={(e) =>
-                    setPotonganForm({
-                      ...potonganForm,
-                      nominal: formatRibuan(e.target.value),
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPotonganForm({ ...potonganForm, nominal: "" })
-                  }
-                  className="text-[11px] text-red-600 hover:underline mt-1"
-                >
-                  Kosongkan / set ke Rp 0
-                </button>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Keterangan
-                </label>
-                <input
-                  type="text"
-                  placeholder="Alasan potongan..."
-                  value={potonganForm.keterangan}
-                  onChange={(e) =>
-                    setPotonganForm({
-                      ...potonganForm,
-                      keterangan: e.target.value,
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-5 justify-end">
-              <button
-                onClick={() => setShowPotonganModal(false)}
-                className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleSavePotongan}
-                disabled={saving}
-                className="px-4 py-2 text-sm bg-emerald-500 hover:bg-emerald-600 text-white rounded font-semibold disabled:opacity-50"
-              >
-                {saving ? "Menyimpan..." : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal Input / Edit Angsuran */}
       {showAngsuranModal && (
