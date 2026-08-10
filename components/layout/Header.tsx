@@ -3,7 +3,6 @@
 import React from 'react';
 import { Menu, Bell, AlertTriangle, CheckCircle, Search, LogOut } from 'lucide-react';
 import { useData } from '@/lib/data-context';
-import { createClient } from '@/lib/sql/client';
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;
@@ -11,10 +10,9 @@ interface HeaderProps {
 
 export function Header({ onMobileMenuToggle }: HeaderProps) {
   const { items, disbursementRequests, currentUser } = useData();
-  const supabase = createClient();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await fetch('/api/auth/signout', { method: 'POST' });
     window.location.href = '/login';
   };
 

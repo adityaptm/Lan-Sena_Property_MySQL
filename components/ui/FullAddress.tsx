@@ -1,10 +1,21 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createClient } from '@/lib/sql/client';
 
 // Simple in-memory cache to avoid re-fetching the same regional hierarchy
 const addressCache: Record<string, string> = {};
+
+// Helper to query /api/db
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
 
 interface FullAddressProps {
   kelurahanId?: string | null;
@@ -40,35 +51,53 @@ export function FullAddress({
     async function resolve() {
       setLoading(true);
       try {
-        const supabase = createClient();
-        
         // 1. Get kelurahan
-        const villageRes = await supabase.from('kelurahan').select('*').eq('id', kelurahanId).single();
-        const village = villageRes.data;
+        const villages = await dbRequest({
+          action: 'select',
+          table: 'kelurahan',
+          filters: [{ type: 'eq', column: 'id', value: kelurahanId }],
+          single: true,
+        });
+        const village = villages;
         if (!village) {
           if (isMounted) setResolvedAddress(fallback || '-');
           return;
         }
 
         // 2. Get kecamatan
-        const districtRes = await supabase.from('kecamatan').select('*').eq('id', village.kecamatan_id).single();
-        const district = districtRes.data;
+        const districts = await dbRequest({
+          action: 'select',
+          table: 'kecamatan',
+          filters: [{ type: 'eq', column: 'id', value: village.kecamatan_id }],
+          single: true,
+        });
+        const district = districts;
         if (!district) {
           if (isMounted) setResolvedAddress(fallback || '-');
           return;
         }
 
         // 3. Get kabupaten
-        const regencyRes = await supabase.from('kabupaten_kota').select('*').eq('id', district.kabupaten_kota_id).single();
-        const regency = regencyRes.data;
+        const regencies = await dbRequest({
+          action: 'select',
+          table: 'kabupaten_kota',
+          filters: [{ type: 'eq', column: 'id', value: district.kabupaten_kota_id }],
+          single: true,
+        });
+        const regency = regencies;
         if (!regency) {
           if (isMounted) setResolvedAddress(fallback || '-');
           return;
         }
 
         // 4. Get provinsi
-        const provinceRes = await supabase.from('provinsi').select('*').eq('id', regency.provinsi_id).single();
-        const province = provinceRes.data;
+        const provinces = await dbRequest({
+          action: 'select',
+          table: 'provinsi',
+          filters: [{ type: 'eq', column: 'id', value: regency.provinsi_id }],
+          single: true,
+        });
+        const province = provinces;
         if (!province) {
           if (isMounted) setResolvedAddress(fallback || '-');
           return;

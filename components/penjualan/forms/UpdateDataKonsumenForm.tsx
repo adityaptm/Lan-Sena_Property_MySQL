@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
-import { createClient } from '@/lib/sql/client';
 import { Customer } from '@/types';
 import { Lock, Unlock } from 'lucide-react';
+
+// Helper to query /api/db
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
 
 interface Props {
   customer: Customer;
@@ -10,7 +21,6 @@ interface Props {
 }
 
 const LockedInput = ({ label, value, onChange, type = 'text', required = false, rows = 0, note = '' }: any) => {
-  // If it has value initially, lock it. Otherwise it's unlocked for new input.
   const [locked, setLocked] = useState(!!value); 
   
   return (
@@ -61,50 +71,54 @@ export function UpdateDataKonsumenForm({ customer, onClose, onSuccess }: Props) 
     nomor_rekening_kpr: customer.nomor_rekening_kpr || ''
   });
   const [saving, setSaving] = useState(false);
-  const supabase = createClient();
 
   const isMenikah = form.status_pernikahan === 'Menikah';
 
   const handleSave = async () => {
-    // Validasi basic
     if (!form.nama || !form.tanggal_lahir || !form.nik || !form.no_hp || !form.alamat) {
       alert('Mohon lengkapi data wajib (*)');
       return;
     }
     
     setSaving(true);
-    const { error } = await supabase.from('customers').update({
-      nama: form.nama,
-      tempat_lahir: form.tempat_lahir,
-      tanggal_lahir: form.tanggal_lahir,
-      nik: form.nik,
-      no_hp: form.no_hp,
-      email: form.email,
-      alamat: form.alamat, 
-      alamat_ktp: form.alamat, // Fix bug alamat not synced
-      domisili: form.domisili,
-      alamat_domisili: form.domisili, // Fix bug domisili not synced
-      pekerjaan: form.pekerjaan,
-      instansi: form.instansi,
-      pendapatan_per_bulan: Number(String(form.pendapatan_per_bulan).replace(/\D/g, '')) || 0,
-      npwp: form.npwp,
-      status_pernikahan: form.status_pernikahan,
-      nama_pasangan: isMenikah ? form.nama_pasangan : null,
-      tempat_lahir_pasangan: isMenikah ? form.tempat_lahir_pasangan : null,
-      tanggal_lahir_pasangan: isMenikah ? form.tanggal_lahir_pasangan : null,
-      pekerjaan_pasangan: isMenikah ? form.pekerjaan_pasangan : null,
-      nik_pasangan: isMenikah ? form.nik_pasangan : null,
-      alamat_domisili_pasangan: isMenikah ? form.alamat_domisili_pasangan : null,
-      bank_rekening_kpr: form.bank_rekening_kpr,
-      nomor_rekening_kpr: form.nomor_rekening_kpr
-    }).eq('id', customer.id);
-    
-    setSaving(false);
-    if (!error) {
+    try {
+      await dbRequest({
+        action: 'update',
+        table: 'customers',
+        filters: [{ type: 'eq', column: 'id', value: customer.id }],
+        data: {
+          nama: form.nama,
+          tempat_lahir: form.tempat_lahir,
+          tanggal_lahir: form.tanggal_lahir,
+          nik: form.nik,
+          no_hp: form.no_hp,
+          email: form.email,
+          alamat: form.alamat, 
+          alamat_ktp: form.alamat,
+          domisili: form.domisili,
+          alamat_domisili: form.domisili,
+          pekerjaan: form.pekerjaan,
+          instansi: form.instansi,
+          pendapatan_per_bulan: Number(String(form.pendapatan_per_bulan).replace(/\D/g, '')) || 0,
+          npwp: form.npwp,
+          status_pernikahan: form.status_pernikahan,
+          nama_pasangan: isMenikah ? form.nama_pasangan : null,
+          tempat_lahir_pasangan: isMenikah ? form.tempat_lahir_pasangan : null,
+          tanggal_lahir_pasangan: isMenikah ? form.tanggal_lahir_pasangan : null,
+          pekerjaan_pasangan: isMenikah ? form.pekerjaan_pasangan : null,
+          nik_pasangan: isMenikah ? form.nik_pasangan : null,
+          alamat_domisili_pasangan: isMenikah ? form.alamat_domisili_pasangan : null,
+          bank_rekening_kpr: form.bank_rekening_kpr,
+          nomor_rekening_kpr: form.nomor_rekening_kpr
+        },
+      });
+      
       onSuccess();
       onClose();
-    } else {
-      alert('Gagal mengupdate data konsumen.');
+    } catch (error: any) {
+      alert('Gagal mengupdate data konsumen: ' + error.message);
+    } finally {
+      setSaving(false);
     }
   };
 

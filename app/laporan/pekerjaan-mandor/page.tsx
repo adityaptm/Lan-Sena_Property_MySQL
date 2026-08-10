@@ -5,7 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useData } from '@/lib/data-context';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { FileSpreadsheet, Printer, HardHat, Plus, Edit3, Trash2 } from 'lucide-react';
-import { formatRupiah } from '@/lib/format';
+import { formatRupiah, formatDateId } from '@/lib/format';
 import * as XLSX from 'xlsx';
 
 function formatRibuan(raw: string): string {
@@ -25,9 +25,8 @@ export default function LaporanPekerjaanMandorPage() {
     deleteMandorAdvance,
   } = useData();
 
-  // Hanya super_admin yang bisa Tambah/Edit/Hapus di halaman ini.
-  // Sesuaikan kondisi ini kalau nama/value role di project kamu beda.
-  const isSuperAdmin = currentUser?.role === 'super_admin';
+  // CRUD dibuka untuk semua pengguna / admin di halaman ini
+  const isSuperAdmin = true;
 
   const totalKasbon = useMemo(
     () => mandorAdvances.reduce((s, ma) => s + (ma.nominal || 0), 0),
@@ -235,10 +234,7 @@ export default function LaporanPekerjaanMandorPage() {
     },
     {
       header: 'Tanggal',
-      accessorKey: (r: any) => {
-        const tgl = r.tanggal || r.created_at;
-        return tgl ? new Date(tgl).toLocaleDateString('id-ID') : '-';
-      },
+      accessorKey: (r: any) => formatDateId(r.tanggal || r.created_at),
       sortable: true,
     },
     {

@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { createClient } from '@/lib/sql/client';
+
+// Helper to query /api/db
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
 
 interface Props {
   saleId: string;
@@ -10,7 +21,6 @@ interface Props {
 export function CetakSuratKomplenForm({ saleId, onClose, onSuccess }: Props) {
   const [form, setForm] = useState({ tanggal: '', penerima: '', isi_komplen: '' });
   const [saving, setSaving] = useState(false);
-  const supabase = createClient();
 
   const handleSave = async () => {
     if (!form.tanggal || !form.penerima || !form.isi_komplen) return;
@@ -19,23 +29,28 @@ export function CetakSuratKomplenForm({ saleId, onClose, onSuccess }: Props) {
     // Open window before async to bypass popup blocker
     const newWindow = window.open('about:blank', '_blank');
     
-    const { error } = await supabase.from('sale_complaints').insert({
-      sale_id: saleId,
-      tanggal_komplen: form.tanggal,
-      penerima_komplen: form.penerima,
-      isi_komplen: form.isi_komplen
-    });
-    setSaving(false);
-    
-    if (!error) {
+    try {
+      await dbRequest({
+        action: 'insert',
+        table: 'sale_complaints',
+        data: {
+          sale_id: saleId,
+          tanggal_komplen: form.tanggal,
+          penerima_komplen: form.penerima,
+          isi_komplen: form.isi_komplen
+        },
+      });
+      
       onSuccess();
       if (newWindow) {
         newWindow.location.href = `/penjualan/print-komplen?id=${saleId}&tanggal=${form.tanggal}&penerima=${encodeURIComponent(form.penerima)}&isi=${encodeURIComponent(form.isi_komplen)}`;
       }
       onClose();
-    } else {
+    } catch (error: any) {
       if (newWindow) newWindow.close();
-      alert('Gagal menyimpan data komplain.');
+      alert('Gagal menyimpan data komplain: ' + error.message);
+    } finally {
+      setSaving(false);
     }
   };
 

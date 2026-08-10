@@ -4,8 +4,19 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { createClient } from '@/lib/sql/client';
 import { SalePayment } from '@/types';
+
+// Helper to query /api/db
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
 
 export default function PrintKwitansiClient() {
   const searchParams = useSearchParams();
@@ -13,14 +24,13 @@ export default function PrintKwitansiClient() {
   const saleId = searchParams.get('sale_id') || '';
 
   const { sales, customers, units, currentUser, loading } = useData();
-  const supabase = useMemo(() => createClient(), []);
 
   const [payment, setPayment] = useState<SalePayment | null>(null);
   const [pdfUrl, setPdfUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Load the payment data from Supabase
+  // Load the payment data from database
   useEffect(() => {
     async function loadPayment() {
       if (!paymentId) {
@@ -29,12 +39,14 @@ export default function PrintKwitansiClient() {
         return;
       }
       try {
-        const { data, error: err } = await supabase
-          .from('sale_payments')
-          .select('*')
-          .eq('id', paymentId)
-          .single();
-        if (err || !data) {
+        const data = await dbRequest({
+          action: 'select',
+          table: 'sale_payments',
+          filters: [{ type: 'eq', column: 'id', value: paymentId }],
+          single: true,
+        });
+        
+        if (!data) {
           setError('Data pembayaran tidak ditemukan.');
           setIsLoading(false);
           return;
@@ -47,7 +59,7 @@ export default function PrintKwitansiClient() {
       }
     }
     loadPayment();
-  }, [paymentId, supabase]);
+  }, [paymentId]);
 
   const sale = useMemo(() => {
     if (!payment) return null;

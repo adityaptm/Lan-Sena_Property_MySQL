@@ -15,8 +15,19 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
-import { createClient } from "@/lib/sql/client";
 import type { Customer, Unit } from "@/types";
+
+// Helper to query /api/db
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
 
 // Urutan alami supaya "2" tampil sebelum "10" (bukan urutan teks biasa)
 function naturalSort<T>(arr: T[], getKey: (item: T) => string): T[] {
@@ -43,7 +54,6 @@ export default function InputPenjualanPage() {
     addSale,
     searchCustomers,
   } = useData();
-  const supabase = createClient();
 
   // --- State pencarian Customer ---
   const [customerQuery, setCustomerQuery] = useState("");
@@ -99,18 +109,35 @@ export default function InputPenjualanPage() {
   const filteredBlocks = useMemo(
     () =>
       naturalSort(
-        blocks.filter((b) => b.location_id === locationId),
+        blocks.filter((b) => !locationId || b.location_id === locationId),
         (b) => b.nama_blok,
       ),
     [blocks, locationId],
   );
 
-  const availableUnitsInBlock = useMemo(() => {
-    const filtered = units.filter(
-      (u) => u.block_id === blockId && u.status === "Tersedia",
-    );
-    return naturalSort(filtered, (u) => u.no_unit || "");
-  }, [units, blockId]);
+  const availableUnits = useMemo(() => {
+    let list = units;
+
+    if (blockId) {
+      const selectedBlock = blocks.find((b) => b.id === blockId);
+      const bNama = selectedBlock?.nama_blok?.toLowerCase();
+      list = units.filter(
+        (u) =>
+          u.block_id === blockId ||
+          (bNama && u.block_nama?.toLowerCase() === bNama),
+      );
+    } else if (locationId) {
+      const selectedLoc = locations.find((l) => l.id === locationId);
+      const locNama = selectedLoc?.nama_lokasi?.toLowerCase();
+      list = units.filter((u) => {
+        if (locNama && u.location_nama?.toLowerCase() === locNama) return true;
+        const uBlock = blocks.find((b) => b.id === u.block_id || b.nama_blok === u.block_nama);
+        return uBlock && uBlock.location_id === locationId;
+      });
+    }
+
+    return naturalSort(list, (u) => `${u.block_nama || ''} ${u.no_unit || ''}`);
+  }, [units, blockId, locationId, blocks, locations]);
 
   const selectedUnit: Unit | undefined = useMemo(
     () => units.find((u) => u.id === unitId),
@@ -126,6 +153,12 @@ export default function InputPenjualanPage() {
   const handleBlockChange = (val: string) => {
     setBlockId(val);
     setUnitId("");
+
+    // Auto sync location jika perumahan belum dipilih
+    if (val && !locationId) {
+      const blk = blocks.find((b) => b.id === val);
+      if (blk?.location_id) setLocationId(blk.location_id);
+    }
   };
 
   // --- Form utama ---
@@ -148,10 +181,14 @@ export default function InputPenjualanPage() {
   useEffect(() => {
     if (formData.metode_bayar === "KPR" && selectedUnit) {
       const plafon = selectedUnit.maksimal_kredit || 0;
-      setFormData((prev) => ({
-        ...prev,
-        harga_kesepakatan: plafon + prev.dp_nominal + prev.booking_fee,
-      }));
+      const dp = formData.dp_nominal ?? selectedUnit.uang_muka ?? 0;
+      const booking = formData.booking_fee ?? selectedUnit.booking_fee ?? 0;
+      if (plafon > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          harga_kesepakatan: plafon + dp + booking,
+        }));
+      }
     }
   }, [
     formData.metode_bayar,
@@ -165,11 +202,31 @@ export default function InputPenjualanPage() {
     setUnitId(val);
     const u = units.find((x) => x.id === val);
     if (u) {
+      // Auto sync block dan location jika belum diset
+      if (!blockId && u.block_id) {
+        setBlockId(u.block_id);
+      } else if (!blockId && u.block_nama) {
+        const foundB = blocks.find((b) => b.nama_blok?.toLowerCase() === u.block_nama?.toLowerCase());
+        if (foundB) setBlockId(foundB.id);
+      }
+
+      if (!locationId && u.location_nama) {
+        const foundL = locations.find((l) => l.nama_lokasi?.toLowerCase() === u.location_nama?.toLowerCase());
+        if (foundL) setLocationId(foundL.id);
+      }
+
+      const bFee = u.booking_fee || 0;
+      const dpNominal = u.uang_muka ?? (u as any).dp_minimal ?? 0;
+      const maxKredit = u.maksimal_kredit || 0;
+      const hgKesepakatan = maxKredit > 0
+        ? maxKredit + dpNominal + bFee
+        : (u.harga_dasar || 0) + bFee;
+
       setFormData((prev) => ({
         ...prev,
-        harga_kesepakatan: (u.harga_dasar || 0) + (u.booking_fee || 0),
-        dp_nominal: u.uang_muka || 0,
-        booking_fee: u.booking_fee || 0,
+        booking_fee: bFee,
+        dp_nominal: dpNominal,
+        harga_kesepakatan: hgKesepakatan,
       }));
     }
   };
@@ -196,18 +253,17 @@ export default function InputPenjualanPage() {
       if (!custId) {
         const dummyNik =
           "0000000000000000-" + Math.floor(Math.random() * 10000);
-        const { data, error } = await supabase
-          .from("customers")
-          .insert({
+        const newCustomer = await dbRequest({
+          action: 'insert',
+          table: 'customers',
+          data: {
             nama: custNama,
             nik: dummyNik,
             alamat: "-",
             no_hp: "-",
-          })
-          .select()
-          .single();
-        if (error) throw error;
-        custId = data?.id;
+          },
+        });
+        custId = newCustomer?.id;
       } else {
         const existing =
           customers.find((c) => c.id === custId) ||
@@ -222,12 +278,12 @@ export default function InputPenjualanPage() {
       )?.id;
 
       if (!markId && formData.marketer_nama) {
-        const { data, error } = await supabase
-          .from("marketers")
-          .insert({ nama: formData.marketer_nama, no_hp: "-" })
-          .select()
-          .single();
-        if (!error) markId = data?.id;
+        const newMarketer = await dbRequest({
+          action: 'insert',
+          table: 'marketers',
+          data: { nama: formData.marketer_nama, no_hp: "-" },
+        });
+        if (newMarketer) markId = newMarketer?.id;
       }
 
       // 3. Resolve Bank ID
@@ -243,18 +299,18 @@ export default function InputPenjualanPage() {
           bankId = bankRecord.id;
           finalBankNama = bankRecord.nama_bank;
         } else {
-          const { data, error } = await supabase
-            .from("banks")
-            .insert({
+          const newBank = await dbRequest({
+            action: 'insert',
+            table: 'banks',
+            data: {
               nama_bank: formData.bank_nama,
               cabang: "Pusat",
               pic_nama: "-",
               pic_hp: "-",
-            })
-            .select()
-            .single();
-          if (!error) {
-            bankId = data?.id;
+            },
+          });
+          if (newBank) {
+            bankId = newBank?.id;
             finalBankNama = formData.bank_nama;
           }
         }
@@ -469,23 +525,22 @@ export default function InputPenjualanPage() {
                 </label>
                 <select
                   required
-                  disabled={!blockId}
                   value={unitId}
                   onChange={(e) => handleUnitChange(e.target.value)}
                   className={INPUT}
                 >
                   <option value="">
-                    {blockId ? "-- Pilih No Unit --" : "Pilih Blok dulu"}
+                    {blockId ? "-- Pilih No Unit --" : locationId ? "-- Pilih No Unit --" : "-- Pilih Unit Rumah --"}
                   </option>
-                  {availableUnitsInBlock.map((u) => (
+                  {availableUnits.map((u) => (
                     <option key={u.id} value={u.id}>
-                      No {u.no_unit} — {u.status}
+                      {u.block_nama ? `BLOK ${u.block_nama} ` : ''}No {u.no_unit} {u.unit_type_nama ? `(${u.unit_type_nama})` : ''} — {u.status || 'Tersedia'}
                     </option>
                   ))}
                 </select>
-                {blockId && availableUnitsInBlock.length === 0 && (
+                {availableUnits.length === 0 && (
                   <p className="text-[11px] text-amber-600 mt-1.5 font-medium">
-                    Tidak ada unit tersedia di blok ini.
+                    Tidak ada unit ditemukan untuk perumahan/blok ini.
                   </p>
                 )}
               </div>

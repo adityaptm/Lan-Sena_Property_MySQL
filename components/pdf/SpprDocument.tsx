@@ -23,6 +23,9 @@ Font.register({
   src: '/fonts/ArchivoNarrow-Bold.ttf'
 });
 
+// Nonaktifkan pemisahan kata dengan strip (-) agar kata utuh dipindah ke baris baru
+Font.registerHyphenationCallback((word) => [word]);
+
 // Create styles
 const styles = StyleSheet.create({
   page: {
@@ -120,11 +123,13 @@ const styles = StyleSheet.create({
   valueCellNormal: {
     flex: 1,
     textTransform: 'uppercase',
+    overflow: 'hidden',
   },
   valueCellBold: {
     flex: 1,
     fontFamily: 'Helvetica-Bold',
     textTransform: 'uppercase',
+    overflow: 'hidden',
   },
 
   // --- List ---
@@ -197,7 +202,8 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
   const dpNominal = Number(sale.dp_nominal) || Number(unit?.uang_muka) || 0;
   const bookingFee = Number(sale.booking_fee) || Number(unit?.booking_fee) || 0;
   const uangMuka = dpNominal + bookingFee;
-  const kprAmount = isKPR ? (Number(sale.total_harga || 0) - uangMuka) : 0;
+  // kprAmount = maksimal_kredit dari master unit (bukan total_harga - uangMuka)
+  const kprAmount = isKPR ? (Number(unit?.maksimal_kredit) || Number(sale.kredit_pengajuan) || (Number(sale.total_harga || 0) - uangMuka)) : 0;
 
   return (
     <Document>

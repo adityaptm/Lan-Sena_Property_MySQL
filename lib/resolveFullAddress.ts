@@ -1,10 +1,14 @@
-import { createClient } from '@/lib/sql/client';
+import { query } from '@/lib/db';
 
 /**
  * Resolve alamat lengkap (Kampung/Jalan, RT/RW, Kel, Kec, Kab/Kota, Provinsi)
  * dari kelurahan_id. Logic-nya sama persis dengan komponen <FullAddress />,
  * tapi versi async function biasa supaya bisa dipanggil sebelum render
  * dokumen react-pdf (yang tidak mendukung useEffect / komponen async).
+ * 
+ * NOTE: This function is called server-side (for PDF generation), so it uses
+ * direct database access via query() instead of fetch('/api/db') to avoid
+ * HTTP round-trip from server to server.
  */
 export async function resolveFullAddress({
   kelurahanId,
@@ -24,26 +28,24 @@ export async function resolveFullAddress({
   }
 
   try {
-    const supabase = createClient();
-
     // 1. Get kelurahan
-    const villageRes = await supabase.from('kelurahan').select('*').eq('id', kelurahanId).single();
-    const village = villageRes.data;
+    const villageRows = await query('SELECT * FROM kelurahan WHERE id = ?', [kelurahanId]);
+    const village = villageRows[0];
     if (!village) return fallback || '-';
 
     // 2. Get kecamatan
-    const districtRes = await supabase.from('kecamatan').select('*').eq('id', village.kecamatan_id).single();
-    const district = districtRes.data;
+    const districtRows = await query('SELECT * FROM kecamatan WHERE id = ?', [village.kecamatan_id]);
+    const district = districtRows[0];
     if (!district) return fallback || '-';
 
     // 3. Get kabupaten
-    const regencyRes = await supabase.from('kabupaten_kota').select('*').eq('id', district.kabupaten_kota_id).single();
-    const regency = regencyRes.data;
+    const regencyRows = await query('SELECT * FROM kabupaten_kota WHERE id = ?', [district.kabupaten_kota_id]);
+    const regency = regencyRows[0];
     if (!regency) return fallback || '-';
 
     // 4. Get provinsi
-    const provinceRes = await supabase.from('provinsi').select('*').eq('id', regency.provinsi_id).single();
-    const province = provinceRes.data;
+    const provinceRows = await query('SELECT * FROM provinsi WHERE id = ?', [regency.provinsi_id]);
+    const province = provinceRows[0];
     if (!province) return fallback || '-';
 
     const rtPart = rt ? `RT ${rt}` : '';

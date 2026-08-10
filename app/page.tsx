@@ -115,17 +115,20 @@ export default function DashboardPage() {
 
   // 3. DYNAMIC DATA: Unit Ready Summary
   const unitReadySummary = useMemo(() => {
-    const readyUnits = units.filter((u) => u.status === 'Tersedia');
-    const map: Record<string, { lokasi: string; blok: string; count: number }> = {};
+    const readyUnits = units.filter((u) => (u.status || '').toLowerCase() === 'tersedia');
+    const map: Record<string, { lokasi: string; blok: string; noUnits: string[]; count: number }> = {};
 
     readyUnits.forEach((u) => {
       const loc = u.location_nama || 'Perumahan';
       const blk = u.block_nama || 'Utama';
       const key = `${loc}||${blk}`;
       if (!map[key]) {
-        map[key] = { lokasi: loc, blok: blk, count: 0 };
+        map[key] = { lokasi: loc, blok: blk, noUnits: [], count: 0 };
       }
       map[key].count += 1;
+      if (u.no_unit) {
+        map[key].noUnits.push(u.no_unit);
+      }
     });
 
     return Object.values(map);
@@ -584,20 +587,34 @@ export default function DashboardPage() {
                 <tr>
                   <th className="py-2.5 px-4">Lokasi</th>
                   <th className="py-2.5 px-4">Blok</th>
-                  <th className="py-2.5 px-4 text-right">Unit Ready</th>
+                  <th className="py-2.5 px-4">No Unit Ready</th>
+                  <th className="py-2.5 px-4 text-right">Jumlah</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {paginatedUnitReadySummary.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-4 text-center text-slate-400">Belum ada unit ready di database</td>
+                    <td colSpan={4} className="py-4 text-center text-slate-400">Belum ada unit ready di database</td>
                   </tr>
                 ) : (
                   paginatedUnitReadySummary.map((item, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
                       <td className="py-2.5 px-4 font-medium text-slate-800">{item.lokasi}</td>
-                      <td className="py-2.5 px-4 font-semibold text-blue-700">{item.blok}</td>
-                      <td className="py-2.5 px-4 text-right font-bold text-emerald-600">{item.count}</td>
+                      <td className="py-2.5 px-4 font-bold text-slate-900">BLOK {item.blok}</td>
+                      <td className="py-2.5 px-4">
+                        <div className="flex flex-wrap gap-1">
+                          {item.noUnits.length > 0 ? (
+                            item.noUnits.map((no, nIdx) => (
+                              <span key={nIdx} className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-mono font-semibold text-[11px]">
+                                No {no}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-bold text-emerald-600">{item.count} Unit</td>
                     </tr>
                   ))
                 )}

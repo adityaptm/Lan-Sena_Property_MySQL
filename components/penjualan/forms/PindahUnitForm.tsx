@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
-import { createClient } from '@/lib/sql/client';
 import { Location, Block, Unit, Sale } from '@/types';
+
+// Helper to query /api/db
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
 
 interface Props {
   sale: Sale;
@@ -19,8 +30,6 @@ export function PindahUnitForm({ sale, currentUnit, locations, blocks, units, on
   const [availableUnits, setAvailableUnits] = useState<Unit[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState('');
   const [saving, setSaving] = useState(false);
-  
-  const supabase = createClient();
 
   const filteredBlocks = blocks.filter(b => b.location_id === lokasiId);
 
@@ -36,30 +45,54 @@ export function PindahUnitForm({ sale, currentUnit, locations, blocks, units, on
     if (!selectedUnitId || !currentUnit) return;
     setSaving(true);
     
-    // 1. Kembalikan unit lama ke Tersedia
-    await supabase.from('units').update({ status: 'Tersedia' }).eq('id', currentUnit.id);
-    
-    // 2. Set unit baru status mengikuti sale status atau 'Booking'
-    const newUnitStatus = sale.status === 'Batal' ? 'Tersedia' : sale.status;
-    await supabase.from('units').update({ status: newUnitStatus }).eq('id', selectedUnitId);
-    
-    // 3. Update sale unit_id
-    await supabase.from('sales').update({ unit_id: selectedUnitId }).eq('id', sale.id);
-    
-    // 4. Catat histori
-    const newUnit = units.find(u => u.id === selectedUnitId);
-    const keterangan = `Pindah dari ${currentUnit.location_nama} Blok ${currentUnit.block_nama} No ${currentUnit.no_unit} ke ${newUnit?.location_nama} Blok ${newUnit?.block_nama} No ${newUnit?.no_unit}`;
-    
-    await supabase.from('sale_step_history').insert({
-      sale_id: sale.id,
-      jenis_step: 'pindah_unit',
-      status: 'Pindah Unit',
-      keterangan: keterangan
-    });
-    
-    setSaving(false);
-    onSuccess();
-    onClose();
+    try {
+      // 1. Kembalikan unit lama ke Tersedia
+      await dbRequest({
+        action: 'update',
+        table: 'units',
+        filters: [{ type: 'eq', column: 'id', value: currentUnit.id }],
+        data: { status: 'Tersedia' },
+      });
+      
+      // 2. Set unit baru status mengikuti sale status
+      const newUnitStatus = sale.status === 'Batal' ? 'Tersedia' : sale.status;
+      await dbRequest({
+        action: 'update',
+        table: 'units',
+        filters: [{ type: 'eq', column: 'id', value: selectedUnitId }],
+        data: { status: newUnitStatus },
+      });
+      
+      // 3. Update sale unit_id
+      await dbRequest({
+        action: 'update',
+        table: 'sales',
+        filters: [{ type: 'eq', column: 'id', value: sale.id }],
+        data: { unit_id: selectedUnitId },
+      });
+      
+      // 4. Catat histori
+      const newUnit = units.find(u => u.id === selectedUnitId);
+      const keterangan = `Pindah dari ${currentUnit.location_nama} Blok ${currentUnit.block_nama} No ${currentUnit.no_unit} ke ${newUnit?.location_nama} Blok ${newUnit?.block_nama} No ${newUnit?.no_unit}`;
+      
+      await dbRequest({
+        action: 'insert',
+        table: 'sale_step_history',
+        data: {
+          sale_id: sale.id,
+          jenis_step: 'pindah_unit',
+          status: 'Pindah Unit',
+          keterangan: keterangan
+        },
+      });
+      
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      alert('Gagal pindah unit: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

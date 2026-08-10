@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { createClient } from '@/lib/sql/client';
 import { useData } from '@/lib/data-context';
 
 export default function LoginPage() {
@@ -14,8 +13,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  const supabase = createClient();
 
   useEffect(() => {
     if (!authLoading && currentUser) {
@@ -32,9 +29,16 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setErrorMsg(error.message || 'Email atau password salah.');
+      const res = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Email atau password salah.');
       } else {
         await refresh();
         window.location.href = '/';

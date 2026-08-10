@@ -51,6 +51,14 @@ const NAV_MENU: NavGroup[] = [
     items: [{ label: 'Master Data & Unit', href: '/unit-rumah' }],
   },
   {
+    title: 'Penjualan',
+    icon: ShoppingCart,
+    items: [
+      { label: 'Input Penjualan Baru', href: '/penjualan/input' },
+      { label: 'Daftar Penjualan', href: '/penjualan/daftar' },
+    ],
+  },
+  {
     title: 'Marketing',
     icon: Megaphone,
     items: [
@@ -84,14 +92,6 @@ const NAV_MENU: NavGroup[] = [
       { label: 'Pengajuan Pencairan', href: '/keuangan/pengajuan-pencairan' },
       { label: 'Laporan Akuntansi', href: '/keuangan/laporan-akuntansi' },
       { label: 'Aset Perusahaan', href: '/keuangan/aset-perusahaan' },
-    ],
-  },
-  {
-    title: 'Penjualan',
-    icon: ShoppingCart,
-    items: [
-      { label: 'Input Penjualan Baru', href: '/penjualan/input' },
-      { label: 'Daftar Penjualan', href: '/penjualan/daftar' },
     ],
   },
   {
@@ -289,9 +289,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
         </div>
         <button
           onClick={async () => {
-            const { createClient } = await import('@/lib/sql/client');
-            const supabase = createClient();
-            await supabase.auth.signOut();
+            await fetch('/api/auth/signout', { method: 'POST' });
             window.location.href = '/login';
           }}
           title="Sign Out"

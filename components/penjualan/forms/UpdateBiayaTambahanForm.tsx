@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { createClient } from '@/lib/sql/client';
+
+// Helper to query /api/db
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
 
 interface Props {
   saleId: string;
@@ -10,25 +21,29 @@ interface Props {
 export function UpdateBiayaTambahanForm({ saleId, onClose, onSuccess }: Props) {
   const [form, setForm] = useState({ nominal: '0', keterangan: '' });
   const [saving, setSaving] = useState(false);
-  const supabase = createClient();
 
   const handleSave = async () => {
     const nominalNum = Number(form.nominal.replace(/\D/g, '')) || 0;
     if (nominalNum <= 0 || !form.keterangan) return;
     
     setSaving(true);
-    const { error } = await supabase.from('sale_additional_costs').insert({
-      sale_id: saleId,
-      keterangan: form.keterangan,
-      nominal: nominalNum
-    });
-    setSaving(false);
-    
-    if (!error) {
+    try {
+      await dbRequest({
+        action: 'insert',
+        table: 'sale_additional_costs',
+        data: {
+          sale_id: saleId,
+          keterangan: form.keterangan,
+          nominal: nominalNum
+        },
+      });
+      
       onSuccess();
       onClose();
-    } else {
-      alert('Gagal menyimpan biaya tambahan.');
+    } catch (error: any) {
+      alert('Gagal menyimpan biaya tambahan: ' + error.message);
+    } finally {
+      setSaving(false);
     }
   };
 

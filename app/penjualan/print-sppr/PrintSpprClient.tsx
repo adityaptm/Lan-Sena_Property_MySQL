@@ -33,16 +33,21 @@ export default function PrintSpprClient({ id }: Props) {
       try {
         const { pdf } = await import('@react-pdf/renderer');
         const { SpprDocument } = await import('@/components/pdf/SpprDocument');
-        const { resolveFullAddress } = await import('@/lib/resolveFullAddress');
 
-        // Resolve alamat lengkap (Kel/Kec/Kab/Provinsi) dulu, sebelum render PDF
-        const alamatLengkap = await resolveFullAddress({
-          kelurahanId: customer.kelurahan_id,
-          kampungDusun: customer.kampung_dusun,
-          rt: customer.rt,
-          rw: customer.rw,
-          fallback: customer.alamat_ktp || customer.alamat,
+        // Resolve alamat lengkap via API route (client component can't import lib/db)
+        const addressRes = await fetch('/api/resolve-address', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kelurahanId: customer.kelurahan_id,
+            kampungDusun: customer.kampung_dusun,
+            rt: customer.rt,
+            rw: customer.rw,
+            fallback: customer.alamat_ktp || customer.alamat,
+          }),
         });
+        const addressData = await addressRes.json();
+        const alamatLengkap = addressData.data || customer.alamat_ktp || customer.alamat || '-';
 
         const customerWithAddress = { ...customer, alamatLengkap };
 

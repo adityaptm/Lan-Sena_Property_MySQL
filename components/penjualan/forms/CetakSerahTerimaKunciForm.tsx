@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { createClient } from '@/lib/sql/client';
+
+// Helper to query /api/db
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
 
 interface Props {
   saleId: string;
@@ -17,7 +28,6 @@ export function CetakSerahTerimaKunciForm({ saleId, onClose, onSuccess }: Props)
   });
 
   const [saving, setSaving] = useState(false);
-  const supabase = createClient();
 
   const handleSave = async () => {
     if (!form.tanggal || !form.yang_menyerahkan || !form.nomor_surat) return;
@@ -26,18 +36,20 @@ export function CetakSerahTerimaKunciForm({ saleId, onClose, onSuccess }: Props)
     // Buka window kosong lebih awal untuk mencegah popup blocker
     const newWindow = window.open('about:blank', '_blank');
     
-    const { error } = await supabase.from('sale_key_handovers').insert({
-      sale_id: saleId,
-      nomor_surat: form.nomor_surat,
-      tanggal_serah_terima: form.tanggal,
-      yang_menyerahkan: form.yang_menyerahkan,
-      masa_pemeliharaan_hari: form.masa_pemeliharaan_hari,
-      catatan: form.catatan,
-    });
+    try {
+      await dbRequest({
+        action: 'insert',
+        table: 'sale_key_handovers',
+        data: {
+          sale_id: saleId,
+          nomor_surat: form.nomor_surat,
+          tanggal_serah_terima: form.tanggal,
+          yang_menyerahkan: form.yang_menyerahkan,
+          masa_pemeliharaan_hari: form.masa_pemeliharaan_hari,
+          catatan: form.catatan,
+        },
+      });
 
-    setSaving(false);
-    
-    if (!error) {
       onSuccess();
       if (newWindow) {
         const queryParams = new URLSearchParams({
@@ -52,10 +64,11 @@ export function CetakSerahTerimaKunciForm({ saleId, onClose, onSuccess }: Props)
         newWindow.location.href = `/penjualan/print-serah-terima-kunci?${queryParams}`;
       }
       onClose();
-    } else {
+    } catch (error: any) {
       if (newWindow) newWindow.close();
-      console.error('Supabase Error Detail:', error);
       alert(`Gagal menyimpan data serah terima kunci: ${error.message}`);
+    } finally {
+      setSaving(false);
     }
   };
 

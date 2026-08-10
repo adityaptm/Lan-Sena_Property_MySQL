@@ -1,7 +1,18 @@
- import React, { useState } from 'react';
-import { createClient } from '@/lib/sql/client';
+import React, { useState } from 'react';
 import { Marketer, Sale, MarketerRight } from '@/types';
 import { formatRupiah } from '@/lib/format';
+
+// Helper to query /api/db
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch('/api/db', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Database error');
+  return json.data;
+}
 
 interface Props {
   sale: Sale;
@@ -16,36 +27,53 @@ export function UpdateMarketerForm({ sale, currentMarketer, currentMarketerRight
   const [selectedMarketerId, setSelectedMarketerId] = useState('');
   const [feeNominal, setFeeNominal] = useState('');
   const [saving, setSaving] = useState(false);
-  const supabase = createClient();
 
   const handleSave = async () => {
     if (!selectedMarketerId) return;
     setSaving(true);
     
-    // 1. Update sale marketer_id
-    await supabase.from('sales').update({ marketer_id: selectedMarketerId }).eq('id', sale.id);
-    
-    // 2. Tandai marketer lama sebagai riwayat (misal update status_pencairan 'Batal' atau bikin record baru)
-    // As per instruction: "tandai record lama sebagai riwayat (jangan dihapus, biar histori komisi tetap ada)"
-    if (currentMarketerRight) {
-       await supabase.from('marketer_rights').update({ is_history: true }).eq('id', currentMarketerRight.id);
-    }
-    
-    // 3. Buat entry baru di marketer_rights
-    const mkt = marketers.find(m => m.id === selectedMarketerId);
-    if (mkt) {
-      await supabase.from('marketer_rights').insert({
-        marketer_id: mkt.id,
-        sale_id: sale.id,
-        persen_fee: 0, // default atau input manual
-        nominal_fee: Number(feeNominal.replace(/\D/g, '')) || 0,
-        status_pencairan: 'Belum'
+    try {
+      // 1. Update sale marketer_id
+      await dbRequest({
+        action: 'update',
+        table: 'sales',
+        filters: [{ type: 'eq', column: 'id', value: sale.id }],
+        data: { marketer_id: selectedMarketerId },
       });
-    }
+      
+      // 2. Tandai marketer lama sebagai riwayat
+      if (currentMarketerRight) {
+        await dbRequest({
+          action: 'update',
+          table: 'marketer_rights',
+          filters: [{ type: 'eq', column: 'id', value: currentMarketerRight.id }],
+          data: { is_history: true },
+        });
+      }
+      
+      // 3. Buat entry baru di marketer_rights
+      const mkt = marketers.find(m => m.id === selectedMarketerId);
+      if (mkt) {
+        await dbRequest({
+          action: 'insert',
+          table: 'marketer_rights',
+          data: {
+            marketer_id: mkt.id,
+            sale_id: sale.id,
+            persen_fee: 0,
+            nominal_fee: Number(feeNominal.replace(/\D/g, '')) || 0,
+            status_pencairan: 'Belum'
+          },
+        });
+      }
 
-    setSaving(false);
-    onSuccess();
-    onClose();
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      alert('Gagal menyimpan: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

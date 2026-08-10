@@ -1,7 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { createClient } from '@/lib/sql/client';
+import React, { useState, useEffect } from "react";
 
 interface AddressSelectorProps {
   kelurahanId: string | null;
@@ -23,6 +22,69 @@ interface RegionItem {
   kode?: string;
 }
 
+// ─── MySQL API Gateway Helper (sama pola dengan data-context.tsx) ──────────
+async function dbRequest(body: Record<string, any>) {
+  const res = await fetch("/api/db", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Database error");
+  return json.data;
+}
+
+function sortByNama<T extends { nama: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+}
+
+async function selectWhere(
+  table: string,
+  column: string,
+  value: string,
+): Promise<any[]> {
+  try {
+    const data = await dbRequest({
+      action: "select",
+      table,
+      filters: [{ type: "eq", column, value }],
+    });
+    return (data || []) as any[];
+  } catch (e: any) {
+    console.warn(`AddressSelector: gagal memuat ${table}`, e.message);
+    return [];
+  }
+}
+
+async function selectSingle(
+  table: string,
+  id: string,
+): Promise<Record<string, any> | null> {
+  try {
+    const data = await dbRequest({
+      action: "select",
+      table,
+      filters: [{ type: "eq", column: "id", value: id }],
+      single: true,
+    });
+    return data || null;
+  } catch (e: any) {
+    console.warn(`AddressSelector: gagal memuat single ${table}`, e.message);
+    return null;
+  }
+}
+
+async function selectAll(table: string): Promise<any[]> {
+  try {
+    const data = await dbRequest({ action: "select", table });
+    return (data || []) as any[];
+  } catch (e: any) {
+    console.warn(`AddressSelector: gagal memuat ${table}`, e.message);
+    return [];
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────
+
 export function AddressSelector({
   kelurahanId,
   kampungDusun,
@@ -31,8 +93,6 @@ export function AddressSelector({
   onChange,
   disabled = false,
 }: AddressSelectorProps) {
-  const supabase = useMemo(() => createClient(), []);
-
   // Dropdown lists
   const [provinces, setProvinces] = useState<RegionItem[]>([]);
   const [regencies, setRegencies] = useState<RegionItem[]>([]);
@@ -40,10 +100,10 @@ export function AddressSelector({
   const [villages, setVillages] = useState<RegionItem[]>([]);
 
   // Selected values
-  const [selectedProvinceId, setSelectedProvinceId] = useState<string>('');
-  const [selectedRegencyId, setSelectedRegencyId] = useState<string>('');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<string>('');
-  const [selectedVillageId, setSelectedVillageId] = useState<string>('');
+  const [selectedProvinceId, setSelectedProvinceId] = useState<string>("");
+  const [selectedRegencyId, setSelectedRegencyId] = useState<string>("");
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
+  const [selectedVillageId, setSelectedVillageId] = useState<string>("");
 
   const [localKampung, setLocalKampung] = useState(kampungDusun);
   const [localRt, setLocalRt] = useState(rt);
@@ -67,21 +127,19 @@ export function AddressSelector({
   // Load provinces on mount
   useEffect(() => {
     async function loadProvinces() {
-      const { data, error } = await supabase.from('provinsi').select('id, nama').order('nama');
-      if (!error && data) {
-        setProvinces(data);
-      }
+      const data = await selectAll("provinsi");
+      setProvinces(sortByNama(data as RegionItem[]));
     }
     loadProvinces();
-  }, [supabase]);
+  }, []);
 
   // Load initial hierarchy if kelurahanId is set
   useEffect(() => {
     if (!kelurahanId) {
-      setSelectedProvinceId('');
-      setSelectedRegencyId('');
-      setSelectedDistrictId('');
-      setSelectedVillageId('');
+      setSelectedProvinceId("");
+      setSelectedRegencyId("");
+      setSelectedDistrictId("");
+      setSelectedVillageId("");
       setRegencies([]);
       setDistricts([]);
       setVillages([]);
@@ -95,51 +153,51 @@ export function AddressSelector({
       setLoading(true);
       try {
         // 1. Get kelurahan info
-        const villageRes = await supabase.from('kelurahan').select('*').eq('id', kelurahanId).single();
-        if (villageRes.error || !villageRes.data) return;
-        const village = villageRes.data;
+        const village = await selectSingle("kelurahan", kelurahanId as string);
+        if (!village) return;
 
         // 2. Get kecamatan info
-        const districtRes = await supabase.from('kecamatan').select('*').eq('id', village.kecamatan_id).single();
-        if (districtRes.error || !districtRes.data) return;
-        const district = districtRes.data;
+        const district = await selectSingle("kecamatan", village.kecamatan_id);
+        if (!district) return;
 
         // 3. Get kabupaten_kota info
-        const regencyRes = await supabase.from('kabupaten_kota').select('*').eq('id', district.kabupaten_kota_id).single();
-        if (regencyRes.error || !regencyRes.data) return;
-        const regency = regencyRes.data;
+        const regency = await selectSingle(
+          "kabupaten_kota",
+          district.kabupaten_kota_id,
+        );
+        if (!regency) return;
 
         // 4. Fetch lists in parallel
         const [regenciesList, districtsList, villagesList] = await Promise.all([
-          supabase.from('kabupaten_kota').select('id, nama').eq('provinsi_id', regency.provinsi_id).order('nama'),
-          supabase.from('kecamatan').select('id, nama').eq('kabupaten_kota_id', regency.id).order('nama'),
-          supabase.from('kelurahan').select('id, nama').eq('kecamatan_id', district.id).order('nama'),
+          selectWhere("kabupaten_kota", "provinsi_id", regency.provinsi_id),
+          selectWhere("kecamatan", "kabupaten_kota_id", regency.id),
+          selectWhere("kelurahan", "kecamatan_id", district.id),
         ]);
 
-        if (regenciesList.data) setRegencies(regenciesList.data);
-        if (districtsList.data) setDistricts(districtsList.data);
-        if (villagesList.data) setVillages(villagesList.data);
+        setRegencies(sortByNama(regenciesList as RegionItem[]));
+        setDistricts(sortByNama(districtsList as RegionItem[]));
+        setVillages(sortByNama(villagesList as RegionItem[]));
 
         setSelectedProvinceId(regency.provinsi_id);
         setSelectedRegencyId(regency.id);
         setSelectedDistrictId(district.id);
         setSelectedVillageId(village.id);
       } catch (e) {
-        console.error('Error loading address hierarchy:', e);
+        console.error("Error loading address hierarchy:", e);
       } finally {
         setLoading(false);
       }
     }
 
     loadHierarchy();
-  }, [kelurahanId, supabase]);
+  }, [kelurahanId]);
 
   // Handle province change
   const handleProvinceChange = async (provId: string) => {
     setSelectedProvinceId(provId);
-    setSelectedRegencyId('');
-    setSelectedDistrictId('');
-    setSelectedVillageId('');
+    setSelectedRegencyId("");
+    setSelectedDistrictId("");
+    setSelectedVillageId("");
 
     setRegencies([]);
     setDistricts([]);
@@ -155,16 +213,16 @@ export function AddressSelector({
     if (!provId) return;
 
     setLoading(true);
-    const { data } = await supabase.from('kabupaten_kota').select('id, nama').eq('provinsi_id', provId).order('nama');
-    if (data) setRegencies(data);
+    const data = await selectWhere("kabupaten_kota", "provinsi_id", provId);
+    setRegencies(sortByNama(data as RegionItem[]));
     setLoading(false);
   };
 
   // Handle regency change
   const handleRegencyChange = async (regId: string) => {
     setSelectedRegencyId(regId);
-    setSelectedDistrictId('');
-    setSelectedVillageId('');
+    setSelectedDistrictId("");
+    setSelectedVillageId("");
 
     setDistricts([]);
     setVillages([]);
@@ -179,15 +237,15 @@ export function AddressSelector({
     if (!regId) return;
 
     setLoading(true);
-    const { data } = await supabase.from('kecamatan').select('id, nama').eq('kabupaten_kota_id', regId).order('nama');
-    if (data) setDistricts(data);
+    const data = await selectWhere("kecamatan", "kabupaten_kota_id", regId);
+    setDistricts(sortByNama(data as RegionItem[]));
     setLoading(false);
   };
 
   // Handle district change
   const handleDistrictChange = async (distId: string) => {
     setSelectedDistrictId(distId);
-    setSelectedVillageId('');
+    setSelectedVillageId("");
 
     setVillages([]);
 
@@ -201,8 +259,8 @@ export function AddressSelector({
     if (!distId) return;
 
     setLoading(true);
-    const { data } = await supabase.from('kelurahan').select('id, nama').eq('kecamatan_id', distId).order('nama');
-    if (data) setVillages(data);
+    const data = await selectWhere("kelurahan", "kecamatan_id", distId);
+    setVillages(sortByNama(data as RegionItem[]));
     setLoading(false);
   };
 
@@ -228,7 +286,7 @@ export function AddressSelector({
   };
 
   const handleRtChange = (val: string) => {
-    const clean = val.replace(/\D/g, '').slice(0, 5);
+    const clean = val.replace(/\D/g, "").slice(0, 5);
     setLocalRt(clean);
     onChange({
       kelurahanId: selectedVillageId || null,
@@ -239,7 +297,7 @@ export function AddressSelector({
   };
 
   const handleRwChange = (val: string) => {
-    const clean = val.replace(/\D/g, '').slice(0, 5);
+    const clean = val.replace(/\D/g, "").slice(0, 5);
     setLocalRw(clean);
     onChange({
       kelurahanId: selectedVillageId || null,
@@ -253,13 +311,19 @@ export function AddressSelector({
     <div className="space-y-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
       <div className="text-xs font-bold text-slate-700 border-b border-slate-200 pb-1.5 mb-1 flex items-center justify-between">
         <span>Struktur Alamat Administratif</span>
-        {loading && <span className="text-[10px] text-blue-500 font-normal animate-pulse">Loading data wilayah...</span>}
+        {loading && (
+          <span className="text-[10px] text-blue-500 font-normal animate-pulse">
+            Loading data wilayah...
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Provinsi */}
         <div>
-          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Provinsi</label>
+          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+            Provinsi
+          </label>
           <select
             value={selectedProvinceId}
             onChange={(e) => handleProvinceChange(e.target.value)}
@@ -277,7 +341,9 @@ export function AddressSelector({
 
         {/* Kabupaten/Kota */}
         <div>
-          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Kabupaten / Kota</label>
+          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+            Kabupaten / Kota
+          </label>
           <select
             value={selectedRegencyId}
             onChange={(e) => handleRegencyChange(e.target.value)}
@@ -297,7 +363,9 @@ export function AddressSelector({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Kecamatan */}
         <div>
-          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Kecamatan</label>
+          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+            Kecamatan
+          </label>
           <select
             value={selectedDistrictId}
             onChange={(e) => handleDistrictChange(e.target.value)}
@@ -315,7 +383,9 @@ export function AddressSelector({
 
         {/* Kelurahan */}
         <div>
-          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Kelurahan / Desa</label>
+          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+            Kelurahan / Desa
+          </label>
           <select
             value={selectedVillageId}
             onChange={(e) => handleVillageChange(e.target.value)}
@@ -335,7 +405,9 @@ export function AddressSelector({
       <div className="grid grid-cols-3 gap-3">
         {/* Kampung / Dusun */}
         <div className="col-span-2">
-          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Kampung / Dusun / Jalan</label>
+          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+            Kampung / Dusun / Jalan
+          </label>
           <input
             type="text"
             value={localKampung}
@@ -349,7 +421,9 @@ export function AddressSelector({
         {/* RT/RW */}
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">RT</label>
+            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+              RT
+            </label>
             <input
               type="text"
               value={localRt}
@@ -361,7 +435,9 @@ export function AddressSelector({
             />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">RW</label>
+            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+              RW
+            </label>
             <input
               type="text"
               value={localRw}

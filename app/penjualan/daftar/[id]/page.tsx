@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/lib/data-context";
-import { createClient } from "@/lib/sql/client";
 import {
   ChevronRight,
   Settings,
@@ -21,19 +20,16 @@ import {
   Wallet,
   Landmark,
   XCircle,
-  Plus,
+  PlusCircle,
 } from "lucide-react";
-import { formatRupiah, bulanKeRomawi } from "@/lib/format";
-import { FullAddress } from "@/components/ui/FullAddress";
-
+import { formatRupiah } from "@/lib/format";
 import {
   SaleAdditionalCost,
+  SaleDiscount,
   SalePayment,
   SaleBillingLetter,
   SaleStepHistory,
   SaleKprSubmission,
-  MarketingFeeDisbursement,
-  SaleDiscount,
 } from "@/types";
 import { CetakSerahTerimaKunciForm } from "@/components/penjualan/forms/CetakSerahTerimaKunciForm";
 import { CetakSuratKomplenForm } from "@/components/penjualan/forms/CetakSuratKomplenForm";
@@ -42,6 +38,29 @@ import { UpdateMarketerForm } from "@/components/penjualan/forms/UpdateMarketerF
 import { UpdateBiayaTambahanForm } from "@/components/penjualan/forms/UpdateBiayaTambahanForm";
 import { UpdateDataKonsumenForm } from "@/components/penjualan/forms/UpdateDataKonsumenForm";
 import { CetakPersyaratanKprForm } from "@/components/penjualan/forms";
+
+// ---------------------------------------------------------------------------
+// dbRequest: generic helper that talks to our own /api/db route.
+// This is the SAME pattern used by CetakSerahTerimaKunciForm — it replaces
+// every Supabase call (`.from().select()/.insert()/.update()/.delete()`)
+// used to live directly in this component.
+// ---------------------------------------------------------------------------
+async function dbRequest(body: any): Promise<any> {
+  const res = await fetch("/api/db", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Database error");
+  return json.data;
+}
+
+// Filter helpers yang sesuai kontrak app/api/db/route.ts (filters = array)
+const eqFilter = (column: string, value: any) => [
+  { column, type: "eq", value },
+];
+const byId = (value: any) => [{ column: "id", value }];
 
 // Daftar rekening tujuan uang masuk (sesuaikan lagi kalau ada rekening baru)
 const REKENING_OPTIONS = [
@@ -72,17 +91,6 @@ function formatRibuan(raw: string): string {
   return raw.replace(/[^0-9]/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-// Buat kode singkat (maks 3 huruf) dari inisial nama kontak, misal "Aditya Pratama Putra" -> "APP"
-function buatKodeKontak(nama: string): string {
-  const inisial = (nama || "")
-    .trim()
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-  return (inisial || "XXX").slice(0, 3).padEnd(3, "X");
-}
-
 function statusBadgeClass(status: string): string {
   if (status === "ACCEPTED")
     return "bg-emerald-100 text-emerald-700 border-emerald-300";
@@ -90,27 +98,6 @@ function statusBadgeClass(status: string): string {
   if (status === "PENDING")
     return "bg-amber-100 text-amber-700 border-amber-300";
   return "bg-slate-100 text-slate-600 border-slate-300";
-}
-
-/**
- * Hitung sisa tagihan konsumen berdasarkan status KPR terbaru.
- * - ACCEPTED → kredit_acc dari submission terbaru mengurangi sisa (clamp min 0)
- * - REJECTED → sisa otomatis 0 (dianggap tidak ada tagihan)
- * - PENDING / WAITING / lainnya → formula lama (base saja)
- * - Non-KPR → selalu formula lama
- */
-function computeSisaTagihan(
-  totalHargaFinal: number,
-  uangMasuk: number,
-  kprStatus: string,
-  kreditAccTerbaru: number,
-  isKpr: boolean,
-): number {
-  const base = totalHargaFinal - uangMasuk;
-  if (!isKpr) return base;
-  if (kprStatus === "ACCEPTED") return Math.max(0, base - kreditAccTerbaru);
-  if (kprStatus === "REJECTED") return 0;
-  return base; // PENDING / WAITING / status lain
 }
 
 export default function DetailPenjualanPage() {
@@ -127,10 +114,7 @@ export default function DetailPenjualanPage() {
     salesSteps,
     certificateSteps,
     refresh,
-    salePayments,
-    cashBankAccounts,
   } = useData();
-  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   // Sale Data
@@ -156,62 +140,104 @@ export default function DetailPenjualanPage() {
   const [additionalCosts, setAdditionalCosts] = useState<SaleAdditionalCost[]>(
     [],
   );
+  const [discounts, setDiscounts] = useState<SaleDiscount[]>([]);
   const [payments, setPayments] = useState<SalePayment[]>([]);
   const [billingLetters, setBillingLetters] = useState<SaleBillingLetter[]>([]);
   const [stepHistory, setStepHistory] = useState<SaleStepHistory[]>([]);
   const [kprSubmissions, setKprSubmissions] = useState<SaleKprSubmission[]>([]);
-  const [marketingDisbursements, setMarketingDisbursements] = useState<
-    MarketingFeeDisbursement[]
-  >([]);
-  const [discounts, setDiscounts] = useState<SaleDiscount[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
 
   const loadExtra = useCallback(async () => {
     if (!id) return;
     setLoadingExtra(true);
     try {
-      const [acRes, payRes, billRes, histRes, kprRes, mfRes, discRes] =
-        await Promise.all([
-          supabase.from("sale_additional_costs").select("*").eq("sale_id", id),
-          supabase
-            .from("sale_payments")
-            .select("*")
-            .eq("sale_id", id)
-            .order("tanggal", { ascending: true }),
-          supabase.from("sale_billing_letters").select("*").eq("sale_id", id),
-          supabase
-            .from("sale_step_history")
-            .select("*, users(nama)")
-            .eq("sale_id", id)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("sale_kpr_submissions")
-            .select("*")
-            .eq("sale_id", id)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("marketing_fee_disbursements")
-            .select("*")
-            .eq("sale_id", id)
-            .order("tanggal", { ascending: true }),
-          supabase
-            .from("sale_discounts")
-            .select("*")
-            .eq("sale_id", id)
-            .order("tanggal", { ascending: true }),
-        ]);
+      const [
+        acData,
+        discData,
+        payData,
+        billData,
+        histData,
+        kprData,
+        usersData,
+      ] = await Promise.all([
+        dbRequest({
+          action: "select",
+          table: "sale_additional_costs",
+          filters: eqFilter("sale_id", id),
+        }),
+        dbRequest({
+          action: "select",
+          table: "sale_discounts",
+          filters: eqFilter("sale_id", id),
+        }),
+        dbRequest({
+          action: "select",
+          table: "sale_payments",
+          filters: eqFilter("sale_id", id),
+        }),
+        dbRequest({
+          action: "select",
+          table: "sale_billing_letters",
+          filters: eqFilter("sale_id", id),
+        }),
+        dbRequest({
+          action: "select",
+          table: "sale_step_history",
+          filters: eqFilter("sale_id", id),
+        }),
+        dbRequest({
+          action: "select",
+          table: "sale_kpr_submissions",
+          filters: eqFilter("sale_id", id),
+        }),
+        // Backend tidak punya join generik (beda dari Supabase
+        // `.select("*, users(nama)")`), jadi kita ambil users terpisah
+        // lalu di-map manual di client untuk resolve changed_by_nama.
+        dbRequest({ action: "select", table: "users" }),
+      ]);
 
-      if (acRes.data) setAdditionalCosts(acRes.data);
-      if (payRes.data) setPayments(payRes.data);
-      if (billRes.data) setBillingLetters(billRes.data);
-      if (kprRes.data) setKprSubmissions(kprRes.data);
-      if (mfRes.data) setMarketingDisbursements(mfRes.data);
-      if (discRes.data) setDiscounts(discRes.data);
-      if (histRes.data) {
+      if (acData) setAdditionalCosts(acData);
+
+      if (discData) {
+        const sorted = [...discData].sort(
+          (a: any, b: any) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+        setDiscounts(sorted);
+      }
+
+      // Sorting dilakukan di client karena handleSelect di route.ts tidak
+      // mendukung parameter "order".
+      if (payData) {
+        const sorted = [...payData].sort(
+          (a: any, b: any) =>
+            new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime(),
+        );
+        setPayments(sorted);
+      }
+
+      if (billData) setBillingLetters(billData);
+
+      if (kprData) {
+        const sorted = [...kprData].sort(
+          (a: any, b: any) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+        setKprSubmissions(sorted);
+      }
+
+      if (histData) {
+        const userMap = new Map(
+          (usersData || []).map((u: any) => [u.id, u.nama]),
+        );
+        const sorted = [...histData].sort(
+          (a: any, b: any) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
         setStepHistory(
-          histRes.data.map((h: any) => ({
+          sorted.map((h: any) => ({
             ...h,
-            changed_by_nama: h.users?.nama || "System",
+            changed_by_nama: userMap.get(h.changed_by) || "System",
           })),
         );
       }
@@ -220,7 +246,7 @@ export default function DetailPenjualanPage() {
     } finally {
       setLoadingExtra(false);
     }
-  }, [id, supabase]);
+  }, [id]);
 
   const triggerRefresh = async () => {
     await refresh();
@@ -231,6 +257,7 @@ export default function DetailPenjualanPage() {
   const [activeTab, setActiveTab] = useState("angsuran");
 
   // Modal States
+  const [showPotonganModal, setShowPotonganModal] = useState(false);
   const [showBiayaModal, setShowBiayaModal] = useState(false);
   const [showSerahTerimaModal, setShowSerahTerimaModal] = useState(false);
   const [showKomplenModal, setShowKomplenModal] = useState(false);
@@ -242,8 +269,13 @@ export default function DetailPenjualanPage() {
   const [showUbahHargaModal, setShowUbahHargaModal] = useState(false);
   const [showAngsuranModal, setShowAngsuranModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showGantiBankModal, setShowGantiBankModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [potonganForm, setPotonganForm] = useState({
+    nominal: "",
+    keterangan: "",
+  });
   const [progresForm, setProgresForm] = useState({
     status: "",
     keterangan: "",
@@ -256,107 +288,21 @@ export default function DetailPenjualanPage() {
     diterima_dari: "",
     keterangan: "",
   });
-  // Form Approval Pengajuan KPR — juga merangkap ganti bank tujuan (bank_id)
   const [approvalForm, setApprovalForm] = useState({
     tanggal: new Date().toISOString().slice(0, 10),
-    bank_id: "",
     status: "PENDING" as "PENDING" | "ACCEPTED" | "REJECTED",
     kredit_acc: "",
     biaya_tambahan: "0",
     keterangan: "",
   });
+  const [gantiBankId, setGantiBankId] = useState("");
 
   // Menyimpan id payment yang sedang diedit. null = mode tambah baru.
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
-
-  // Menyimpan id submission KPR yang sedang diedit. null = mode tambah baru.
-  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(
+  // Menyimpan id baris sales_discount yang sedang diedit. null = mode tambah baru.
+  const [editingDiscountId, setEditingDiscountId] = useState<string | null>(
     null,
   );
-
-  // States untuk modal/form diskon potongan
-  const [showDiskonModal, setShowDiskonModal] = useState(false);
-  const [diskonForm, setDiskonForm] = useState({
-    tanggal: new Date().toISOString().slice(0, 10),
-    nominal: "",
-    keterangan: "",
-  });
-  const [editingDiskonId, setEditingDiskonId] = useState<string | null>(null);
-
-  const [showUploadDokumenModal, setShowUploadDokumenModal] = useState(false);
-  const [showDetailKonsumenModal, setShowDetailKonsumenModal] = useState(false);
-  const [uploadingKtp, setUploadingKtp] = useState(false);
-  const [uploadingKk, setUploadingKk] = useState(false);
-
-  const handleUploadFile = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: "ktp" | "kk",
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (type === "ktp") setUploadingKtp(true);
-    else setUploadingKk(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await res.json();
-      if (result.error) throw new Error(result.error);
-
-      // Update customer in database
-      const field = type === "ktp" ? "scan_ktp_url" : "scan_kk_url";
-      const { error } = await supabase
-        .from("customers")
-        .update({ [field]: result.url })
-        .eq("id", customer?.id);
-
-      if (error) throw error;
-
-      alert(`Upload ${type.toUpperCase()} Berhasil!`);
-      await triggerRefresh();
-    } catch (err: any) {
-      alert(err.message || `Gagal mengupload ${type.toUpperCase()}`);
-    } finally {
-      if (type === "ktp") setUploadingKtp(false);
-      else setUploadingKk(false);
-    }
-  };
-
-  const handleDeleteFile = async (type: "ktp" | "kk") => {
-    if (!customer?.id) return;
-    if (
-      !confirm(
-        `Apakah Anda yakin ingin menghapus file Scan ${type.toUpperCase()} milik ${customer.nama}?`,
-      )
-    )
-      return;
-
-    if (type === "ktp") setUploadingKtp(true);
-    else setUploadingKk(true);
-
-    try {
-      const field = type === "ktp" ? "scan_ktp_url" : "scan_kk_url";
-      const { error } = await supabase
-        .from("customers")
-        .update({ [field]: null })
-        .eq("id", customer.id);
-
-      if (error) throw error;
-      alert(`File Scan ${type.toUpperCase()} berhasil dihapus!`);
-      await triggerRefresh();
-    } catch (err: any) {
-      alert(err.message || `Gagal menghapus file ${type.toUpperCase()}`);
-    } finally {
-      if (type === "ktp") setUploadingKtp(false);
-      else setUploadingKk(false);
-    }
-  };
 
   const openAngsuranModal = () => {
     setEditingPaymentId(null);
@@ -383,12 +329,30 @@ export default function DetailPenjualanPage() {
     setShowAngsuranModal(true);
   };
 
-  // Buka modal Approval Pengajuan KPR, default bank & kredit_acc dari data sale/unit saat ini
+  // Buka modal Potongan dalam mode tambah baris baru (kosong)
+  const openPotonganModal = () => {
+    setEditingDiscountId(null);
+    setPotonganForm({ nominal: "", keterangan: "" });
+    setShowPotonganModal(true);
+  };
+
+  // Buka modal Potongan dalam mode edit, isi form dari baris sales_discount yang dipilih
+  const openEditPotonganModal = (d: SaleDiscount) => {
+    setEditingDiscountId(d.id);
+    setPotonganForm({
+      nominal: String(d.nominal).replace(/\B(?=(\d{3})+(?!\d))/g, "."),
+      keterangan: d.keterangan || "",
+    });
+    setShowPotonganModal(true);
+  };
+
+  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
+
+  // Buka modal Approval Pengajuan KPR dalam mode Tambah Baru
   const openApprovalModal = () => {
     setEditingSubmissionId(null);
     setApprovalForm({
       tanggal: new Date().toISOString().slice(0, 10),
-      bank_id: sale?.bank_id || "",
       status: "PENDING",
       kredit_acc: sale?.kredit_pengajuan
         ? String(sale.kredit_pengajuan).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
@@ -401,21 +365,22 @@ export default function DetailPenjualanPage() {
     setShowApprovalModal(true);
   };
 
-  // Buka Form Approval dalam mode edit, isi dari data submission yang dipilih
+  // Buka modal Approval Pengajuan KPR dalam mode Edit
   const openEditApprovalModal = (k: SaleKprSubmission) => {
     setEditingSubmissionId(k.id);
     setApprovalForm({
-      tanggal: k.tanggal,
-      bank_id: sale?.bank_id || "",
-      status: k.status as "PENDING" | "ACCEPTED" | "REJECTED",
-      kredit_acc: String(k.kredit_acc || 0).replace(
-        /\B(?=(\d{3})+(?!\d))/g,
-        ".",
-      ),
-      biaya_tambahan: "0",
+      tanggal: k.tanggal ? k.tanggal.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      status: k.status || "PENDING",
+      kredit_acc: String(k.kredit_acc || 0).replace(/\B(?=(\d{3})+(?!\d))/g, "."),
+      biaya_tambahan: String(k.biaya_tambahan || 0).replace(/\B(?=(\d{3})+(?!\d))/g, "."),
       keterangan: k.keterangan || "",
     });
     setShowApprovalModal(true);
+  };
+
+  const openGantiBankModal = () => {
+    setGantiBankId(sale?.bank_id || "");
+    setShowGantiBankModal(true);
   };
 
   // Hapus data pembayaran (angsuran) berdasarkan id
@@ -428,11 +393,11 @@ export default function DetailPenjualanPage() {
       return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("sale_payments")
-        .delete()
-        .eq("id", paymentId);
-      if (error) throw error;
+      await dbRequest({
+        action: "delete",
+        table: "sale_payments",
+        filters: byId(paymentId),
+      });
       await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || "Gagal menghapus pembayaran.");
@@ -446,14 +411,32 @@ export default function DetailPenjualanPage() {
     if (!confirm("Yakin ingin menghapus biaya tambahan ini?")) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("sale_additional_costs")
-        .delete()
-        .eq("id", biayaId);
-      if (error) throw error;
+      await dbRequest({
+        action: "delete",
+        table: "sale_additional_costs",
+        filters: byId(biayaId),
+      });
       await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || "Gagal menghapus biaya tambahan.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Hapus satu baris potongan
+  const handleDeletePotongan = async (discountId: string) => {
+    if (!confirm("Yakin ingin menghapus potongan ini?")) return;
+    setSaving(true);
+    try {
+      await dbRequest({
+        action: "delete",
+        table: "sale_discounts",
+        filters: byId(discountId),
+      });
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err?.message || "Gagal menghapus potongan.");
     } finally {
       setSaving(false);
     }
@@ -464,11 +447,11 @@ export default function DetailPenjualanPage() {
     if (!confirm("Yakin ingin membatalkan riwayat pengajuan KPR ini?")) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("sale_kpr_submissions")
-        .delete()
-        .eq("id", submissionId);
-      if (error) throw error;
+      await dbRequest({
+        action: "delete",
+        table: "sale_kpr_submissions",
+        filters: byId(submissionId),
+      });
       await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || "Gagal membatalkan pengajuan.");
@@ -477,74 +460,47 @@ export default function DetailPenjualanPage() {
     }
   };
 
-  const openDiskonModal = () => {
-    setEditingDiskonId(null);
-    setDiskonForm({
-      tanggal: new Date().toISOString().slice(0, 10),
-      nominal: "",
-      keterangan: "",
-    });
-    setShowDiskonModal(true);
-  };
-
-  const openEditDiskonModal = (d: SaleDiscount) => {
-    setEditingDiskonId(d.id);
-    setDiskonForm({
-      tanggal: d.tanggal,
-      nominal: String(d.nominal).replace(/\B(?=(\d{3})+(?!\d))/g, "."),
-      keterangan: d.keterangan || "",
-    });
-    setShowDiskonModal(true);
-  };
-
-  const handleSaveDiskon = async () => {
-    if (!diskonForm.tanggal || !diskonForm.nominal) {
-      alert("Tanggal dan Nominal wajib diisi.");
+  // Simpan potongan sebagai baris baru (atau update baris yang sedang
+  // diedit) di tabel sales_discount — bukan lagi menimpa kolom tunggal
+  // sales.potongan, supaya riwayat & keterangan tiap potongan tersimpan.
+  const handleSavePotongan = async () => {
+    if (!potonganForm.nominal) {
+      alert("Nominal potongan wajib diisi.");
       return;
     }
     setSaving(true);
     try {
-      const nominalValue = Number(diskonForm.nominal.replace(/\D/g, ""));
-      const payload = {
-        sale_id: id,
-        tanggal: diskonForm.tanggal,
-        nominal: nominalValue,
-        keterangan: diskonForm.keterangan || "",
-      };
+      const nominalValue = Number(potonganForm.nominal.replace(/\D/g, ""));
 
-      if (editingDiskonId) {
-        const { error } = await supabase
-          .from("sale_discounts")
-          .update(payload)
-          .eq("id", editingDiskonId);
-        if (error) throw error;
+      if (editingDiscountId) {
+        await dbRequest({
+          action: "update",
+          table: "sale_discounts",
+          data: {
+            nominal: nominalValue,
+            keterangan: potonganForm.keterangan || "",
+          },
+          filters: byId(editingDiscountId),
+        });
       } else {
-        const { error } = await supabase.from("sale_discounts").insert(payload);
-        if (error) throw error;
+        await dbRequest({
+          action: "insert",
+          table: "sale_discounts",
+          data: {
+            sale_id: id,
+            tanggal: new Date().toISOString().slice(0, 10),
+            nominal: nominalValue,
+            keterangan: potonganForm.keterangan || "",
+          },
+        });
       }
 
-      setShowDiskonModal(false);
-      setEditingDiskonId(null);
+      setShowPotonganModal(false);
+      setEditingDiscountId(null);
+      setPotonganForm({ nominal: "", keterangan: "" });
       await triggerRefresh();
     } catch (err: any) {
-      alert(err?.message || "Gagal menyimpan diskon.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteDiskon = async (diskonId: string) => {
-    if (!confirm("Yakin ingin menghapus diskon ini?")) return;
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from("sale_discounts")
-        .delete()
-        .eq("id", diskonId);
-      if (error) throw error;
-      await triggerRefresh();
-    } catch (err: any) {
-      alert(err?.message || "Gagal menghapus diskon.");
+      alert(err?.message || "Gagal menyimpan potongan.");
     } finally {
       setSaving(false);
     }
@@ -568,49 +524,30 @@ export default function DetailPenjualanPage() {
         `Diterima dari ${angsuranForm.diterima_dari} — masuk ke ${angsuranForm.bank_tujuan}`;
 
       if (editingPaymentId) {
-        const { error } = await supabase
-          .from("sale_payments")
-          .update({
+        await dbRequest({
+          action: "update",
+          table: "sale_payments",
+          data: {
             tanggal: angsuranForm.tanggal,
             bank_tujuan: angsuranForm.bank_tujuan,
             diterima_dari: angsuranForm.diterima_dari,
             deskripsi,
             nominal: nominalValue,
-          })
-          .eq("id", editingPaymentId);
-        if (error) throw error;
+          },
+          filters: byId(editingPaymentId),
+        });
         setShowAngsuranModal(false);
         setEditingPaymentId(null);
         await triggerRefresh();
         return;
       }
 
-      const dateObj = new Date(angsuranForm.tanggal);
-      const year = dateObj.getFullYear();
-      const monthRomawi = bulanKeRomawi(dateObj.getMonth() + 1);
-      // Kode kontak (inisial nama) disisipkan supaya nomor kwitansi selalu unik
-      // secara global sekaligus urutannya reset ke 0001 tiap kontak berbeda.
-      const kodeKontak = buatKodeKontak(angsuranForm.diterima_dari);
-      const prefix = `INV/INCOME/${year}/${monthRomawi}/${kodeKontak}/`;
+      const noKwitansi = `INV/INCOME/${new Date(angsuranForm.tanggal).getFullYear()}/${String(new Date(angsuranForm.tanggal).getMonth() + 1).padStart(2, "0")}/${String(payments.length + 1).padStart(4, "0")}`;
 
-      // Cari nomor urutan tertinggi yang sudah ada di database untuk bulan, tahun, dan kontak ini
-      const matchingPayments = salePayments.filter(
-        (p) => p.no_kwitansi && p.no_kwitansi.startsWith(prefix),
-      );
-      let maxSeq = 0;
-      matchingPayments.forEach((p) => {
-        const parts = p.no_kwitansi.split("/");
-        const seqStr = parts[parts.length - 1];
-        const seqNum = parseInt(seqStr, 10);
-        if (!isNaN(seqNum) && seqNum > maxSeq) {
-          maxSeq = seqNum;
-        }
-      });
-      const noKwitansi = `${prefix}${String(maxSeq + 1).padStart(4, "0")}`;
-
-      const { data: inserted, error } = await supabase
-        .from("sale_payments")
-        .insert({
+      const inserted = await dbRequest({
+        action: "insert",
+        table: "sale_payments",
+        data: {
           sale_id: id,
           tanggal: angsuranForm.tanggal,
           no_kwitansi: noKwitansi,
@@ -618,10 +555,8 @@ export default function DetailPenjualanPage() {
           diterima_dari: angsuranForm.diterima_dari,
           deskripsi,
           nominal: nominalValue,
-        })
-        .select()
-        .single();
-      if (error) throw error;
+        },
+      });
 
       setShowAngsuranModal(false);
       if (inserted?.id) {
@@ -638,240 +573,94 @@ export default function DetailPenjualanPage() {
     }
   };
 
+  // Simpan hasil Approval Pengajuan KPR: catat sebagai riwayat baru di
+  // sale_kpr_submissions, lalu sinkronkan status & kredit terbaru ke tabel sales.
   const handleSaveApproval = async () => {
     if (
       !approvalForm.tanggal ||
-      !approvalForm.bank_id ||
       !approvalForm.status ||
       !approvalForm.kredit_acc
     ) {
-      alert("Tanggal, Bank Tujuan, Status, dan Kredit Acc wajib diisi.");
+      alert("Tanggal, Status, dan Kredit Acc wajib diisi.");
       return;
     }
     setSaving(true);
     try {
       const kreditAccValue = Number(approvalForm.kredit_acc.replace(/\D/g, ""));
-      const kprStatusMap: Record<string, string> = {
-        ACCEPTED: "SP3K",
-        REJECTED: "REJECTED",
-        PENDING: "Wawancara",
-      };
-
+      const biayaTambahanValue =
+        Number(approvalForm.biaya_tambahan.replace(/\D/g, "")) || 0;
       if (editingSubmissionId) {
-        // Mode edit: update submission yang sudah ada, tidak insert biaya tambahan lagi
-        const { error: updateError } = await supabase
-          .from("sale_kpr_submissions")
-          .update({
+        await dbRequest({
+          action: "update",
+          table: "sale_kpr_submissions",
+          data: {
             tanggal: approvalForm.tanggal,
             status: approvalForm.status,
             kredit_acc: kreditAccValue,
+            biaya_tambahan: biayaTambahanValue,
             keterangan: approvalForm.keterangan || "",
-          })
-          .eq("id", editingSubmissionId);
-        if (updateError) throw updateError;
-
-        // Kalau yang diedit adalah submission TERBARU, sinkronkan ke tabel sales
-        // (supaya status KPR & kredit pengajuan di halaman ini ikut ter-update)
-        const isLatest = kprSubmissions[0]?.id === editingSubmissionId;
-        if (isLatest) {
-          const updateFields: any = {
-            bank_id: approvalForm.bank_id,
-            kredit_pengajuan: kreditAccValue,
-            kpr_status: kprStatusMap[approvalForm.status] || sale?.kpr_status,
-          };
-          if (approvalForm.status === "REJECTED") {
-            updateFields.status = "Batal";
-          } else if (approvalForm.status === "ACCEPTED") {
-            updateFields.status = "Akad";
-            updateFields.kpr_status = "Akad";
-          } else if (approvalForm.status === "PENDING") {
-            if (sale?.status === "Batal") {
-              updateFields.status = "Booking";
-            }
-          }
-          await supabase.from("sales").update(updateFields).eq("id", id);
-        }
-
-        if (approvalForm.status === "REJECTED") {
-          const kantorStep = salesSteps.find(
-            (s) => s.nama_step.toLowerCase() === "kantor",
-          );
-          if (sale?.unit_id) {
-            await supabase
-              .from("units")
-              .update({
-                status: "Tersedia",
-                sales_step_id: kantorStep?.id || null,
-              })
-              .eq("id", sale.unit_id);
-          }
-          await supabase.from("sale_step_history").insert({
-            sale_id: id,
-            jenis_step: "penjualan",
-            status: "Batal",
-            keterangan:
-              "KPR Ditolak oleh Bank. Transaksi dibatalkan secara otomatis.",
-            changed_by: currentUser?.id,
-          });
-        } else if (approvalForm.status === "ACCEPTED") {
-          const akadStep = salesSteps.find((s) =>
-            s.nama_step.toLowerCase().includes("akad"),
-          );
-          if (sale?.unit_id) {
-            await supabase
-              .from("units")
-              .update({
-                status: "Akad",
-                sales_step_id: akadStep?.id || null,
-              })
-              .eq("id", sale.unit_id);
-          }
-          await supabase.from("sale_step_history").insert({
-            sale_id: id,
-            jenis_step: "penjualan",
-            status: "Akad",
-            keterangan: "KPR disetujui oleh Bank (ACCEPTED).",
-            changed_by: currentUser?.id,
-          });
-        } else if (approvalForm.status === "PENDING") {
-          if (sale?.unit_id) {
-            const bookingStep = salesSteps.find((s) =>
-              s.nama_step.toLowerCase().includes("booking"),
-            );
-            await supabase
-              .from("units")
-              .update({
-                status: "Booking",
-                sales_step_id: bookingStep?.id || null,
-              })
-              .eq("id", sale.unit_id);
-          }
-          await supabase.from("sale_step_history").insert({
-            sale_id: id,
-            jenis_step: "penjualan",
-            status: "Wawancara",
-            keterangan: "KPR dalam proses pengajuan (PENDING/WAITING).",
-            changed_by: currentUser?.id,
-          });
-        }
-
-        setShowApprovalModal(false);
-        setEditingSubmissionId(null);
-        await triggerRefresh();
-        return;
-      }
-
-      // Mode tambah baru
-      const biayaTambahanValue =
-        Number(approvalForm.biaya_tambahan.replace(/\D/g, "")) || 0;
-      const noReferensi = `KPR/${new Date(approvalForm.tanggal).getFullYear()}/${String(new Date(approvalForm.tanggal).getMonth() + 1).padStart(2, "0")}/${String(kprSubmissions.length + 1).padStart(4, "0")}`;
-
-      const { error: insertError } = await supabase
-        .from("sale_kpr_submissions")
-        .insert({
-          sale_id: id,
-          no_referensi: noReferensi,
-          tanggal: approvalForm.tanggal,
-          status: approvalForm.status,
-          kredit_acc: kreditAccValue,
-          biaya_tambahan: biayaTambahanValue,
-          keterangan: approvalForm.keterangan || "",
+          },
+          filters: byId(editingSubmissionId),
         });
-      if (insertError) throw insertError;
+      } else {
+        const noReferensi = `KPR/${new Date(approvalForm.tanggal).getFullYear()}/${String(new Date(approvalForm.tanggal).getMonth() + 1).padStart(2, "0")}/${String(kprSubmissions.length + 1).padStart(4, "0")}`;
 
-      // Kalau ada biaya tambahan, catat juga ke sale_additional_costs
-      // supaya kelihatan di tab Angsuran Konsumen (Total Tagihan / Sisa Tagihan ikut berubah)
-      if (biayaTambahanValue > 0) {
-        const { error: biayaError } = await supabase
-          .from("sale_additional_costs")
-          .insert({
+        await dbRequest({
+          action: "insert",
+          table: "sale_kpr_submissions",
+          data: {
             sale_id: id,
-            nominal: biayaTambahanValue,
-            keterangan: `Biaya tambahan dari approval KPR ${noReferensi}${approvalForm.keterangan ? " - " + approvalForm.keterangan : ""}`,
-          });
-        if (biayaError) throw biayaError;
+            no_referensi: noReferensi,
+            tanggal: approvalForm.tanggal,
+            status: approvalForm.status,
+            kredit_acc: kreditAccValue,
+            biaya_tambahan: biayaTambahanValue,
+            keterangan: approvalForm.keterangan || "",
+          },
+        });
       }
 
-      // Sinkronkan ke sales: bank tujuan, kredit_pengajuan & kpr_status ikut status approval terbaru
-      const updateFields: any = {
-        bank_id: approvalForm.bank_id,
+      // Sinkronkan ke sales: kredit_pengajuan & kpr_status ikut status approval terbaru
+      const kprStatusMap: Record<string, string> = {
+        ACCEPTED: "ACCEPTED",
+        REJECTED: "REJECTED",
+        PENDING: "PENDING",
+      };
+      const updateData: any = {
         kredit_pengajuan: kreditAccValue,
-        kpr_status: kprStatusMap[approvalForm.status] || sale?.kpr_status,
+        kpr_status: kprStatusMap[approvalForm.status] || approvalForm.status,
       };
       if (approvalForm.status === "REJECTED") {
-        updateFields.status = "Batal";
+        updateData.status = "Batal";
       } else if (approvalForm.status === "ACCEPTED") {
-        updateFields.status = "Akad";
-        updateFields.kpr_status = "Akad";
-      } else if (approvalForm.status === "PENDING") {
-        if (sale?.status === "Batal") {
-          updateFields.status = "Booking";
-        }
+        updateData.kpr_status = "SP3K";
       }
-      await supabase.from("sales").update(updateFields).eq("id", id);
+      await dbRequest({
+        action: "update",
+        table: "sales",
+        data: updateData,
+        filters: byId(id),
+      });
 
-      if (approvalForm.status === "REJECTED") {
-        const kantorStep = salesSteps.find(
-          (s) => s.nama_step.toLowerCase() === "kantor",
-        );
-        if (sale?.unit_id) {
-          await supabase
-            .from("units")
-            .update({
-              status: "Tersedia",
-              sales_step_id: kantorStep?.id || null,
-            })
-            .eq("id", sale.unit_id);
-        }
-        await supabase.from("sale_step_history").insert({
+      // Catat riwayat step secara otomatis
+      const stepName =
+        approvalForm.status === "ACCEPTED"
+          ? "KPR - KELUAR SP3K / ACC BANK"
+          : approvalForm.status === "REJECTED"
+          ? "KPR - CANCEL/RIJEK"
+          : "KPR - DIPERIKSA BANK";
+
+      await dbRequest({
+        action: "insert",
+        table: "sale_step_history",
+        data: {
           sale_id: id,
           jenis_step: "penjualan",
-          status: "Batal",
-          keterangan:
-            "KPR Ditolak oleh Bank. Transaksi dibatalkan secara otomatis.",
+          status: stepName,
+          keterangan: `Approval KPR ${approvalForm.status} — Nominal ACC: Rp ${kreditAccValue.toLocaleString("id-ID")}${approvalForm.keterangan ? ". " + approvalForm.keterangan : ""}`,
           changed_by: currentUser?.id,
-        });
-      } else if (approvalForm.status === "ACCEPTED") {
-        const akadStep = salesSteps.find((s) =>
-          s.nama_step.toLowerCase().includes("akad"),
-        );
-        if (sale?.unit_id) {
-          await supabase
-            .from("units")
-            .update({
-              status: "Akad",
-              sales_step_id: akadStep?.id || null,
-            })
-            .eq("id", sale.unit_id);
-        }
-        await supabase.from("sale_step_history").insert({
-          sale_id: id,
-          jenis_step: "penjualan",
-          status: "Akad",
-          keterangan: "KPR disetujui oleh Bank (ACCEPTED).",
-          changed_by: currentUser?.id,
-        });
-      } else if (approvalForm.status === "PENDING") {
-        if (sale?.unit_id) {
-          const bookingStep = salesSteps.find((s) =>
-            s.nama_step.toLowerCase().includes("booking"),
-          );
-          await supabase
-            .from("units")
-            .update({
-              status: "Booking",
-              sales_step_id: bookingStep?.id || null,
-            })
-            .eq("id", sale.unit_id);
-        }
-        await supabase.from("sale_step_history").insert({
-          sale_id: id,
-          jenis_step: "penjualan",
-          status: "Wawancara",
-          keterangan: "KPR dalam proses pengajuan (PENDING/WAITING).",
-          changed_by: currentUser?.id,
-        });
-      }
+        },
+      });
 
       setShowApprovalModal(false);
       await triggerRefresh();
@@ -882,75 +671,115 @@ export default function DetailPenjualanPage() {
     }
   };
 
-  const [editingProgresId, setEditingProgresId] = useState<string | null>(null);
-
-  const openProgresModal = () => {
-    setEditingProgresId(null);
-    setProgresForm({ status: "", keterangan: "" });
-    setShowProgresModal(true);
+  // Ganti bank tujuan pengajuan KPR untuk transaksi ini
+  const handleSaveGantiBank = async () => {
+    if (!gantiBankId) {
+      alert("Silakan pilih bank tujuan.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await dbRequest({
+        action: "update",
+        table: "sales",
+        data: { bank_id: gantiBankId },
+        filters: byId(id),
+      });
+      setShowGantiBankModal(false);
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err?.message || "Gagal mengganti bank tujuan.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const openEditProgresModal = (hist: SaleStepHistory) => {
-    setEditingProgresId(hist.id);
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
+
+  const openEditStepModal = (hist: SaleStepHistory) => {
+    setEditingStepId(hist.id);
     setProgresForm({
-      status: hist.status,
+      status: hist.status || "",
       keterangan: hist.keterangan || "",
     });
     setShowProgresModal(true);
+  };
+
+  const handleDeleteStep = async (stepId: string) => {
+    if (!confirm("Yakin ingin menghapus riwayat aktivitas ini?")) return;
+    setSaving(true);
+    try {
+      await dbRequest({
+        action: "delete",
+        table: "sale_step_history",
+        filters: byId(stepId),
+      });
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err?.message || "Gagal menghapus riwayat.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveProgres = async () => {
     if (!progresForm.status) return;
     setSaving(true);
     try {
-      const payload = {
-        sale_id: id,
-        jenis_step: activeTab as any,
-        status: progresForm.status,
-        keterangan: progresForm.keterangan || "",
-        changed_by: currentUser?.id,
-      };
-
-      if (editingProgresId) {
-        const { error } = await supabase
-          .from("sale_step_history")
-          .update(payload)
-          .eq("id", editingProgresId);
-        if (error) throw error;
+      if (editingStepId) {
+        await dbRequest({
+          action: "update",
+          table: "sale_step_history",
+          data: {
+            status: progresForm.status,
+            keterangan: progresForm.keterangan || "",
+          },
+          filters: byId(editingStepId),
+        });
       } else {
-        const { error } = await supabase
-          .from("sale_step_history")
-          .insert(payload);
-        if (error) throw error;
+        await dbRequest({
+          action: "insert",
+          table: "sale_step_history",
+          data: {
+            sale_id: id,
+            jenis_step: activeTab,
+            status: progresForm.status,
+            keterangan: progresForm.keterangan || "",
+            changed_by: currentUser?.id,
+          },
+        });
       }
 
-      // Update unit status if it's penjualan/sertifikat
       if (activeTab === "penjualan" && sale?.unit_id) {
         const selectedStep = salesSteps.find(
           (s) => s.nama_step === progresForm.status,
         );
         if (selectedStep) {
-          await supabase
-            .from("units")
-            .update({ sales_step_id: selectedStep.id })
-            .eq("id", sale.unit_id);
+          await dbRequest({
+            action: "update",
+            table: "units",
+            data: { sales_step_id: selectedStep.id },
+            filters: byId(sale.unit_id),
+          });
         }
       } else if (activeTab === "sertifikat" && sale?.unit_id) {
         const selectedStep = certificateSteps.find(
           (c) => c.nama_step === progresForm.status,
         );
         if (selectedStep) {
-          await supabase
-            .from("units")
-            .update({ certificate_step_id: selectedStep.id })
-            .eq("id", sale.unit_id);
+          await dbRequest({
+            action: "update",
+            table: "units",
+            data: { certificate_step_id: selectedStep.id },
+            filters: byId(sale.unit_id),
+          });
         }
       }
 
-      alert("Progres berhasil disimpan.");
       setShowProgresModal(false);
+      setEditingStepId(null);
+      await triggerRefresh();
       setProgresForm({ status: "", keterangan: "" });
-      setEditingProgresId(null);
       await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || "Gagal menyimpan progres.");
@@ -959,120 +788,17 @@ export default function DetailPenjualanPage() {
     }
   };
 
-  const handleDeleteProgres = async (histId: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus data progres ini?")) return;
-    try {
-      const { error } = await supabase
-        .from("sale_step_history")
-        .delete()
-        .eq("id", histId);
-      if (error) throw error;
-      alert("Data progres berhasil dihapus.");
-      await triggerRefresh();
-    } catch (err: any) {
-      alert(err.message || "Gagal menghapus progres.");
-    }
-  };
-
-  // --- Marketing Fee Disbursements CRUD ---
-  const [showMarketingFeeModal, setShowMarketingFeeModal] = useState(false);
-  const [editingMarketingFeeId, setEditingMarketingFeeId] = useState<
-    string | null
-  >(null);
-  const [marketingFeeForm, setMarketingFeeForm] = useState({
-    tanggal: new Date().toISOString().slice(0, 10),
-    rekening: "",
-    nominal: "",
-    keterangan: "",
-  });
-
-  const openMarketingFeeModal = () => {
-    setEditingMarketingFeeId(null);
-    setMarketingFeeForm({
-      tanggal: new Date().toISOString().slice(0, 10),
-      rekening: "",
-      nominal: "",
-      keterangan: "",
-    });
-    setShowMarketingFeeModal(true);
-  };
-
-  const openEditMarketingFeeModal = (mf: MarketingFeeDisbursement) => {
-    setEditingMarketingFeeId(mf.id);
-    setMarketingFeeForm({
-      tanggal: mf.tanggal,
-      rekening: mf.rekening || "",
-      nominal: String(mf.nominal).replace(/\B(?=(\d{3})+(?!\d))/g, "."),
-      keterangan: mf.keterangan || "",
-    });
-    setShowMarketingFeeModal(true);
-  };
-
-  const handleSaveMarketingFee = async () => {
-    if (!marketingFeeForm.rekening || !marketingFeeForm.nominal) {
-      alert("Semua field bertanda * wajib diisi!");
-      return;
-    }
-    setSaving(true);
-    try {
-      const payload = {
-        sale_id: id,
-        tanggal: marketingFeeForm.tanggal,
-        rekening: marketingFeeForm.rekening,
-        nominal: Number(marketingFeeForm.nominal.replace(/\D/g, "")),
-        keterangan: marketingFeeForm.keterangan || "",
-      };
-
-      if (editingMarketingFeeId) {
-        const { error } = await supabase
-          .from("marketing_fee_disbursements")
-          .update(payload)
-          .eq("id", editingMarketingFeeId);
-        if (error) throw error;
-        alert("Pencairan berhasil diperbarui.");
-      } else {
-        const { error } = await supabase
-          .from("marketing_fee_disbursements")
-          .insert(payload);
-        if (error) throw error;
-        alert("Pencairan berhasil ditambahkan.");
-      }
-
-      setShowMarketingFeeModal(false);
-      await loadExtra();
-    } catch (err: any) {
-      alert(err.message || "Gagal menyimpan pencairan.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteMarketingFee = async (mfId: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus data pencairan ini?"))
-      return;
-    try {
-      const { error } = await supabase
-        .from("marketing_fee_disbursements")
-        .delete()
-        .eq("id", mfId);
-      if (error) throw error;
-      alert("Data pencairan berhasil dihapus.");
-      await loadExtra();
-    } catch (err: any) {
-      alert(err.message || "Gagal menghapus pencairan.");
-    }
-  };
-
   const handleSaveHargaPajak = async () => {
     setSaving(true);
     try {
       const nominalValue = Number(hargaPajakForm.replace(/\D/g, ""));
-      const { error } = await supabase
-        .from("sales")
-        .update({ harga_jual_pajak: nominalValue })
-        .eq("id", id);
+      await dbRequest({
+        action: "update",
+        table: "sales",
+        data: { harga_jual_pajak: nominalValue },
+        filters: byId(id),
+      });
 
-      if (error) throw error;
       alert("Harga Pajak berhasil diperbarui.");
       setShowUbahHargaModal(false);
       await triggerRefresh();
@@ -1101,34 +827,39 @@ export default function DetailPenjualanPage() {
     (sum, item) => sum + (item.nominal || 0),
     0,
   );
-  const totalDiscounts = discounts.reduce(
+  // Total potongan sekarang dijumlah dari tabel sales_discount (riwayat),
+  // bukan lagi dari kolom tunggal sales.potongan.
+  const totalPotongan = discounts.reduce(
     (sum, item) => sum + (item.nominal || 0),
     0,
   );
   const totalHargaFinal =
     (sale.harga_jual_awal || sale.total_harga) -
-    totalDiscounts +
+    totalPotongan +
     totalBiayaTambahan;
-  const uangMasuk = payments.reduce(
+  const uangMasukPembayaran = payments.reduce(
     (sum, item) => sum + (item.nominal || 0),
     0,
   );
-  const isKpr = sale.metode_bayar === "KPR";
-  const kreditAccTerbaru = kprSubmissions[0]?.kredit_acc || 0;
+  // Jika KPR sudah ACC, nominal kredit_acc dari bank dihitung sebagai "Sudah Dibayar"
+  const kprAccAmount = kprSubmissions
+    .filter((k) => k.status === "ACCEPTED")
+    .reduce((sum, k) => sum + (k.kredit_acc || 0), 0);
+  const uangMasuk = uangMasukPembayaran + kprAccAmount;
+  const sisaTagihan = totalHargaFinal - uangMasuk;
+
   // Status KPR saat ini = status dari riwayat approval paling baru, atau WAITING kalau belum pernah diajukan
   const currentKprStatus = kprSubmissions[0]?.status || "WAITING";
-  const sisaTagihan = computeSisaTagihan(
-    totalHargaFinal,
-    uangMasuk,
-    currentKprStatus,
-    kreditAccTerbaru,
-    isKpr,
+  const totalReturn = kprSubmissions.reduce(
+    (sum, k) => sum + (k.kredit_acc || 0),
+    0,
   );
 
   const waMessage = encodeURIComponent(
     `Halo ${customer?.nama || ""}, saya dari tim Lansena Property terkait unit ${unit?.no_unit ? "No. " + unit.no_unit : ""}${unit?.block_nama ? " Blok " + unit.block_nama : ""}${unit?.location_nama ? " di " + unit.location_nama : ""}. Mohon waktunya sebentar ya, terima kasih.`,
   );
 
+  // Tab "Info KPR" cuma relevan untuk transaksi metode KPR
   const TABS = [
     { id: "angsuran", label: "Angsuran Konsumen" },
     ...(sale.metode_bayar === "KPR"
@@ -1260,15 +991,7 @@ export default function DetailPenjualanPage() {
               <div className="grid grid-cols-[130px_10px_1fr]">
                 <span className="font-semibold text-slate-600">Domisili</span>
                 <span>:</span>
-                <span>
-                  <FullAddress
-                    kelurahanId={customer?.kelurahan_id}
-                    kampungDusun={customer?.kampung_dusun}
-                    rt={customer?.rt}
-                    rw={customer?.rw}
-                    fallback={customer?.domisili || customer?.alamat || "-"}
-                  />
-                </span>
+                <span>{customer?.domisili || customer?.alamat || "-"}</span>
               </div>
               <div className="grid grid-cols-[130px_10px_1fr]">
                 <span className="font-semibold text-slate-600">NPWP</span>
@@ -1278,71 +1001,48 @@ export default function DetailPenjualanPage() {
               <div className="grid grid-cols-[130px_10px_1fr]">
                 <span className="font-semibold text-slate-600">Scan KTP</span>
                 <span>:</span>
-                <div className="flex items-center gap-2">
+                <span>
                   {customer?.scan_ktp_url ? (
-                    <>
-                      <a
-                        href={customer.scan_ktp_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 hover:underline font-semibold"
-                      >
-                        Lihat File
-                      </a>
-                      <button
-                        onClick={() => handleDeleteFile("ktp")}
-                        className="text-xs text-red-500 hover:underline font-medium"
-                        title="Hapus Scan KTP"
-                      >
-                        (Hapus)
-                      </button>
-                    </>
+                    <a
+                      href={customer.scan_ktp_url}
+                      target="_blank"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Lihat File
+                    </a>
                   ) : (
-                    <span className="text-slate-400">-</span>
+                    "-"
                   )}
-                </div>
+                </span>
               </div>
               <div className="grid grid-cols-[130px_10px_1fr]">
                 <span className="font-semibold text-slate-600">Scan KK</span>
                 <span>:</span>
-                <div className="flex items-center gap-2">
+                <span>
                   {customer?.scan_kk_url ? (
-                    <>
-                      <a
-                        href={customer.scan_kk_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 hover:underline font-semibold"
-                      >
-                        Lihat File
-                      </a>
-                      <button
-                        onClick={() => handleDeleteFile("kk")}
-                        className="text-xs text-red-500 hover:underline font-medium"
-                        title="Hapus Scan KK"
-                      >
-                        (Hapus)
-                      </button>
-                    </>
+                    <a
+                      href={customer.scan_kk_url}
+                      target="_blank"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Lihat File
+                    </a>
                   ) : (
-                    <span className="text-slate-400">-</span>
+                    "-"
                   )}
-                </div>
+                </span>
               </div>
             </div>
             <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 flex items-center gap-4 text-xs font-semibold text-blue-600">
-              <button
-                onClick={() => setShowUploadDokumenModal(true)}
-                className="flex items-center gap-1.5 hover:underline"
-              >
+              <button className="flex items-center gap-1.5 hover:underline">
                 <Upload className="w-3.5 h-3.5" /> Upload Dokumen Ktp & Kk
               </button>
-              <button
-                onClick={() => setShowDetailKonsumenModal(true)}
+              <Link
+                href="/kontak/customer"
                 className="flex items-center gap-1.5 hover:underline"
               >
                 <Eye className="w-3.5 h-3.5" /> Detail Konsumen
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -1422,19 +1122,6 @@ export default function DetailPenjualanPage() {
                   <span>:</span>
                   <span className="font-bold text-slate-800">
                     {formatRupiah(unit?.booking_fee || 0)}
-                  </span>
-                </div>
-                <div className="grid grid-cols-[130px_10px_1fr] pt-2 border-t border-slate-100">
-                  <span className="font-semibold text-slate-850 font-bold">
-                    Total Ketentuan
-                  </span>
-                  <span>:</span>
-                  <span className="font-bold text-blue-700">
-                    {formatRupiah(
-                      (unit?.maksimal_kredit || 0) +
-                        (unit?.uang_muka || 0) +
-                        (unit?.booking_fee || 0),
-                    )}
                   </span>
                 </div>
               </div>
@@ -1534,10 +1221,30 @@ export default function DetailPenjualanPage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-[160px_10px_1fr]">
-                  <span className="font-semibold text-slate-600">Diskon</span>
+                  <span className="font-semibold text-slate-600">Potongan</span>
                   <span>:</span>
-                  <span className="text-rose-600">
-                    - {formatRupiah(totalDiscounts)}
+                  <div className="flex items-center gap-2">
+                    <span className="text-red-500">
+                      - {formatRupiah(totalPotongan)}
+                    </span>
+                    <button
+                      onClick={openPotonganModal}
+                      className="text-[10px] text-blue-600 hover:underline"
+                    >
+                      (+ Tambah)
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-[160px_10px_1fr]">
+                  <span className="font-semibold text-slate-600">
+                    Potongan Ket.
+                  </span>
+                  <span>:</span>
+                  <span>
+                    {discounts
+                      .map((d) => d.keterangan)
+                      .filter(Boolean)
+                      .join(", ") || "-"}
                   </span>
                 </div>
                 <div className="grid grid-cols-[160px_10px_1fr]">
@@ -1582,24 +1289,9 @@ export default function DetailPenjualanPage() {
                 <div className="grid grid-cols-[160px_10px_1fr] pt-2 border-t border-slate-100">
                   <span className="font-bold text-red-600">Sisa Tagihan</span>
                   <span>:</span>
-                  <div>
-                    <span className="font-bold text-red-600">
-                      {formatRupiah(sisaTagihan)}
-                    </span>
-                    {isKpr &&
-                      currentKprStatus === "ACCEPTED" &&
-                      kreditAccTerbaru > 0 && (
-                        <span className="ml-2 text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                          Sudah dikurangi kredit KPR{" "}
-                          {formatRupiah(kreditAccTerbaru)}
-                        </span>
-                      )}
-                    {isKpr && currentKprStatus === "REJECTED" && (
-                      <span className="ml-2 text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
-                        Pengajuan KPR ditolak — tagihan dianggap lunas
-                      </span>
-                    )}
-                  </div>
+                  <span className="font-bold text-red-600">
+                    {formatRupiah(sisaTagihan)}
+                  </span>
                 </div>
                 <div className="grid grid-cols-[160px_10px_1fr] pt-2 border-t border-slate-100">
                   <span className="font-semibold text-slate-600">
@@ -1652,738 +1344,657 @@ export default function DetailPenjualanPage() {
             ))}
           </div>
 
-          <div className="flex-1 space-y-6">
-            <div className="bg-white border border-slate-200 rounded-md shadow-sm p-5">
-              <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
-                <h3 className="font-bold text-lg text-slate-800">
-                  {TABS.find((t) => t.id === activeTab)?.label}
-                </h3>
-                {activeTab === "angsuran" && (
-                  <div className="flex flex-wrap gap-2 justify-end">
-                    <button
-                      onClick={openAngsuranModal}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
-                    >
-                      + Input Angsuran Baru
-                    </button>
-                    <button
-                      onClick={() => setShowBiayaModal(true)}
-                      className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold"
-                    >
-                      + Input Biaya Tambahan
-                    </button>
-                    <button
-                      onClick={openDiskonModal}
-                      className="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded text-xs font-semibold"
-                    >
-                      + Input Diskon
-                    </button>
-                  </div>
-                )}
-                {activeTab === "info_kpr" && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={openApprovalModal}
-                      className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
-                    >
-                      <CheckCircle className="w-3.5 h-3.5" /> Approval Pengajuan
-                    </button>
-                  </div>
-                )}
-                {(activeTab === "penjualan" ||
-                  activeTab === "sertifikat" ||
-                  activeTab === "posisi_sertifikat") && (
+          <div className="flex-1 bg-white border border-slate-200 rounded-md shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
+              <h3 className="font-bold text-lg text-slate-800">
+                {TABS.find((t) => t.id === activeTab)?.label}
+              </h3>
+              {activeTab === "angsuran" && (
+                <div className="flex gap-2">
                   <button
-                    onClick={openProgresModal}
+                    onClick={openAngsuranModal}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
                   >
-                    + Input Progres
+                    + Input Angsuran Baru
                   </button>
-                )}
-                {activeTab === "marketing_fee" && (
                   <button
-                    onClick={openMarketingFeeModal}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
+                    onClick={openPotonganModal}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-semibold"
                   >
-                    + Input Pencairan Baru
+                    + Input Potongan
                   </button>
-                )}
-              </div>
-
-              {activeTab === "angsuran" ? (
-                <div className="space-y-6">
-                  {/* Summary Angsuran */}
-                  <div
-                    className={`grid gap-4 mb-6 ${isKpr && currentKprStatus === "ACCEPTED" && kreditAccTerbaru > 0 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}
+                  <button
+                    onClick={() => setShowBiayaModal(true)}
+                    className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold"
                   >
-                    <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-center">
-                      <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
-                        Total Tagihan
-                      </p>
-                      <p className="text-xl font-bold text-slate-800">
-                        {formatRupiah(totalHargaFinal)}
-                      </p>
-                    </div>
-                    <div className="bg-blue-50 p-4 rounded-md border border-blue-200 text-center">
-                      <p className="text-xs font-semibold text-blue-600 mb-1 uppercase tracking-wider">
-                        Sudah Dibayar
-                      </p>
-                      <p className="text-xl font-bold text-blue-700">
-                        {formatRupiah(uangMasuk)}
-                      </p>
-                    </div>
-                    {isKpr &&
-                      currentKprStatus === "ACCEPTED" &&
-                      kreditAccTerbaru > 0 && (
-                        <div className="bg-emerald-50 p-4 rounded-md border border-emerald-200 text-center">
-                          <p className="text-xs font-semibold text-emerald-600 mb-1 uppercase tracking-wider flex items-center justify-center gap-1">
-                            <Landmark className="w-3.5 h-3.5" /> Kredit KPR
-                            Disetujui
-                          </p>
-                          <p className="text-xl font-bold text-emerald-700">
-                            {formatRupiah(kreditAccTerbaru)}
-                          </p>
-                        </div>
-                      )}
-                    <div className="bg-red-50 p-4 rounded-md border border-red-200 text-center">
-                      <p className="text-xs font-semibold text-red-600 mb-1 uppercase tracking-wider">
-                        Sisa
-                      </p>
-                      <p className="text-xl font-bold text-red-700">
-                        {formatRupiah(sisaTagihan)}
-                      </p>
-                      {isKpr &&
-                        currentKprStatus === "ACCEPTED" &&
-                        kreditAccTerbaru > 0 && (
-                          <p className="text-[10px] text-slate-500 mt-1">
-                            Sudah dikurangi kredit KPR
-                          </p>
-                        )}
-                      {isKpr && currentKprStatus === "REJECTED" && (
-                        <p className="text-[10px] text-red-500 mt-1">
-                          KPR ditolak — tagihan dianggap lunas
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                    + Input Biaya Tambahan
+                  </button>
+                </div>
+              )}
+              {activeTab === "info_kpr" && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={openGantiBankModal}
+                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" /> Ganti Bank Tujuan
+                  </button>
+                  <button
+                    onClick={openApprovalModal}
+                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" /> Approval Pengajuan
+                  </button>
+                </div>
+              )}
+              {(activeTab === "penjualan" ||
+                activeTab === "sertifikat" ||
+                activeTab === "posisi_sertifikat") && (
+                <button
+                  onClick={() => setShowProgresModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
+                >
+                  + Input Progres
+                </button>
+              )}
+            </div>
 
-                  {/* Daftar Pembayaran */}
-                  <div>
-                    <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-emerald-500" />{" "}
-                      Daftar Pembayaran
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left border border-slate-200">
-                        <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
-                          <tr>
-                            <th className="px-4 py-2 w-12 text-center">No</th>
-                            <th className="px-4 py-2 w-32">Tanggal</th>
-                            <th className="px-4 py-2">
-                              No Kwitansi & Deskripsi
-                            </th>
-                            <th className="px-4 py-2 text-right">Nominal</th>
-                            <th className="px-4 py-2 w-28 text-center">Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {payments.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={5}
-                                className="text-center py-4 text-slate-500"
-                              >
-                                Belum ada pembayaran.
-                              </td>
-                            </tr>
-                          ) : (
-                            payments.map((p, i) => (
-                              <tr
-                                key={p.id}
-                                className="border-b border-slate-100 hover:bg-slate-50"
-                              >
-                                <td className="px-4 py-2 text-center">
-                                  {i + 1}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {new Date(p.tanggal).toLocaleDateString(
-                                    "id-ID",
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">
-                                  <div className="font-bold text-slate-800">
-                                    {p.no_kwitansi}
-                                  </div>
-                                  <div className="text-xs text-slate-500">
-                                    {p.deskripsi}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-2 text-right font-semibold text-green-600">
-                                  {formatRupiah(p.nominal)}
-                                </td>
-                                <td className="px-4 py-2 text-center">
-                                  <div className="flex items-center justify-center gap-1">
-                                    <button
-                                      onClick={() =>
-                                        window.open(
-                                          `/penjualan/print-kwitansi?payment_id=${p.id}&sale_id=${id}`,
-                                          "_blank",
-                                        )
-                                      }
-                                      className="p-1 bg-amber-100 text-amber-600 hover:bg-amber-200 rounded"
-                                      title="Cetak Kwitansi"
-                                    >
-                                      <Printer className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => openEditAngsuranModal(p)}
-                                      className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
-                                      title="Edit"
-                                    >
-                                      <Edit3 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeletePayment(p.id)}
-                                      className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
-                                      title="Hapus"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                          {payments.length > 0 && (
-                            <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
-                              <td colSpan={3} className="px-4 py-3 text-right">
-                                TOTAL PEMBAYARAN
-                              </td>
-                              <td className="px-4 py-3 text-right text-blue-700">
-                                {formatRupiah(uangMasuk)}
-                              </td>
-                              <td></td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+            {activeTab === "angsuran" ? (
+              <div className="space-y-6">
+                {/* Summary Angsuran */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-center">
+                    <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                      Total Tagihan
+                    </p>
+                    <p className="text-xl font-bold text-slate-800">
+                      {formatRupiah(totalHargaFinal)}
+                    </p>
                   </div>
+                  <div className="bg-blue-50 p-4 rounded-md border border-blue-200 text-center">
+                    <p className="text-xs font-semibold text-blue-600 mb-1 uppercase tracking-wider">
+                      Sudah Dibayar
+                    </p>
+                    <p className="text-xl font-bold text-blue-700">
+                      {formatRupiah(uangMasuk)}
+                    </p>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-md border border-red-200 text-center">
+                    <p className="text-xs font-semibold text-red-600 mb-1 uppercase tracking-wider">
+                      Sisa
+                    </p>
+                    <p className="text-xl font-bold text-red-700">
+                      {formatRupiah(sisaTagihan)}
+                    </p>
+                  </div>
+                </div>
 
-                  {/* Daftar Biaya Tambahan */}
-                  <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
-                    <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-amber-500" /> Daftar Biaya
-                      Tambahan
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left border border-slate-200">
-                        <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                {/* Daftar Pembayaran */}
+                <div>
+                  <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" /> Daftar
+                    Pembayaran
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left border border-slate-200">
+                      <thead className="bg-teal-600 text-white font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-2 w-12 text-center">No</th>
+                          <th className="px-4 py-2 w-32">Tanggal</th>
+                          <th className="px-4 py-2">No Kwitansi & Deskripsi</th>
+                          <th className="px-4 py-2 text-right">Nominal</th>
+                          <th className="px-4 py-2 w-28 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payments.length === 0 ? (
                           <tr>
-                            <th className="px-4 py-2 w-12 text-center">No</th>
-                            <th className="px-4 py-2">Keterangan</th>
-                            <th className="px-4 py-2 text-right">Nominal</th>
-                            <th className="px-4 py-2 w-20 text-center">Aksi</th>
+                            <td
+                              colSpan={5}
+                              className="text-center py-4 text-slate-500"
+                            >
+                              Belum ada pembayaran.
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {additionalCosts.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={4}
-                                className="text-center py-4 text-slate-500"
-                              >
-                                Belum ada biaya tambahan.
+                        ) : (
+                          payments.map((p, i) => (
+                            <tr
+                              key={p.id}
+                              className="border-b border-slate-100 hover:bg-slate-50"
+                            >
+                              <td className="px-4 py-2 text-center">{i + 1}</td>
+                              <td className="px-4 py-2">
+                                {new Date(p.tanggal).toLocaleDateString(
+                                  "id-ID",
+                                )}
                               </td>
-                            </tr>
-                          ) : (
-                            additionalCosts.map((c, i) => (
-                              <tr
-                                key={c.id}
-                                className="border-b border-slate-100 hover:bg-slate-50"
-                              >
-                                <td className="px-4 py-2 text-center">
-                                  {i + 1}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {c.keterangan || "-"}
-                                </td>
-                                <td className="px-4 py-2 text-right font-semibold text-green-600">
-                                  {formatRupiah(c.nominal)}
-                                </td>
-                                <td className="px-4 py-2 text-center">
+                              <td className="px-4 py-2">
+                                <div className="font-bold text-slate-800">
+                                  {p.no_kwitansi}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  {p.deskripsi}
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 text-right font-semibold text-green-600">
+                                {formatRupiah(p.nominal)}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
                                   <button
-                                    onClick={() => handleDeleteBiaya(c.id)}
+                                    onClick={() =>
+                                      window.open(
+                                        `/penjualan/print-kwitansi?payment_id=${p.id}&sale_id=${id}`,
+                                        "_blank",
+                                      )
+                                    }
+                                    className="p-1 bg-amber-100 text-amber-600 hover:bg-amber-200 rounded"
+                                    title="Cetak Kwitansi"
+                                  >
+                                    <Printer className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => openEditAngsuranModal(p)}
+                                    className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
+                                    title="Edit"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePayment(p.id)}
                                     className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
                                     title="Hapus"
                                   >
-                                    <Trash2 className="w-4 h-4 mx-auto" />
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                          {additionalCosts.length > 0 && (
-                            <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
-                              <td colSpan={2} className="px-4 py-3 text-right">
-                                TOTAL BIAYA TAMBAHAN
+                                </div>
                               </td>
-                              <td className="px-4 py-3 text-right text-green-700">
-                                {formatRupiah(totalBiayaTambahan)}
-                              </td>
-                              <td></td>
                             </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Daftar Potongan (Diskon) */}
-                  <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
-                    <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                      <Trash2 className="w-4 h-4 text-rose-500" /> Daftar
-                      Potongan (Diskon)
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left border border-slate-200">
-                        <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
-                          <tr>
-                            <th className="px-4 py-2 w-12 text-center">No</th>
-                            <th className="px-4 py-2 w-32">Tanggal</th>
-                            <th className="px-4 py-2">Keterangan</th>
-                            <th className="px-4 py-2 text-right">Nominal</th>
-                            <th className="px-4 py-2 w-28 text-center">Aksi</th>
+                          ))
+                        )}
+                        {payments.length > 0 && (
+                          <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
+                            <td colSpan={3} className="px-4 py-3 text-right">
+                              TOTAL PEMBAYARAN
+                            </td>
+                            <td className="px-4 py-3 text-right text-blue-700">
+                              {formatRupiah(uangMasuk)}
+                            </td>
+                            <td></td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {discounts.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={5}
-                                className="text-center py-4 text-slate-500"
-                              >
-                                Belum ada potongan diskon.
-                              </td>
-                            </tr>
-                          ) : (
-                            discounts.map((d, i) => (
-                              <tr
-                                key={d.id}
-                                className="border-b border-slate-100 hover:bg-slate-50"
-                              >
-                                <td className="px-4 py-2 text-center">
-                                  {i + 1}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {new Date(d.tanggal).toLocaleDateString(
-                                    "id-ID",
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {d.keterangan || "-"}
-                                </td>
-                                <td className="px-4 py-2 text-right font-semibold text-rose-600">
-                                  -{formatRupiah(d.nominal)}
-                                </td>
-                                <td className="px-4 py-2 text-center">
-                                  <div className="flex items-center justify-center gap-1.5">
-                                    <button
-                                      onClick={() => openEditDiskonModal(d)}
-                                      className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
-                                      title="Edit"
-                                    >
-                                      <Edit3 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteDiskon(d.id)}
-                                      className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
-                                      title="Hapus"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                          {discounts.length > 0 && (
-                            <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
-                              <td colSpan={3} className="px-4 py-3 text-right">
-                                TOTAL DISKON (POTONGAN)
-                              </td>
-                              <td className="px-4 py-3 text-right text-rose-700">
-                                -{formatRupiah(totalDiscounts)}
-                              </td>
-                              <td></td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Daftar Surat Tagihan */}
-                  <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
-                    <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-amber-500" /> Daftar
-                      Surat Tagihan
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left border border-slate-200">
-                        <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
-                          <tr>
-                            <th className="px-4 py-2">Tgl Tagihan</th>
-                            <th className="px-4 py-2">Jatuh Tempo</th>
-                            <th className="px-4 py-2 text-right">Kekurangan</th>
-                            <th className="px-4 py-2 w-20 text-center">
-                              Cetak
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {billingLetters.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={4}
-                                className="text-center py-4 text-slate-500"
-                              >
-                                Tidak ada surat tagihan.
-                              </td>
-                            </tr>
-                          ) : (
-                            billingLetters.map((b) => (
-                              <tr
-                                key={b.id}
-                                className="border-b border-slate-100 hover:bg-slate-50"
-                              >
-                                <td className="px-4 py-2">
-                                  {new Date(b.tgl_tagihan).toLocaleDateString(
-                                    "id-ID",
-                                  )}
-                                </td>
-                                <td className="px-4 py-2 text-red-600 font-medium">
-                                  {new Date(b.jatuh_tempo).toLocaleDateString(
-                                    "id-ID",
-                                  )}
-                                </td>
-                                <td className="px-4 py-2 text-right font-semibold">
-                                  {formatRupiah(b.kekurangan)}
-                                </td>
-                                <td className="px-4 py-2 text-center">
-                                  <button
-                                    className="p-1 bg-amber-100 text-amber-600 hover:bg-amber-200 rounded"
-                                    title="Cetak Surat"
-                                  >
-                                    <Printer className="w-4 h-4 mx-auto" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-              ) : activeTab === "info_kpr" ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-sm">
-                    <div className="grid grid-cols-[130px_10px_1fr]">
-                      <span className="font-semibold text-slate-600">Bank</span>
-                      <span>:</span>
-                      <span className="font-bold text-slate-800">
-                        {bank?.nama_bank || sale.bank_nama || "-"}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-[130px_10px_1fr]">
-                      <span className="font-semibold text-slate-600">
-                        Kredit Pengajuan
-                      </span>
-                      <span>:</span>
-                      <span className="font-bold text-slate-800">
-                        {formatRupiah(
-                          sale.kredit_pengajuan || unit?.maksimal_kredit || 0,
+
+                {/* Daftar Potongan */}
+                <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
+                  <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <Landmark className="w-4 h-4 text-red-500" /> Daftar
+                    Potongan
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left border border-slate-200">
+                      <thead className="bg-teal-600 text-white font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-2 w-12 text-center">No</th>
+                          <th className="px-4 py-2">Keterangan</th>
+                          <th className="px-4 py-2 text-right">Nominal</th>
+                          <th className="px-4 py-2 w-24 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {discounts.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={4}
+                              className="text-center py-4 text-slate-500"
+                            >
+                              Belum ada potongan.
+                            </td>
+                          </tr>
+                        ) : (
+                          discounts.map((d, i) => (
+                            <tr
+                              key={d.id}
+                              className="border-b border-slate-100 hover:bg-slate-50"
+                            >
+                              <td className="px-4 py-2 text-center">{i + 1}</td>
+                              <td className="px-4 py-2">
+                                {d.keterangan || "-"}
+                              </td>
+                              <td className="px-4 py-2 text-right font-semibold text-red-600">
+                                - {formatRupiah(d.nominal)}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={() => openEditPotonganModal(d)}
+                                    className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
+                                    title="Edit"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePotongan(d.id)}
+                                    className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
+                                    title="Hapus"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
                         )}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-[130px_10px_1fr]">
-                      <span className="font-semibold text-slate-600">
-                        Status
-                      </span>
-                      <span>:</span>
+                        {discounts.length > 0 && (
+                          <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
+                            <td colSpan={2} className="px-4 py-3 text-right">
+                              TOTAL POTONGAN
+                            </td>
+                            <td className="px-4 py-3 text-right text-red-700">
+                              - {formatRupiah(totalPotongan)}
+                            </td>
+                            <td></td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Daftar Biaya Tambahan */}
+                <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
+                  <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-amber-500" /> Daftar Biaya
+                    Tambahan
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left border border-slate-200">
+                      <thead className="bg-teal-600 text-white font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-2 w-12 text-center">No</th>
+                          <th className="px-4 py-2">Keterangan</th>
+                          <th className="px-4 py-2 text-right">Nominal</th>
+                          <th className="px-4 py-2 w-20 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {additionalCosts.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={4}
+                              className="text-center py-4 text-slate-500"
+                            >
+                              Belum ada biaya tambahan.
+                            </td>
+                          </tr>
+                        ) : (
+                          additionalCosts.map((c, i) => (
+                            <tr
+                              key={c.id}
+                              className="border-b border-slate-100 hover:bg-slate-50"
+                            >
+                              <td className="px-4 py-2 text-center">{i + 1}</td>
+                              <td className="px-4 py-2">
+                                {c.keterangan || "-"}
+                              </td>
+                              <td className="px-4 py-2 text-right font-semibold text-green-600">
+                                {formatRupiah(c.nominal)}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                <button
+                                  onClick={() => handleDeleteBiaya(c.id)}
+                                  className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
+                                  title="Hapus"
+                                >
+                                  <Trash2 className="w-4 h-4 mx-auto" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                        {additionalCosts.length > 0 && (
+                          <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
+                            <td colSpan={2} className="px-4 py-3 text-right">
+                              TOTAL BIAYA TAMBAHAN
+                            </td>
+                            <td className="px-4 py-3 text-right text-green-700">
+                              {formatRupiah(totalBiayaTambahan)}
+                            </td>
+                            <td></td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Daftar Surat Tagihan */}
+                <div className="pt-4 mt-6 border-t border-dashed border-slate-300">
+                  <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-amber-500" /> Daftar Surat
+                    Tagihan
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left border border-slate-200">
+                      <thead className="bg-teal-600 text-white font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-2">Tgl Tagihan</th>
+                          <th className="px-4 py-2">Jatuh Tempo</th>
+                          <th className="px-4 py-2 text-right">Kekurangan</th>
+                          <th className="px-4 py-2 w-20 text-center">Cetak</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {billingLetters.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={4}
+                              className="text-center py-4 text-slate-500"
+                            >
+                              Tidak ada surat tagihan.
+                            </td>
+                          </tr>
+                        ) : (
+                          billingLetters.map((b) => (
+                            <tr
+                              key={b.id}
+                              className="border-b border-slate-100 hover:bg-slate-50"
+                            >
+                              <td className="px-4 py-2">
+                                {new Date(b.tgl_tagihan).toLocaleDateString(
+                                  "id-ID",
+                                )}
+                              </td>
+                              <td className="px-4 py-2 text-red-600 font-medium">
+                                {new Date(b.jatuh_tempo).toLocaleDateString(
+                                  "id-ID",
+                                )}
+                              </td>
+                              <td className="px-4 py-2 text-right font-semibold">
+                                {formatRupiah(b.kekurangan)}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                <button
+                                  className="p-1 bg-amber-100 text-amber-600 hover:bg-amber-200 rounded"
+                                  title="Cetak Surat"
+                                >
+                                  <Printer className="w-4 h-4 mx-auto" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : activeTab === "info_kpr" ? (
+              <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-sm mb-6">
+                  <div className="grid grid-cols-[130px_10px_1fr]">
+                    <span className="font-semibold text-slate-600">Bank</span>
+                    <span>:</span>
+                    <span className="font-bold text-slate-800">
+                      {bank?.nama_bank || sale.bank_nama || "-"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[130px_10px_1fr]">
+                    <span className="font-semibold text-slate-600">
+                      Kredit Pengajuan
+                    </span>
+                    <span>:</span>
+                    <span className="font-bold text-slate-800">
+                      {formatRupiah(
+                        sale.kredit_pengajuan || unit?.maksimal_kredit || 0,
+                      )}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[130px_10px_1fr] items-center">
+                    <span className="font-semibold text-slate-600">Status</span>
+                    <span>:</span>
+                    <div className="flex items-center gap-2">
                       <span
                         className={`inline-block w-fit px-2 py-0.5 rounded border text-xs font-bold ${statusBadgeClass(currentKprStatus)}`}
                       >
                         {currentKprStatus}
                       </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-slate-800 mb-3 text-sm">
-                      Daftar Return
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left border border-slate-200">
-                        <thead className="bg-teal-600 text-white font-semibold">
-                          <tr>
-                            <th className="px-4 py-2">No Kwitansi & Tgl</th>
-                            <th className="px-4 py-2">Keterangan</th>
-                            <th className="px-4 py-2 text-right">Nominal</th>
-                            <th className="px-4 py-2 w-24 text-center">Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {kprSubmissions.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={4}
-                                className="text-center py-4 text-slate-500"
-                              >
-                                Belum ada riwayat pengajuan.
-                              </td>
-                            </tr>
-                          ) : (
-                            kprSubmissions.map((k) => (
-                              <tr
-                                key={k.id}
-                                className="border-b border-slate-100 hover:bg-slate-50"
-                              >
-                                <td className="px-4 py-2">
-                                  <div className="font-bold text-slate-800">
-                                    {k.no_referensi || "-"}
-                                  </div>
-                                  <div className="text-xs text-slate-500">
-                                    {new Date(k.tanggal).toLocaleDateString(
-                                      "id-ID",
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-2">
-                                  <span
-                                    className={`inline-block px-1.5 py-0.5 rounded border text-[10px] font-bold mr-1 ${statusBadgeClass(k.status)}`}
-                                  >
-                                    {k.status}
-                                  </span>
-                                  {k.keterangan || "-"}
-                                </td>
-                                <td className="px-4 py-2 text-right font-semibold">
-                                  {formatRupiah(k.kredit_acc)}
-                                </td>
-                                <td className="px-4 py-2 text-center">
-                                  <div className="flex items-center justify-center gap-1">
-                                    <button
-                                      onClick={() => openEditApprovalModal(k)}
-                                      className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
-                                      title="Edit Status"
-                                    >
-                                      <Edit3 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleCancelSubmission(k.id)
-                                      }
-                                      className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
-                                      title="Batalkan"
-                                    >
-                                      <XCircle className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                      {currentKprStatus === "ACCEPTED" && (
+                        <span className="text-xs text-emerald-600 font-medium">
+                          (Pengajuan KPR Disetujui / ACC)
+                        </span>
+                      )}
+                      {currentKprStatus === "REJECTED" && (
+                        <span className="text-xs text-rose-600 font-medium">
+                          (Pengajuan KPR Ditolak / Rejected)
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-              ) : activeTab === "marketing_fee" ? (
-                <div className="space-y-6">
-                  {/* Summary Marketing Fee */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-center">
-                      <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
-                        Marketing Fee
-                      </p>
-                      <p className="text-xl font-bold text-slate-800">
-                        {formatRupiah(sale.fee_marketer || 0)}
-                      </p>
-                    </div>
-                    <div className="bg-emerald-50 p-4 rounded-md border border-emerald-200 text-center">
-                      <p className="text-xs font-semibold text-emerald-600 mb-1 uppercase tracking-wider font-bold">
-                        Sudah Cair
-                      </p>
-                      <p className="text-xl font-bold text-emerald-700">
-                        {formatRupiah(
-                          marketingDisbursements.reduce(
-                            (sum, item) => sum + (item.nominal || 0),
-                            0,
-                          ),
-                        )}
-                      </p>
-                    </div>
-                    <div className="bg-red-50 p-4 rounded-md border border-red-200 text-center">
-                      <p className="text-xs font-semibold text-red-600 mb-1 uppercase tracking-wider font-bold">
-                        Sisa
-                      </p>
-                      <p className="text-xl font-bold text-red-700">
-                        {formatRupiah(
-                          Math.max(
-                            0,
-                            (sale.fee_marketer || 0) -
-                              marketingDisbursements.reduce(
-                                (sum, item) => sum + (item.nominal || 0),
-                                0,
-                              ),
-                          ),
-                        )}
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Table of Disbursements */}
-                  <div>
-                    <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-teal-600" /> Riwayat
-                      Pencairan
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left border border-slate-200">
-                        <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
-                          <tr>
-                            <th className="px-4 py-2 w-12 text-center">No</th>
-                            <th className="px-4 py-2 w-32">Tanggal</th>
-                            <th className="px-4 py-2">Nominal</th>
-                            <th className="px-4 py-2">Uang diambil dari</th>
-                            <th className="px-4 py-2">Keterangan</th>
-                            <th className="px-4 py-2 w-28 text-center">Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {marketingDisbursements.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={6}
-                                className="text-center py-4 text-slate-500"
-                              >
-                                Belum ada riwayat pencairan marketing fee.
-                              </td>
-                            </tr>
-                          ) : (
-                            marketingDisbursements.map((mf, i) => (
-                              <tr
-                                key={mf.id}
-                                className="border-b border-slate-100 hover:bg-slate-50"
-                              >
-                                <td className="px-4 py-2 text-center">
-                                  {i + 1}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {new Date(mf.tanggal).toLocaleDateString(
-                                    "id-ID",
-                                  )}
-                                </td>
-                                <td className="px-4 py-2 font-semibold text-emerald-600">
-                                  {formatRupiah(mf.nominal)}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {mf.rekening || "-"}
-                                </td>
-                                <td className="px-4 py-2 text-xs text-slate-600">
-                                  {mf.keterangan || "-"}
-                                </td>
-                                <td className="px-4 py-2 text-center">
-                                  <div className="flex items-center justify-center gap-1.5">
-                                    <button
-                                      onClick={() =>
-                                        openEditMarketingFeeModal(mf)
-                                      }
-                                      className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
-                                      title="Edit"
-                                    >
-                                      <Edit3 className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleDeleteMarketingFee(mf.id)
-                                      }
-                                      className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
-                                      title="Hapus"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="border-l-2 border-slate-200 ml-3 pl-4 space-y-6 mt-4">
-                    {stepHistory.filter((h) => h.jenis_step === activeTab)
-                      .length === 0 ? (
-                      <p className="text-sm text-slate-500 italic">
-                        Belum ada riwayat aktivitas.
-                      </p>
-                    ) : (
-                      stepHistory
-                        .filter((h) => h.jenis_step === activeTab)
-                        .map((hist) => (
-                          <div key={hist.id} className="relative">
-                            <div className="absolute -left-[23px] top-1 w-3 h-3 bg-blue-500 rounded-full border-[3px] border-white shadow-sm" />
-                            <div className="mb-0.5 flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-slate-800 text-sm">
-                                  {hist.status}
-                                </span>
-                                <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">
-                                  {new Date(hist.created_at).toLocaleString(
-                                    "id-ID",
-                                  )}
-                                </span>
+                <h4 className="font-bold text-slate-800 mb-3 text-base">
+                  Daftar Return
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left border border-slate-200">
+                    <thead className="bg-teal-600 text-white font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-2">No Kwitansi & Tgl</th>
+                        <th className="px-4 py-2">Keterangan</th>
+                        <th className="px-4 py-2 text-right">Nominal</th>
+                        <th className="px-4 py-2 w-28 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {kprSubmissions.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={4}
+                            className="text-center py-4 text-slate-500"
+                          >
+                            Belum ada riwayat pengajuan.
+                          </td>
+                        </tr>
+                      ) : (
+                        kprSubmissions.map((k) => (
+                          <tr
+                            key={k.id}
+                            className="border-b border-slate-100 hover:bg-slate-50"
+                          >
+                            <td className="px-4 py-2">
+                              <div className="font-bold text-slate-800">
+                                {k.no_referensi || "-"}
                               </div>
-                              <div className="flex items-center gap-1.5">
+                              <div className="text-xs text-slate-500">
+                                {new Date(k.tanggal).toLocaleDateString(
+                                  "id-ID",
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span
+                                className={`inline-block px-1.5 py-0.5 rounded border text-[10px] font-bold mr-1 ${statusBadgeClass(k.status)}`}
+                              >
+                                {k.status}
+                              </span>
+                              {k.keterangan || "-"}
+                            </td>
+                            <td className="px-4 py-2 text-right font-semibold">
+                              {formatRupiah(k.kredit_acc)}
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              <div className="flex items-center justify-center gap-1">
                                 <button
-                                  onClick={() => openEditProgresModal(hist)}
-                                  className="p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
-                                  title="Edit Progres"
+                                  onClick={() => openEditApprovalModal(k)}
+                                  className="p-1.5 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded transition"
+                                  title="Edit Pengajuan KPR"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteProgres(hist.id)}
-                                  className="p-1 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded transition-colors"
-                                  title="Hapus Progres"
+                                  onClick={() => handleCancelSubmission(k.id)}
+                                  className="p-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded transition"
+                                  title="Hapus / Batalkan"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
-                            </div>
-                            <p className="text-sm text-slate-600">
-                              {hist.keterangan ||
-                                "Tidak ada keterangan tambahan."}
-                            </p>
-                            <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> Diupdate oleh:{" "}
-                              {hist.changed_by_nama}
-                            </p>
-                          </div>
+                            </td>
+                          </tr>
                         ))
-                    )}
-                  </div>
+                      )}
+                      <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
+                        <td colSpan={2} className="px-4 py-3 text-right">
+                          Total
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {formatRupiah(totalReturn)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="border-l-2 border-slate-200 ml-3 pl-4 space-y-6 mt-4">
+                  {stepHistory.filter((h) => h.jenis_step === activeTab)
+                    .length === 0 ? (
+                    <p className="text-sm text-slate-500 italic">
+                      Belum ada riwayat aktivitas.
+                    </p>
+                  ) : (
+                    stepHistory
+                      .filter((h) => h.jenis_step === activeTab)
+                      .map((hist) => (
+                        <div key={hist.id} className="relative group border-b border-slate-100 pb-3 last:border-0">
+                          <div className="absolute -left-[23px] top-1 w-3 h-3 bg-blue-500 rounded-full border-[3px] border-white shadow-sm" />
+                          <div className="mb-0.5 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-slate-800 text-sm">
+                                {hist.status}
+                              </span>
+                              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">
+                                {new Date(hist.created_at).toLocaleString(
+                                  "id-ID",
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => openEditStepModal(hist)}
+                                className="p-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded transition"
+                                title="Edit Riwayat Step"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteStep(hist.id)}
+                                className="p-1 bg-red-50 hover:bg-red-100 text-red-600 rounded transition"
+                                title="Hapus Riwayat Step"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-sm text-slate-600">
+                            {hist.keterangan ||
+                              "Tidak ada keterangan tambahan."}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> Diupdate oleh:{" "}
+                            {hist.changed_by_nama || "-"}
+                          </p>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </AppLayout>
+
+      {/* Modal Potongan */}
+      {showPotonganModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 text-lg">
+                {editingDiscountId ? "Edit Potongan" : "Input Potongan Baru"}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowPotonganModal(false);
+                  setEditingDiscountId(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Nominal Potongan (Rp) *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 5.000.000"
+                  value={potonganForm.nominal}
+                  onChange={(e) =>
+                    setPotonganForm({
+                      ...potonganForm,
+                      nominal: formatRibuan(e.target.value),
+                    })
+                  }
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Keterangan
+                </label>
+                <input
+                  type="text"
+                  placeholder="Alasan potongan..."
+                  value={potonganForm.keterangan}
+                  onChange={(e) =>
+                    setPotonganForm({
+                      ...potonganForm,
+                      keterangan: e.target.value,
+                    })
+                  }
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button
+                onClick={() => {
+                  setShowPotonganModal(false);
+                  setEditingDiscountId(null);
+                }}
+                className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSavePotongan}
+                disabled={saving || !potonganForm.nominal}
+                className="px-4 py-2 text-sm bg-emerald-500 hover:bg-emerald-600 text-white rounded font-semibold disabled:opacity-50"
+              >
+                {saving ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Input / Edit Angsuran */}
       {showAngsuranModal && (
@@ -2518,21 +2129,16 @@ export default function DetailPenjualanPage() {
         </div>
       )}
 
-      {/* Modal Form Approval Pengajuan KPR (sekaligus Ganti Bank Tujuan) */}
+      {/* Modal Form Approval Pengajuan KPR */}
       {showApprovalModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-800 text-lg">
-                {editingSubmissionId
-                  ? "Edit Status Pengajuan"
-                  : "Form Approval Pengajuan"}
+                Form Approval Pengajuan
               </h3>
               <button
-                onClick={() => {
-                  setShowApprovalModal(false);
-                  setEditingSubmissionId(null);
-                }}
+                onClick={() => setShowApprovalModal(false)}
                 className="text-slate-400 hover:text-slate-600 text-xl leading-none"
               >
                 &times;
@@ -2554,28 +2160,6 @@ export default function DetailPenjualanPage() {
                   }
                   className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Bank Tujuan *
-                </label>
-                <select
-                  value={approvalForm.bank_id}
-                  onChange={(e) =>
-                    setApprovalForm({
-                      ...approvalForm,
-                      bank_id: e.target.value,
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="">-- Pilih Bank --</option>
-                  {banks.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.nama_bank} {b.cabang ? `- ${b.cabang}` : ""}
-                    </option>
-                  ))}
-                </select>
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">
@@ -2613,29 +2197,23 @@ export default function DetailPenjualanPage() {
                   className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
-              {!editingSubmissionId && (
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                    Biaya Tambahan (Rp) *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="0"
-                    value={approvalForm.biaya_tambahan}
-                    onChange={(e) =>
-                      setApprovalForm({
-                        ...approvalForm,
-                        biaya_tambahan: formatRibuan(e.target.value),
-                      })
-                    }
-                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Nilai ini otomatis ikut ditambahkan ke Biaya Tambahan &amp;
-                    Total Tagihan di tab Angsuran Konsumen.
-                  </p>
-                </div>
-              )}
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Biaya Tambahan (Rp) *
+                </label>
+                <input
+                  type="text"
+                  placeholder="0"
+                  value={approvalForm.biaya_tambahan}
+                  onChange={(e) =>
+                    setApprovalForm({
+                      ...approvalForm,
+                      biaya_tambahan: formatRibuan(e.target.value),
+                    })
+                  }
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">
                   Keterangan
@@ -2656,16 +2234,56 @@ export default function DetailPenjualanPage() {
             </div>
             <div className="flex gap-2 mt-5 justify-end">
               <button
-                onClick={() => {
-                  setShowApprovalModal(false);
-                  setEditingSubmissionId(null);
-                }}
+                onClick={() => setShowApprovalModal(false)}
                 className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold"
               >
                 Batal
               </button>
               <button
                 onClick={handleSaveApproval}
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
+              >
+                {saving ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ganti Bank Tujuan */}
+      {showGantiBankModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="font-bold text-slate-800 text-lg mb-4">
+              Ganti Bank Tujuan KPR
+            </h3>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Pilih Bank *
+              </label>
+              <select
+                value={gantiBankId}
+                onChange={(e) => setGantiBankId(e.target.value)}
+                className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">-- Pilih Bank --</option>
+                {banks.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.nama_bank} {b.cabang ? `- ${b.cabang}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button
+                onClick={() => setShowGantiBankModal(false)}
+                className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveGantiBank}
                 disabled={saving}
                 className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
               >
@@ -2751,7 +2369,7 @@ export default function DetailPenjualanPage() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
             <h3 className="font-bold text-slate-800 text-lg mb-4">
-              Input Progres - {TABS.find((t) => t.id === activeTab)?.label}
+              {editingStepId ? "Edit Progres" : "Input Progres"} - {TABS.find((t) => t.id === activeTab)?.label}
             </h3>
             <div className="space-y-3">
               <div>
@@ -2884,672 +2502,6 @@ export default function DetailPenjualanPage() {
               </button>
               <button
                 onClick={handleSaveHargaPajak}
-                disabled={saving}
-                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
-              >
-                {saving ? "Menyimpan..." : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Upload Dokumen KTP & KK */}
-      {showUploadDokumenModal && customer && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4 border-b pb-2">
-              <h3 className="font-bold text-slate-800 text-lg">
-                Upload Dokumen KTP &amp; KK
-              </h3>
-              <button
-                onClick={() => {
-                  setShowUploadDokumenModal(false);
-                }}
-                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
-              >
-                &times;
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-3 bg-blue-50 rounded border border-blue-200 text-xs text-blue-700">
-                Format file yang didukung: JPG, PNG, PDF, DOCX, dll. File akan
-                tersimpan dengan aman pada server.
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Scan KTP
-                </label>
-                <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded border">
-                  {customer.scan_ktp_url ? (
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-green-600 font-medium">
-                        ✓ File Tersedia
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <a
-                          href={customer.scan_ktp_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-blue-600 hover:underline font-bold"
-                        >
-                          Lihat File
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteFile("ktp")}
-                          className="text-red-600 hover:underline font-semibold"
-                        >
-                          Hapus File
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-400 mb-1">
-                      Belum ada file KTP.
-                    </span>
-                  )}
-                  <input
-                    type="file"
-                    onChange={(e) => handleUploadFile(e, "ktp")}
-                    disabled={uploadingKtp || uploadingKk}
-                    className="text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  {uploadingKtp && (
-                    <span className="text-[10px] text-blue-600 font-medium animate-pulse">
-                      Memproses...
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Scan KK (Kartu Keluarga)
-                </label>
-                <div className="flex flex-col gap-2 p-3 bg-slate-50 rounded border">
-                  {customer.scan_kk_url ? (
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-green-600 font-medium">
-                        ✓ File Tersedia
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <a
-                          href={customer.scan_kk_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-blue-600 hover:underline font-bold"
-                        >
-                          Lihat File
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteFile("kk")}
-                          className="text-red-600 hover:underline font-semibold"
-                        >
-                          Hapus File
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-400 mb-1">
-                      Belum ada file KK.
-                    </span>
-                  )}
-                  <input
-                    type="file"
-                    onChange={(e) => handleUploadFile(e, "kk")}
-                    disabled={uploadingKtp || uploadingKk}
-                    className="text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  {uploadingKk && (
-                    <span className="text-[10px] text-blue-600 font-medium animate-pulse">
-                      Memproses...
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end mt-6 border-t pt-4">
-              <button
-                onClick={() => setShowUploadDokumenModal(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded font-semibold text-sm"
-              >
-                Selesai
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Detail Konsumen */}
-      {showDetailKonsumenModal && customer && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-4 border-b pb-2">
-              <h3 className="font-bold text-slate-800 text-lg">
-                Detail Data Konsumen (Read-Only)
-              </h3>
-              <button
-                onClick={() => setShowDetailKonsumenModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
-              >
-                &times;
-              </button>
-            </div>
-
-            <div className="space-y-6 text-sm">
-              {/* Informasi Pribadi */}
-              <div>
-                <h4 className="font-bold text-teal-700 border-b border-teal-100 pb-1 mb-2 uppercase text-xs tracking-wider">
-                  Informasi Pribadi
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Nama Lengkap</span>
-                    <span>:</span>
-                    <span className="font-semibold text-slate-800">
-                      {customer.nama || "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">NIK (No. KTP)</span>
-                    <span>:</span>
-                    <span className="font-semibold text-slate-800">
-                      {customer.nik || "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Tempat Lahir</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.tempat_lahir || "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Tanggal Lahir</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.tanggal_lahir
-                        ? new Date(customer.tanggal_lahir).toLocaleDateString(
-                            "id-ID",
-                          )
-                        : "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">No. Handphone</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.no_hp || "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Email</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.email || "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Pekerjaan</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.pekerjaan || "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Instansi</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.instansi || "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Pendapatan/Bulan</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.pendapatan_per_bulan
-                        ? formatRupiah(Number(customer.pendapatan_per_bulan))
-                        : "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">NPWP</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.npwp || "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Status Pernikahan</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.status_pernikahan || "-"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Data Alamat */}
-              <div>
-                <h4 className="font-bold text-teal-700 border-b border-teal-100 pb-1 mb-2 uppercase text-xs tracking-wider">
-                  Alamat
-                </h4>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Alamat KTP</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      <FullAddress
-                        kelurahanId={customer.kelurahan_id}
-                        kampungDusun={customer.kampung_dusun}
-                        rt={customer.rt}
-                        rw={customer.rw}
-                        fallback={customer.alamat_ktp || "-"}
-                      />
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Alamat Domisili</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      <FullAddress
-                        kelurahanId={customer.kelurahan_id}
-                        kampungDusun={customer.kampung_dusun}
-                        rt={customer.rt}
-                        rw={customer.rw}
-                        fallback={
-                          customer.alamat_domisili ||
-                          customer.domisili ||
-                          customer.alamat ||
-                          "-"
-                        }
-                      />
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Data Pasangan */}
-              {(customer.status_pernikahan === "Menikah" ||
-                customer.nama_pasangan) && (
-                <div>
-                  <h4 className="font-bold text-teal-700 border-b border-teal-100 pb-1 mb-2 uppercase text-xs tracking-wider">
-                    Informasi Pasangan
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                    <div className="grid grid-cols-[130px_10px_1fr]">
-                      <span className="text-slate-500">Nama Pasangan</span>
-                      <span>:</span>
-                      <span className="font-semibold text-slate-800">
-                        {customer.nama_pasangan || "-"}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-[130px_10px_1fr]">
-                      <span className="text-slate-500">NIK Pasangan</span>
-                      <span>:</span>
-                      <span className="text-slate-800">
-                        {customer.nik_pasangan || "-"}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-[130px_10px_1fr]">
-                      <span className="text-slate-500">Tempat Lahir</span>
-                      <span>:</span>
-                      <span className="text-slate-800">
-                        {customer.tempat_lahir_pasangan || "-"}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-[130px_10px_1fr]">
-                      <span className="text-slate-500">Tanggal Lahir</span>
-                      <span>:</span>
-                      <span className="text-slate-800">
-                        {customer.tanggal_lahir_pasangan
-                          ? new Date(
-                              customer.tanggal_lahir_pasangan,
-                            ).toLocaleDateString("id-ID")
-                          : "-"}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-[130px_10px_1fr]">
-                      <span className="text-slate-500">No. HP Pasangan</span>
-                      <span>:</span>
-                      <span className="text-slate-800">
-                        {customer.no_hp_pasangan || "-"}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-[130px_10px_1fr]">
-                      <span className="text-slate-500">Pekerjaan</span>
-                      <span>:</span>
-                      <span className="text-slate-800">
-                        {customer.pekerjaan_pasangan || "-"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr] mt-2">
-                    <span className="text-slate-500">Alamat Domisili</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.alamat_domisili_pasangan || "-"}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Data KPR */}
-              <div>
-                <h4 className="font-bold text-teal-700 border-b border-teal-100 pb-1 mb-2 uppercase text-xs tracking-wider">
-                  Rekening Bank KPR
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">Bank Rekening</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.bank_rekening_kpr || "-"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500">No. Rekening</span>
-                    <span>:</span>
-                    <span className="text-slate-800">
-                      {customer.nomor_rekening_kpr || "-"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dokumen & Catatan */}
-              <div>
-                <h4 className="font-bold text-teal-700 border-b border-teal-100 pb-1 mb-2 uppercase text-xs tracking-wider">
-                  Dokumen &amp; Catatan
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500 font-semibold">
-                      Scan KTP
-                    </span>
-                    <span>:</span>
-                    <div className="flex items-center gap-2">
-                      {customer.scan_ktp_url ? (
-                        <>
-                          <a
-                            href={customer.scan_ktp_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-600 hover:underline font-bold"
-                          >
-                            Lihat KTP
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteFile("ktp")}
-                            className="text-xs text-red-500 hover:underline font-medium"
-                          >
-                            (Hapus)
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="text-slate-500 font-semibold">
-                      Scan KK
-                    </span>
-                    <span>:</span>
-                    <div className="flex items-center gap-2">
-                      {customer.scan_kk_url ? (
-                        <>
-                          <a
-                            href={customer.scan_kk_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-600 hover:underline font-bold"
-                          >
-                            Lihat KK
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteFile("kk")}
-                            className="text-xs text-red-500 hover:underline font-medium"
-                          >
-                            (Hapus)
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {customer.catatan && (
-                  <div className="mt-2 bg-slate-50 p-2.5 rounded border border-slate-200 text-slate-700">
-                    <p className="font-semibold text-xs text-slate-500 mb-1">
-                      Catatan Tambahan:
-                    </p>
-                    <p className="text-xs whitespace-pre-wrap">
-                      {customer.catatan}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end mt-6 border-t pt-4">
-              <button
-                onClick={() => setShowDetailKonsumenModal(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded font-semibold text-sm"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Modal Input / Edit Pencairan Marketing Fee */}
-      {showMarketingFeeModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4 border-b pb-2">
-              <h3 className="font-bold text-slate-800 text-lg">
-                {editingMarketingFeeId
-                  ? "Edit Pencairan Marketing Fee"
-                  : "Form Input Cicilan"}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowMarketingFeeModal(false);
-                  setEditingMarketingFeeId(null);
-                }}
-                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
-              >
-                &times;
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Tanggal *
-                </label>
-                <input
-                  type="date"
-                  value={marketingFeeForm.tanggal}
-                  onChange={(e) =>
-                    setMarketingFeeForm({
-                      ...marketingFeeForm,
-                      tanggal: e.target.value,
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Uang diambil dari *
-                </label>
-                <select
-                  value={marketingFeeForm.rekening}
-                  onChange={(e) =>
-                    setMarketingFeeForm({
-                      ...marketingFeeForm,
-                      rekening: e.target.value,
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="">-- Pilih Rekening --</option>
-                  {cashBankAccounts?.map((r) => (
-                    <option key={r.id} value={r.nama_akun}>
-                      {r.nama_akun} {r.no_rekening ? `(${r.no_rekening})` : ""}
-                    </option>
-                  ))}
-                  {REKENING_OPTIONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Sebesar (Rp) *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: 1.000.000"
-                  value={marketingFeeForm.nominal}
-                  onChange={(e) =>
-                    setMarketingFeeForm({
-                      ...marketingFeeForm,
-                      nominal: formatRibuan(e.target.value),
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Keterangan
-                </label>
-                <textarea
-                  placeholder="Catatan tambahan (opsional)..."
-                  value={marketingFeeForm.keterangan}
-                  onChange={(e) =>
-                    setMarketingFeeForm({
-                      ...marketingFeeForm,
-                      keterangan: e.target.value,
-                    })
-                  }
-                  rows={2}
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-5 justify-end">
-              <button
-                onClick={() => {
-                  setShowMarketingFeeModal(false);
-                  setEditingMarketingFeeId(null);
-                }}
-                className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleSaveMarketingFee}
-                disabled={saving}
-                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
-              >
-                {saving ? "Menyimpan..." : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Input / Edit Diskon (Potongan) */}
-      {showDiskonModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4 border-b pb-2">
-              <h3 className="font-bold text-slate-800 text-lg">
-                {editingDiskonId
-                  ? "Edit Potongan Diskon"
-                  : "Tambah Potongan Diskon"}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowDiskonModal(false);
-                  setEditingDiskonId(null);
-                }}
-                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
-              >
-                &times;
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Tanggal *
-                </label>
-                <input
-                  type="date"
-                  value={diskonForm.tanggal}
-                  onChange={(e) =>
-                    setDiskonForm({ ...diskonForm, tanggal: e.target.value })
-                  }
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Sebesar (Rp) *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: 1.000.000"
-                  value={diskonForm.nominal}
-                  onChange={(e) =>
-                    setDiskonForm({
-                      ...diskonForm,
-                      nominal: formatRibuan(e.target.value),
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                  Keterangan
-                </label>
-                <textarea
-                  placeholder="Alasan / catatan diskon (opsional)..."
-                  value={diskonForm.keterangan}
-                  onChange={(e) =>
-                    setDiskonForm({ ...diskonForm, keterangan: e.target.value })
-                  }
-                  rows={2}
-                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-5 justify-end">
-              <button
-                onClick={() => {
-                  setShowDiskonModal(false);
-                  setEditingDiskonId(null);
-                }}
-                className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleSaveDiskon}
                 disabled={saving}
                 className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
               >

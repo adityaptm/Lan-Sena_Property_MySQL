@@ -26,10 +26,27 @@ export function bulanKeRomawi(bulan: number): string {
 }
 
 /**
- * Format a Date object to Indonesian date string.
- * Example: 17 Agustus 1945
+ * Format a Date object or ISO string to ID date string (DD/MM/YYYY).
+ * Example: "2026-08-09T17:00:00.000Z" → "10/08/2026"
  */
-export function formatTanggalIndonesia(date: Date): string {
+export function formatDateId(dateVal?: string | Date | null): string {
+  if (!dateVal) return '-';
+  const date = typeof dateVal === 'string' ? new Date(dateVal) : dateVal;
+  if (isNaN(date.getTime())) return String(dateVal);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Format a Date object or ISO string to Indonesian date string.
+ * Example: "2026-08-09T17:00:00.000Z" → "10 Agustus 2026"
+ */
+export function formatTanggalIndonesia(dateVal: Date | string | null | undefined): string {
+  if (!dateVal) return '-';
+  const date = typeof dateVal === 'string' ? new Date(dateVal) : dateVal;
+  if (isNaN(date.getTime())) return String(dateVal);
   const months = [
     'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
