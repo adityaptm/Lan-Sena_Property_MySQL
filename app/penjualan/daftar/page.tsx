@@ -34,8 +34,28 @@ function daysSince(dateStr?: string): number {
   return Math.floor((Date.now() - d.getTime()) / 86_400_000);
 }
 
-/** Threshold hari untuk dianggap "Progres Lambat" */
-const LAMBAT_THRESHOLD_DAYS = 60;
+/** Hitung jumlah hari kerja (Senin-Jumat) dari tanggal booking hingga sekarang */
+function getWorkdaysSince(dateStr?: string): number {
+  if (!dateStr) return 0;
+  const start = new Date(dateStr);
+  if (isNaN(start.getTime())) return 0;
+  const end = new Date();
+  let count = 0;
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  while (cur < end) {
+    cur.setDate(cur.getDate() + 1);
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) {
+      count++;
+    }
+  }
+  return count;
+}
+
+/** Threshold hari kerja untuk dianggap "Progres Lambat" (14 hari kerja) */
+const LAMBAT_THRESHOLD_WORKDAYS = 14;
 
 // ─── Badge Komponen ─────────────────────────────────────────────────────────
 
@@ -114,13 +134,14 @@ export default function DaftarPenjualanPage() {
           : s.status || 'BOOKING';
 
       const tipeUnit = u?.unit_type_nama || (u?.luas_bangunan && u?.luas_tanah ? `${u.luas_bangunan}/${u.luas_tanah}` : '30/60');
+      const workdays = getWorkdaysSince(s.tanggal_booking || s.created_at);
       const days = daysSince(s.tanggal_booking || s.created_at);
       const finalStatus = (s.status || '').toUpperCase();
       const kprUp = (s.kpr_status || '').toUpperCase();
 
-      // Progres Lambat: > 60 hari, status belum Akad/Lunas/Batal
+      // Progres Lambat: durasi >= 14 hari kerja (atau 14 hari), status belum Akad/Lunas/Batal/Reject
       const isLambat =
-        days > LAMBAT_THRESHOLD_DAYS &&
+        (workdays >= LAMBAT_THRESHOLD_WORKDAYS || days >= 14) &&
         finalStatus !== 'AKAD' &&
         finalStatus !== 'LUNAS' &&
         finalStatus !== 'BATAL' &&
@@ -131,6 +152,8 @@ export default function DaftarPenjualanPage() {
 
       // Accepted: kpr_status ACCEPTED / SP3K / Akad
       const isAccepted = kprUp.includes('ACCEPT') || kprUp === 'SP3K' || kprUp === 'AKAD';
+
+      const tanggalStep = formatDateId(s.tanggal_booking || s.created_at);
 
       return {
         ...s,
@@ -146,6 +169,7 @@ export default function DaftarPenjualanPage() {
         is_lambat: isLambat,
         is_reject: isReject,
         is_accepted: isAccepted,
+        tanggal_step: tanggalStep,
       };
     });
   }, [sales, customers, units, blocks, locations]);
@@ -425,18 +449,20 @@ export default function DaftarPenjualanPage() {
 
                         {/* Step Terakhir */}
                         <td className="py-2.5 px-3">
-                          <div className="flex flex-col items-start gap-1">
-                            <span className="font-bold text-slate-800 uppercase">
+                          <div className="flex flex-col items-start gap-0.5">
+                            <span className="font-bold text-slate-800 text-xs uppercase tracking-tight">
                               {r.step_terakhir}
                             </span>
-                            {(r.is_lambat || r.is_reject) && (
-                              <button
-                                onClick={() => setExpandedRowId(isExpanded ? null : r.id)}
-                                className="text-[10px] text-slate-600 hover:text-blue-600 font-semibold flex items-center gap-0.5 underline"
-                              >
-                                {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                                Detail Info
-                              </button>
+                            {r.tanggal_step && r.tanggal_step !== '-' && (
+                              <span className="text-[11px] text-slate-500 font-mono">
+                                {r.tanggal_step}
+                              </span>
+                            )}
+                            {r.is_lambat && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-0.5 rounded text-[10px] font-bold bg-[#dc2626] text-white shadow-2xs">
+                                <AlertTriangle className="w-3 h-3 text-white fill-white/20 shrink-0" />
+                                Progres Lambat
+                              </span>
                             )}
                           </div>
                         </td>

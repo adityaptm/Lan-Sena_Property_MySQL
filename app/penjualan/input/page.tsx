@@ -118,11 +118,8 @@ export default function InputPenjualanPage() {
   );
 
   const availableUnits = useMemo(() => {
-    // Hanya sertakan unit yang berstatus "Tersedia" dan tidak memiliki penjualan aktif
+    // Hanya sertakan unit yang tidak memiliki transaksi penjualan aktif (bukan Batal/Rejected)
     let list = units.filter((u) => {
-      const isNotTersedia = Boolean(u.status && u.status.toLowerCase() !== "tersedia");
-      if (isNotTersedia) return false;
-
       const hasActiveSale = sales.some(
         (s) =>
           s.unit_id === u.id &&

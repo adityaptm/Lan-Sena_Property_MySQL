@@ -127,7 +127,7 @@ export default function CustomerPage() {
       status: c.status,
       is_registered_before: !!c.is_registered_before,
       tempat_lahir: c.tempat_lahir || "",
-      tanggal_lahir: c.tanggal_lahir || "",
+      tanggal_lahir: c.tanggal_lahir ? String(c.tanggal_lahir).slice(0, 10) : "",
       alamat_ktp: c.alamat_ktp || "",
       alamat_domisili: c.alamat_domisili || "",
       pekerjaan: c.pekerjaan || "",
@@ -137,7 +137,7 @@ export default function CustomerPage() {
       status_pernikahan: c.status_pernikahan || "Belum Menikah",
       nama_pasangan: c.nama_pasangan || "",
       tempat_lahir_pasangan: c.tempat_lahir_pasangan || "",
-      tanggal_lahir_pasangan: c.tanggal_lahir_pasangan || "",
+      tanggal_lahir_pasangan: c.tanggal_lahir_pasangan ? String(c.tanggal_lahir_pasangan).slice(0, 10) : "",
       pekerjaan_pasangan: c.pekerjaan_pasangan || "",
       nik_pasangan: c.nik_pasangan || "",
       no_hp_pasangan: c.no_hp_pasangan || "",
@@ -205,6 +205,16 @@ export default function CustomerPage() {
         <span className="font-mono text-xs text-slate-500">{r.nik}</span>
       ),
       sortable: true,
+    },
+    {
+      header: "Tgl Lahir",
+      accessorKey: (r) => {
+        if (!r.tanggal_lahir) return "-";
+        const clean = String(r.tanggal_lahir).slice(0, 10);
+        const parts = clean.split("-");
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        return clean;
+      },
     },
     { header: "No. WhatsApp / HP", accessorKey: "no_hp" },
     { header: "Pekerjaan", accessorKey: (r) => r.pekerjaan || "-" },

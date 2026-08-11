@@ -633,6 +633,14 @@ export default function DetailPenjualanPage() {
       };
       if (approvalForm.status === "REJECTED") {
         updateData.status = "Batal";
+        if (sale?.unit_id) {
+          await dbRequest({
+            action: "update",
+            table: "units",
+            data: { status: "Tersedia" },
+            filters: byId(sale.unit_id),
+          });
+        }
       } else if (approvalForm.status === "ACCEPTED") {
         updateData.kpr_status = "SP3K";
       }

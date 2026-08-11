@@ -50,7 +50,7 @@ export function UpdateDataKonsumenForm({ customer, onClose, onSuccess }: Props) 
   const [form, setForm] = useState({
     nama: customer.nama || '',
     tempat_lahir: customer.tempat_lahir || '',
-    tanggal_lahir: customer.tanggal_lahir || '',
+    tanggal_lahir: customer.tanggal_lahir ? String(customer.tanggal_lahir).slice(0, 10) : '',
     nik: customer.nik || '',
     no_hp: customer.no_hp || '',
     email: customer.email || '',
@@ -63,7 +63,7 @@ export function UpdateDataKonsumenForm({ customer, onClose, onSuccess }: Props) 
     status_pernikahan: customer.status_pernikahan || 'Belum Menikah',
     nama_pasangan: customer.nama_pasangan || '',
     tempat_lahir_pasangan: customer.tempat_lahir_pasangan || '',
-    tanggal_lahir_pasangan: customer.tanggal_lahir_pasangan || '',
+    tanggal_lahir_pasangan: customer.tanggal_lahir_pasangan ? String(customer.tanggal_lahir_pasangan).slice(0, 10) : '',
     pekerjaan_pasangan: customer.pekerjaan_pasangan || '',
     nik_pasangan: customer.nik_pasangan || '',
     alamat_domisili_pasangan: customer.alamat_domisili_pasangan || '',
