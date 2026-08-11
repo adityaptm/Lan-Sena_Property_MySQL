@@ -52,6 +52,10 @@ export default function CustomerPage() {
     nik_pasangan: "",
     no_hp_pasangan: "",
     alamat_domisili_pasangan: "",
+    kampung_dusun_pasangan: "",
+    rt_pasangan: "",
+    rw_pasangan: "",
+    kelurahan_id_pasangan: null as string | null,
     kampung_dusun: "",
     rt: "",
     rw: "",
@@ -96,6 +100,10 @@ export default function CustomerPage() {
     nik_pasangan: "",
     no_hp_pasangan: "",
     alamat_domisili_pasangan: "",
+    kampung_dusun_pasangan: "",
+    rt_pasangan: "",
+    rw_pasangan: "",
+    kelurahan_id_pasangan: null as string | null,
     kampung_dusun: "",
     rt: "",
     rw: "",
@@ -134,6 +142,10 @@ export default function CustomerPage() {
       nik_pasangan: c.nik_pasangan || "",
       no_hp_pasangan: c.no_hp_pasangan || "",
       alamat_domisili_pasangan: c.alamat_domisili_pasangan || "",
+      kampung_dusun_pasangan: (c as any).kampung_dusun_pasangan || "",
+      rt_pasangan: (c as any).rt_pasangan || "",
+      rw_pasangan: (c as any).rw_pasangan || "",
+      kelurahan_id_pasangan: (c as any).kelurahan_id_pasangan || null,
       kampung_dusun: c.kampung_dusun || "",
       rt: c.rt || "",
       rw: c.rw || "",
@@ -334,38 +346,7 @@ export default function CustomerPage() {
           onSubmit={handleSubmit}
           className="space-y-5 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar"
         >
-          {/* Question / Status */}
-          <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-100">
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
-              Sudah pernah terdaftar sebagai Mandor/Suplier/Marketer?
-            </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-600">
-                <input
-                  type="radio"
-                  name="is_registered_before"
-                  checked={!formData.is_registered_before}
-                  onChange={() =>
-                    setFormData({ ...formData, is_registered_before: false })
-                  }
-                  className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                />
-                <span>Belum pernah</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-600">
-                <input
-                  type="radio"
-                  name="is_registered_before"
-                  checked={formData.is_registered_before}
-                  onChange={() =>
-                    setFormData({ ...formData, is_registered_before: true })
-                  }
-                  className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                />
-                <span>Sudah pernah</span>
-              </label>
-            </div>
-          </div>
+
 
           {/* Identitas Diri */}
           <FormGroup icon={User} color="blue" title="Identitas Diri">
@@ -650,19 +631,44 @@ export default function CustomerPage() {
                 />
               </Field>
 
-              <Field label="Alamat Domisili Pasangan">
-                <textarea
-                  rows={2}
-                  value={formData.alamat_domisili_pasangan}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      alamat_domisili_pasangan: e.target.value,
-                    })
-                  }
-                  className={INPUT}
+              <div className="pt-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold text-slate-700">
+                    Alamat Domisili Pasangan
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        kelurahan_id_pasangan: prev.kelurahan_id,
+                        kampung_dusun_pasangan: prev.kampung_dusun,
+                        rt_pasangan: prev.rt,
+                        rw_pasangan: prev.rw,
+                      }));
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-bold underline"
+                  >
+                    Samakan dengan Alamat KTP Utama
+                  </button>
+                </div>
+                <AddressSelector
+                  title="Struktur Alamat Administratif Pasangan"
+                  kelurahanId={formData.kelurahan_id_pasangan}
+                  kampungDusun={formData.kampung_dusun_pasangan}
+                  rt={formData.rt_pasangan}
+                  rw={formData.rw_pasangan}
+                  onChange={(val) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      kelurahan_id_pasangan: val.kelurahanId,
+                      kampung_dusun_pasangan: val.kampungDusun,
+                      rt_pasangan: val.rt,
+                      rw_pasangan: val.rw,
+                    }));
+                  }}
                 />
-              </Field>
+              </div>
             </FormGroup>
           )}
 

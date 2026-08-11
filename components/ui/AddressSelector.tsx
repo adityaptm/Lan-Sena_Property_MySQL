@@ -14,6 +14,7 @@ interface AddressSelectorProps {
     rw: string;
   }) => void;
   disabled?: boolean;
+  title?: string;
 }
 
 interface RegionItem {
@@ -92,6 +93,7 @@ export function AddressSelector({
   rw,
   onChange,
   disabled = false,
+  title = "Struktur Alamat Administratif",
 }: AddressSelectorProps) {
   // Dropdown lists
   const [provinces, setProvinces] = useState<RegionItem[]>([]);
@@ -105,23 +107,43 @@ export function AddressSelector({
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
   const [selectedVillageId, setSelectedVillageId] = useState<string>("");
 
-  const [localKampung, setLocalKampung] = useState(kampungDusun);
-  const [localRt, setLocalRt] = useState(rt);
-  const [localRw, setLocalRw] = useState(rw);
+  // Search filter inputs
+  const [searchProv, setSearchProv] = useState("");
+  const [searchReg, setSearchReg] = useState("");
+  const [searchDist, setSearchDist] = useState("");
+  const [searchVill, setSearchVill] = useState("");
+
+  const [localKampung, setLocalKampung] = useState(kampungDusun || "");
+  const [localRt, setLocalRt] = useState(rt || "");
+  const [localRw, setLocalRw] = useState(rw || "");
 
   const [loading, setLoading] = useState(false);
 
+  // Filtered lists based on search
+  const filteredProvinces = provinces.filter((p) =>
+    p.nama.toLowerCase().includes(searchProv.toLowerCase()),
+  );
+  const filteredRegencies = regencies.filter((r) =>
+    r.nama.toLowerCase().includes(searchReg.toLowerCase()),
+  );
+  const filteredDistricts = districts.filter((d) =>
+    d.nama.toLowerCase().includes(searchDist.toLowerCase()),
+  );
+  const filteredVillages = villages.filter((v) =>
+    v.nama.toLowerCase().includes(searchVill.toLowerCase()),
+  );
+
   // Sync text inputs
   useEffect(() => {
-    setLocalKampung(kampungDusun);
+    setLocalKampung(kampungDusun || "");
   }, [kampungDusun]);
 
   useEffect(() => {
-    setLocalRt(rt);
+    setLocalRt(rt || "");
   }, [rt]);
 
   useEffect(() => {
-    setLocalRw(rw);
+    setLocalRw(rw || "");
   }, [rw]);
 
   // Load provinces on mount
@@ -310,7 +332,7 @@ export function AddressSelector({
   return (
     <div className="space-y-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
       <div className="text-xs font-bold text-slate-700 border-b border-slate-200 pb-1.5 mb-1 flex items-center justify-between">
-        <span>Struktur Alamat Administratif</span>
+        <span>{title}</span>
         {loading && (
           <span className="text-[10px] text-blue-500 font-normal animate-pulse">
             Loading data wilayah...
@@ -321,9 +343,19 @@ export function AddressSelector({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Provinsi */}
         <div>
-          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
-            Provinsi
-          </label>
+          <div className="flex items-center justify-between mb-0.5">
+            <label className="block text-[10px] font-semibold text-slate-500">
+              Provinsi
+            </label>
+            <input
+              type="text"
+              placeholder="Cari provinsi..."
+              value={searchProv}
+              onChange={(e) => setSearchProv(e.target.value)}
+              disabled={disabled || loading}
+              className="text-[10px] px-1.5 py-0.5 border border-slate-200 rounded w-24 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
           <select
             value={selectedProvinceId}
             onChange={(e) => handleProvinceChange(e.target.value)}
@@ -331,7 +363,7 @@ export function AddressSelector({
             className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100"
           >
             <option value="">-- Pilih Provinsi --</option>
-            {provinces.map((p) => (
+            {filteredProvinces.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nama}
               </option>
@@ -341,9 +373,19 @@ export function AddressSelector({
 
         {/* Kabupaten/Kota */}
         <div>
-          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
-            Kabupaten / Kota
-          </label>
+          <div className="flex items-center justify-between mb-0.5">
+            <label className="block text-[10px] font-semibold text-slate-500">
+              Kabupaten / Kota
+            </label>
+            <input
+              type="text"
+              placeholder="Cari kota/kab..."
+              value={searchReg}
+              onChange={(e) => setSearchReg(e.target.value)}
+              disabled={disabled || loading || !selectedProvinceId}
+              className="text-[10px] px-1.5 py-0.5 border border-slate-200 rounded w-24 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
           <select
             value={selectedRegencyId}
             onChange={(e) => handleRegencyChange(e.target.value)}
@@ -351,7 +393,7 @@ export function AddressSelector({
             className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100"
           >
             <option value="">-- Pilih Kabupaten/Kota --</option>
-            {regencies.map((r) => (
+            {filteredRegencies.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.nama}
               </option>
@@ -363,9 +405,19 @@ export function AddressSelector({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Kecamatan */}
         <div>
-          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
-            Kecamatan
-          </label>
+          <div className="flex items-center justify-between mb-0.5">
+            <label className="block text-[10px] font-semibold text-slate-500">
+              Kecamatan
+            </label>
+            <input
+              type="text"
+              placeholder="Cari kecamatan..."
+              value={searchDist}
+              onChange={(e) => setSearchDist(e.target.value)}
+              disabled={disabled || loading || !selectedRegencyId}
+              className="text-[10px] px-1.5 py-0.5 border border-slate-200 rounded w-24 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
           <select
             value={selectedDistrictId}
             onChange={(e) => handleDistrictChange(e.target.value)}
@@ -373,7 +425,7 @@ export function AddressSelector({
             className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100"
           >
             <option value="">-- Pilih Kecamatan --</option>
-            {districts.map((d) => (
+            {filteredDistricts.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.nama}
               </option>
@@ -383,9 +435,19 @@ export function AddressSelector({
 
         {/* Kelurahan */}
         <div>
-          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
-            Kelurahan / Desa
-          </label>
+          <div className="flex items-center justify-between mb-0.5">
+            <label className="block text-[10px] font-semibold text-slate-500">
+              Kelurahan / Desa
+            </label>
+            <input
+              type="text"
+              placeholder="Cari kelurahan..."
+              value={searchVill}
+              onChange={(e) => setSearchVill(e.target.value)}
+              disabled={disabled || loading || !selectedDistrictId}
+              className="text-[10px] px-1.5 py-0.5 border border-slate-200 rounded w-24 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
           <select
             value={selectedVillageId}
             onChange={(e) => handleVillageChange(e.target.value)}
@@ -393,7 +455,7 @@ export function AddressSelector({
             className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100"
           >
             <option value="">-- Pilih Kelurahan/Desa --</option>
-            {villages.map((v) => (
+            {filteredVillages.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.nama}
               </option>
@@ -410,7 +472,7 @@ export function AddressSelector({
           </label>
           <input
             type="text"
-            value={localKampung}
+            value={localKampung || ""}
             onChange={(e) => handleKampungChange(e.target.value)}
             disabled={disabled}
             placeholder="Kp. Suka Maju / Jl. Mawar"
@@ -426,7 +488,7 @@ export function AddressSelector({
             </label>
             <input
               type="text"
-              value={localRt}
+              value={localRt || ""}
               onChange={(e) => handleRtChange(e.target.value)}
               disabled={disabled}
               placeholder="001"
@@ -440,7 +502,7 @@ export function AddressSelector({
             </label>
             <input
               type="text"
-              value={localRw}
+              value={localRw || ""}
               onChange={(e) => handleRwChange(e.target.value)}
               disabled={disabled}
               placeholder="002"
