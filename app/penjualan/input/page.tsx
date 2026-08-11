@@ -118,12 +118,26 @@ export default function InputPenjualanPage() {
   );
 
   const availableUnits = useMemo(() => {
-    let list = units;
+    // Hanya sertakan unit yang berstatus "Tersedia" dan tidak memiliki penjualan aktif
+    let list = units.filter((u) => {
+      const isNotTersedia = Boolean(u.status && u.status.toLowerCase() !== "tersedia");
+      if (isNotTersedia) return false;
+
+      const hasActiveSale = sales.some(
+        (s) =>
+          s.unit_id === u.id &&
+          (s.status || "").toUpperCase() !== "BATAL" &&
+          !(s.kpr_status || "").toUpperCase().includes("REJECT"),
+      );
+      if (hasActiveSale) return false;
+
+      return true;
+    });
 
     if (blockId) {
       const selectedBlock = blocks.find((b) => b.id === blockId);
       const bNama = selectedBlock?.nama_blok?.toLowerCase();
-      list = units.filter(
+      list = list.filter(
         (u) =>
           u.block_id === blockId ||
           (bNama && u.block_nama?.toLowerCase() === bNama),
@@ -131,7 +145,7 @@ export default function InputPenjualanPage() {
     } else if (locationId) {
       const selectedLoc = locations.find((l) => l.id === locationId);
       const locNama = selectedLoc?.nama_lokasi?.toLowerCase();
-      list = units.filter((u) => {
+      list = list.filter((u) => {
         if (locNama && u.location_nama?.toLowerCase() === locNama) return true;
         const uBlock = blocks.find(
           (b) => b.id === u.block_id || b.nama_blok === u.block_nama,
@@ -141,7 +155,7 @@ export default function InputPenjualanPage() {
     }
 
     return naturalSort(list, (u) => `${u.block_nama || ""} ${u.no_unit || ""}`);
-  }, [units, blockId, locationId, blocks, locations]);
+  }, [units, sales, blockId, locationId, blocks, locations]);
 
   const selectedUnit: Unit | undefined = useMemo(
     () => units.find((u) => u.id === unitId),
@@ -572,52 +586,17 @@ export default function InputPenjualanPage() {
                         ? "-- Pilih No Unit --"
                         : "-- Pilih Unit Rumah --"}
                   </option>
-                  {availableUnits.map((u) => {
-                    const isTerjual = Boolean(
-                      u.status && u.status !== "Tersedia",
-                    );
-                    const hasActiveSale = sales.some(
-                      (s) =>
-                        s.unit_id === u.id &&
-                        (s.status || "").toUpperCase() !== "BATAL" &&
-                        !(s.kpr_status || "").toUpperCase().includes("REJECT"),
-                    );
-                    const isUnavailable = isTerjual || hasActiveSale;
-                    const statusText = isUnavailable
-                      ? `[ SUDAH DIBOOKING / ${u.status?.toUpperCase() || "TERJUAL"} ]`
-                      : `[ TERSEDIA ]`;
-
-                    return (
-                      <option key={u.id} value={u.id} disabled={isUnavailable}>
-                        {u.block_nama ? `BLOK ${u.block_nama} ` : ""}No{" "}
-                        {u.no_unit}{" "}
-                        {u.unit_type_nama ? `(${u.unit_type_nama})` : ""} —{" "}
-                        {statusText}
-                      </option>
-                    );
-                  })}
+                  {availableUnits.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.block_nama ? `BLOK ${u.block_nama} ` : ""}No {u.no_unit} {u.unit_type_nama ? `(${u.unit_type_nama})` : ""} — Tersedia
+                    </option>
+                  ))}
                 </select>
                 {availableUnits.length === 0 && (
                   <p className="text-[11px] text-amber-600 mt-1.5 font-medium">
-                    Tidak ada unit ditemukan untuk perumahan/blok ini.
+                    Tidak ada unit ready/tersedia di lokasi atau blok ini.
                   </p>
                 )}
-                {selectedUnit &&
-                  (selectedUnit.status !== "Tersedia" ||
-                    sales.some(
-                      (s) =>
-                        s.unit_id === selectedUnit.id &&
-                        (s.status || "").toUpperCase() !== "BATAL" &&
-                        !(s.kpr_status || "").toUpperCase().includes("REJECT"),
-                    )) && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded text-xs font-bold flex items-center gap-2 mt-2 shadow-2xs">
-                      <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                      <span>
-                        PERINGATAN: Unit ini sudah di-booking/terjual dan tidak
-                        bisa dijual kembali!
-                      </span>
-                    </div>
-                  )}
               </div>
             </div>
 
