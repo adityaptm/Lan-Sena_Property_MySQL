@@ -113,6 +113,7 @@ export default function DetailPenjualanPage() {
     currentUser,
     salesSteps,
     certificateSteps,
+    kprSteps,
     refresh,
   } = useData();
   const router = useRouter();
@@ -863,7 +864,10 @@ export default function DetailPenjualanPage() {
   const TABS = [
     { id: "angsuran", label: "Angsuran Konsumen" },
     ...(sale.metode_bayar === "KPR"
-      ? [{ id: "info_kpr", label: "Info KPR" }]
+      ? [
+          { id: "info_kpr", label: "Info KPR" },
+          { id: "kpr_berkas", label: "Step KPR Berkas" },
+        ]
       : []),
     { id: "penjualan", label: "Step Penjualan" },
     { id: "sertifikat", label: "Step Sertifikat" },
@@ -1389,7 +1393,8 @@ export default function DetailPenjualanPage() {
               )}
               {(activeTab === "penjualan" ||
                 activeTab === "sertifikat" ||
-                activeTab === "posisi_sertifikat") && (
+                activeTab === "posisi_sertifikat" ||
+                activeTab === "kpr_berkas") && (
                 <button
                   onClick={() => setShowProgresModal(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
@@ -2403,6 +2408,21 @@ export default function DetailPenjualanPage() {
                     {certificateSteps.map((c) => (
                       <option key={c.id} value={c.nama_step}>
                         {c.nama_step}
+                      </option>
+                    ))}
+                  </select>
+                ) : activeTab === "kpr_berkas" ? (
+                  <select
+                    value={progresForm.status}
+                    onChange={(e) =>
+                      setProgresForm({ ...progresForm, status: e.target.value })
+                    }
+                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Pilih Step KPR Berkas...</option>
+                    {kprSteps.map((k) => (
+                      <option key={k.id} value={k.nama_step}>
+                        {k.nama_step}
                       </option>
                     ))}
                   </select>

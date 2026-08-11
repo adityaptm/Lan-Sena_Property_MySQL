@@ -78,6 +78,12 @@ export interface CertificateStep {
   urutan: number;
 }
 
+export interface KprStep {
+  id: string;
+  nama_step: string;
+  urutan: number;
+}
+
 export interface PriceItem {
   id: string;
   nama_item: string;
@@ -404,7 +410,8 @@ export interface SaleStepHistory {
     | "sertifikat"
     | "posisi_sertifikat"
     | "marketing_fee"
-    | "pindah_unit";
+    | "pindah_unit"
+    | "kpr_berkas";
   status: string;
   keterangan?: string;
   changed_by?: string;

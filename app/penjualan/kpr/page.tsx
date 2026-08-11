@@ -9,7 +9,7 @@ import { Sale } from '@/types';
 import { CheckCircle2 } from 'lucide-react';
 
 export default function KPRStatusPage() {
-  const { sales, updateKprStatus } = useData();
+  const { sales, kprSteps, updateKprStatus } = useData();
 
   const kprSales = sales.filter((s) => s.metode_bayar === 'KPR');
 
@@ -74,11 +74,21 @@ export default function KPRStatusPage() {
                 onChange={(e) => updateKprStatus(row.id, e.target.value as any)}
                 className="px-2.5 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs text-blue-600 font-semibold focus:outline-none"
               >
-                <option value="Berkas Lengkap">Berkas Lengkap</option>
-                <option value="Wawancara">Wawancara Bank</option>
-                <option value="OTS">OTS (Survey Lapangan)</option>
-                <option value="SP3K">SP3K Terbit</option>
-                <option value="Akad">Akad Kredit</option>
+                {kprSteps.length > 0 ? (
+                  kprSteps.map((k) => (
+                    <option key={k.id} value={k.nama_step}>
+                      {k.nama_step}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Berkas Lengkap">Berkas Lengkap</option>
+                    <option value="Wawancara">Wawancara Bank</option>
+                    <option value="OTS">OTS (Survey Lapangan)</option>
+                    <option value="SP3K">SP3K Terbit</option>
+                    <option value="Akad">Akad Kredit</option>
+                  </>
+                )}
               </select>
             )}
           </div>

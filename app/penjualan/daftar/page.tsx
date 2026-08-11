@@ -108,10 +108,10 @@ export default function DaftarPenjualanPage() {
       const blkNama = s.block_nama || b?.nama_blok || '-';
       const blockKey = `${locNama} - ${blkNama}`;
 
-      let stepTerakhir = u?.sales_step_nama || s.kpr_status || s.status || 'BOOKING';
-      if (s.metode_bayar === 'KPR' && s.kpr_status) {
-        stepTerakhir = s.kpr_status.startsWith('KPR') ? s.kpr_status : `KPR - ${s.kpr_status}`;
-      }
+      const stepTerakhir =
+        u?.sales_step_nama && u.sales_step_nama !== 'Kantor'
+          ? u.sales_step_nama
+          : s.status || 'BOOKING';
 
       const tipeUnit = u?.unit_type_nama || (u?.luas_bangunan && u?.luas_tanah ? `${u.luas_bangunan}/${u.luas_tanah}` : '30/60');
       const days = daysSince(s.tanggal_booking || s.created_at);

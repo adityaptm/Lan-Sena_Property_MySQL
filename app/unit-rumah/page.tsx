@@ -34,6 +34,7 @@ export default function UnitRumahPage() {
     subsidyTypes,
     salesSteps,
     certificateSteps,
+    kprSteps,
     priceItems,
     addUnit,
     updateUnit,
@@ -44,6 +45,9 @@ export default function UnitRumahPage() {
     addCertificateStep,
     updateCertificateStep,
     deleteCertificateStep,
+    addKprStep,
+    updateKprStep,
+    deleteKprStep,
     addPriceItem,
     updatePriceItem,
     deletePriceItem,
@@ -67,6 +71,7 @@ export default function UnitRumahPage() {
   const [masterSubTab, setMasterSubTab] = useState<
     | "salesStep"
     | "certStep"
+    | "kprStep"
     | "priceItem"
     | "location"
     | "block"
@@ -200,6 +205,10 @@ export default function UnitRumahPage() {
           await updateCertificateStep(editingMasterId, {
             nama_step: masterFormText,
           });
+        } else if (masterSubTab === "kprStep") {
+          await updateKprStep(editingMasterId, {
+            nama_step: masterFormText,
+          });
         } else if (masterSubTab === "priceItem") {
           await updatePriceItem(editingMasterId, {
             nama_item: masterFormText,
@@ -241,6 +250,11 @@ export default function UnitRumahPage() {
           await addCertificateStep({
             nama_step: masterFormText,
             urutan: certificateSteps.length + 1,
+          });
+        } else if (masterSubTab === "kprStep") {
+          await addKprStep({
+            nama_step: masterFormText,
+            urutan: kprSteps.length + 1,
           });
         } else if (masterSubTab === "priceItem") {
           if (!masterFormText) return;
@@ -307,7 +321,7 @@ export default function UnitRumahPage() {
   const openEditMasterModal = (tab: typeof masterSubTab, item: any) => {
     setEditingMasterId(item.id);
     setMasterSubTab(tab);
-    if (tab === "salesStep" || tab === "certStep") {
+    if (tab === "salesStep" || tab === "certStep" || tab === "kprStep") {
       setMasterFormText(item.nama_step || "");
       setMasterFormExtra((prev) => ({ ...prev }));
     } else if (tab === "priceItem") {
@@ -349,6 +363,7 @@ export default function UnitRumahPage() {
     try {
       if (tab === "salesStep") await deleteSalesStep(id);
       else if (tab === "certStep") await deleteCertificateStep(id);
+      else if (tab === "kprStep") await deleteKprStep(id);
       else if (tab === "priceItem") await deletePriceItem(id);
       else if (tab === "location") await deleteLocation(id);
       else if (tab === "block") await deleteBlock(id);
@@ -388,6 +403,15 @@ export default function UnitRumahPage() {
       bg: "bg-cyan-50",
       ring: "border-cyan-400 bg-cyan-50/60",
       count: certificateSteps.length,
+    },
+    {
+      id: "kprStep",
+      label: "Step KPR Berkas",
+      icon: ClipboardList,
+      accent: "text-blue-600",
+      bg: "bg-blue-50",
+      ring: "border-blue-400 bg-blue-50/60",
+      count: kprSteps.length,
     },
     {
       id: "priceItem",
@@ -797,6 +821,20 @@ export default function UnitRumahPage() {
                       subtitle={`Urutan ${c.urutan}`}
                       onEdit={() => openEditMasterModal("certStep", c)}
                       onDelete={() => handleDeleteMaster("certStep", c.id)}
+                    />
+                  ))}
+
+                {masterSubTab === "kprStep" && kprSteps.length === 0 && (
+                  <EmptyState label="Belum ada step KPR berkas" />
+                )}
+                {masterSubTab === "kprStep" &&
+                  kprSteps.map((k) => (
+                    <MasterCard
+                      key={k.id}
+                      title={k.nama_step}
+                      subtitle={`Urutan ${k.urutan}`}
+                      onEdit={() => openEditMasterModal("kprStep", k)}
+                      onDelete={() => handleDeleteMaster("kprStep", k.id)}
                     />
                   ))}
 

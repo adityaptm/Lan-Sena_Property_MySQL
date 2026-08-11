@@ -35,6 +35,7 @@ import type {
   UserProfile,
   SalesStep,
   CertificateStep,
+  KprStep,
   PriceItem,
   MarketerRight,
   CompanySettings,
@@ -142,6 +143,10 @@ interface DataContextType {
     c: Partial<CertificateStep>,
   ) => Promise<void>;
   deleteCertificateStep: (id: string) => Promise<void>;
+  kprSteps: KprStep[];
+  addKprStep: (k: Omit<KprStep, "id">) => Promise<void>;
+  updateKprStep: (id: string, k: Partial<KprStep>) => Promise<void>;
+  deleteKprStep: (id: string) => Promise<void>;
   priceItems: PriceItem[];
   addPriceItem: (p: Omit<PriceItem, "id">) => Promise<void>;
   updatePriceItem: (id: string, p: Partial<PriceItem>) => Promise<void>;
@@ -332,6 +337,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [certificateSteps, setCertificateSteps] = useState<CertificateStep[]>(
     [],
   );
+  const [kprSteps, setKprSteps] = useState<KprStep[]>([]);
   const [priceItems, setPriceItems] = useState<PriceItem[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -407,6 +413,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         "banks",
         "sales_steps",
         "certificate_steps",
+        "kpr_steps",
         "price_items",
         "locations",
         "blocks",
@@ -490,6 +497,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const bnk = dataMap["banks"];
       const ss = dataMap["sales_steps"];
       const cs = dataMap["certificate_steps"];
+      const ks = dataMap["kpr_steps"];
       const pi = dataMap["price_items"];
       const loc = dataMap["locations"];
       const blk = dataMap["blocks"];
@@ -599,6 +607,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setBanks(bnk);
       setSalesSteps(ss);
       setCertificateSteps(cs);
+      setKprSteps(ks);
       setPriceItems(pi);
       setLocations(loc);
       setBlocks(blk);
@@ -786,6 +795,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const deleteCertificateStep = (id: string) => {
     const target = certificateSteps.find((c) => c.id === id);
     return remove("certificate_steps", id, target, target?.nama_step);
+  };
+
+  const addKprStep = (k: Omit<KprStep, "id">) => insert("kpr_steps", k);
+  const updateKprStep = (id: string, k: Partial<KprStep>) =>
+    update("kpr_steps", id, k);
+  const deleteKprStep = (id: string) => {
+    const target = kprSteps.find((k) => k.id === id);
+    return remove("kpr_steps", id, target, target?.nama_step);
   };
 
   const addPriceItem = (p: Omit<PriceItem, "id">) => insert("price_items", p);
@@ -1529,6 +1546,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         addCertificateStep,
         updateCertificateStep,
         deleteCertificateStep,
+        kprSteps,
+        addKprStep,
+        updateKprStep,
+        deleteKprStep,
         priceItems,
         addPriceItem,
         updatePriceItem,
