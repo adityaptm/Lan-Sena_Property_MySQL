@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Search,
   ExternalLink,
+  AlertTriangle,
   User,
   Home,
   Wallet,
@@ -19,13 +20,13 @@ import type { Customer, Unit } from "@/types";
 
 // Helper to query /api/db
 async function dbRequest(body: any): Promise<any> {
-  const res = await fetch('/api/db', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/db", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Database error');
+  if (!res.ok) throw new Error(json.error || "Database error");
   return json.data;
 }
 
@@ -49,6 +50,7 @@ export default function InputPenjualanPage() {
     units,
     marketers,
     banks,
+    sales,
     locations,
     blocks,
     addSale,
@@ -131,12 +133,14 @@ export default function InputPenjualanPage() {
       const locNama = selectedLoc?.nama_lokasi?.toLowerCase();
       list = units.filter((u) => {
         if (locNama && u.location_nama?.toLowerCase() === locNama) return true;
-        const uBlock = blocks.find((b) => b.id === u.block_id || b.nama_blok === u.block_nama);
+        const uBlock = blocks.find(
+          (b) => b.id === u.block_id || b.nama_blok === u.block_nama,
+        );
         return uBlock && uBlock.location_id === locationId;
       });
     }
 
-    return naturalSort(list, (u) => `${u.block_nama || ''} ${u.no_unit || ''}`);
+    return naturalSort(list, (u) => `${u.block_nama || ""} ${u.no_unit || ""}`);
   }, [units, blockId, locationId, blocks, locations]);
 
   const selectedUnit: Unit | undefined = useMemo(
@@ -206,21 +210,27 @@ export default function InputPenjualanPage() {
       if (!blockId && u.block_id) {
         setBlockId(u.block_id);
       } else if (!blockId && u.block_nama) {
-        const foundB = blocks.find((b) => b.nama_blok?.toLowerCase() === u.block_nama?.toLowerCase());
+        const foundB = blocks.find(
+          (b) => b.nama_blok?.toLowerCase() === u.block_nama?.toLowerCase(),
+        );
         if (foundB) setBlockId(foundB.id);
       }
 
       if (!locationId && u.location_nama) {
-        const foundL = locations.find((l) => l.nama_lokasi?.toLowerCase() === u.location_nama?.toLowerCase());
+        const foundL = locations.find(
+          (l) =>
+            l.nama_lokasi?.toLowerCase() === u.location_nama?.toLowerCase(),
+        );
         if (foundL) setLocationId(foundL.id);
       }
 
       const bFee = u.booking_fee || 0;
       const dpNominal = u.uang_muka ?? (u as any).dp_minimal ?? 0;
       const maxKredit = u.maksimal_kredit || 0;
-      const hgKesepakatan = maxKredit > 0
-        ? maxKredit + dpNominal + bFee
-        : (u.harga_dasar || 0) + bFee;
+      const hgKesepakatan =
+        maxKredit > 0
+          ? maxKredit + dpNominal + bFee
+          : (u.harga_dasar || 0) + bFee;
 
       setFormData((prev) => ({
         ...prev,
@@ -238,6 +248,32 @@ export default function InputPenjualanPage() {
       alert("Silakan pilih Perumahan, Blok, dan No Unit terlebih dahulu.");
       return;
     }
+
+    // Validasi pencegahan double booking / unit tidak tersedia
+    if (
+      selectedUnit &&
+      selectedUnit.status &&
+      selectedUnit.status !== "Tersedia"
+    ) {
+      alert(
+        `Unit BLOK ${selectedUnit.block_nama || ""} No ${selectedUnit.no_unit} saat ini berstatus "${selectedUnit.status}" (Sudah Dibooking / Terjual). Tidak dapat menginput penjualan ganda untuk unit yang sama!`,
+      );
+      return;
+    }
+
+    const existingActiveSale = sales.find(
+      (s) =>
+        s.unit_id === unitId &&
+        (s.status || "").toUpperCase() !== "BATAL" &&
+        !(s.kpr_status || "").toUpperCase().includes("REJECT"),
+    );
+    if (existingActiveSale) {
+      alert(
+        `Unit BLOK ${selectedUnit?.block_nama || ""} No ${selectedUnit?.no_unit} sudah memiliki transaksi penjualan aktif (Konsumen: ${existingActiveSale.customer_nama || "-"}). Tidak dapat melakukan booking ganda!`,
+      );
+      return;
+    }
+
     if (!selectedCustomerId && !customerQuery.trim()) {
       alert("Silakan pilih atau ketik nama customer.");
       return;
@@ -254,8 +290,8 @@ export default function InputPenjualanPage() {
         const dummyNik =
           "0000000000000000-" + Math.floor(Math.random() * 10000);
         const newCustomer = await dbRequest({
-          action: 'insert',
-          table: 'customers',
+          action: "insert",
+          table: "customers",
           data: {
             nama: custNama,
             nik: dummyNik,
@@ -279,8 +315,8 @@ export default function InputPenjualanPage() {
 
       if (!markId && formData.marketer_nama) {
         const newMarketer = await dbRequest({
-          action: 'insert',
-          table: 'marketers',
+          action: "insert",
+          table: "marketers",
           data: { nama: formData.marketer_nama, no_hp: "-" },
         });
         if (newMarketer) markId = newMarketer?.id;
@@ -300,8 +336,8 @@ export default function InputPenjualanPage() {
           finalBankNama = bankRecord.nama_bank;
         } else {
           const newBank = await dbRequest({
-            action: 'insert',
-            table: 'banks',
+            action: "insert",
+            table: "banks",
             data: {
               nama_bank: formData.bank_nama,
               cabang: "Pusat",
@@ -530,19 +566,58 @@ export default function InputPenjualanPage() {
                   className={INPUT}
                 >
                   <option value="">
-                    {blockId ? "-- Pilih No Unit --" : locationId ? "-- Pilih No Unit --" : "-- Pilih Unit Rumah --"}
+                    {blockId
+                      ? "-- Pilih No Unit --"
+                      : locationId
+                        ? "-- Pilih No Unit --"
+                        : "-- Pilih Unit Rumah --"}
                   </option>
-                  {availableUnits.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.block_nama ? `BLOK ${u.block_nama} ` : ''}No {u.no_unit} {u.unit_type_nama ? `(${u.unit_type_nama})` : ''} — {u.status || 'Tersedia'}
-                    </option>
-                  ))}
+                  {availableUnits.map((u) => {
+                    const isTerjual = Boolean(
+                      u.status && u.status !== "Tersedia",
+                    );
+                    const hasActiveSale = sales.some(
+                      (s) =>
+                        s.unit_id === u.id &&
+                        (s.status || "").toUpperCase() !== "BATAL" &&
+                        !(s.kpr_status || "").toUpperCase().includes("REJECT"),
+                    );
+                    const isUnavailable = isTerjual || hasActiveSale;
+                    const statusText = isUnavailable
+                      ? `[ SUDAH DIBOOKING / ${u.status?.toUpperCase() || "TERJUAL"} ]`
+                      : `[ TERSEDIA ]`;
+
+                    return (
+                      <option key={u.id} value={u.id} disabled={isUnavailable}>
+                        {u.block_nama ? `BLOK ${u.block_nama} ` : ""}No{" "}
+                        {u.no_unit}{" "}
+                        {u.unit_type_nama ? `(${u.unit_type_nama})` : ""} —{" "}
+                        {statusText}
+                      </option>
+                    );
+                  })}
                 </select>
                 {availableUnits.length === 0 && (
                   <p className="text-[11px] text-amber-600 mt-1.5 font-medium">
                     Tidak ada unit ditemukan untuk perumahan/blok ini.
                   </p>
                 )}
+                {selectedUnit &&
+                  (selectedUnit.status !== "Tersedia" ||
+                    sales.some(
+                      (s) =>
+                        s.unit_id === selectedUnit.id &&
+                        (s.status || "").toUpperCase() !== "BATAL" &&
+                        !(s.kpr_status || "").toUpperCase().includes("REJECT"),
+                    )) && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded text-xs font-bold flex items-center gap-2 mt-2 shadow-2xs">
+                      <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                      <span>
+                        PERINGATAN: Unit ini sudah di-booking/terjual dan tidak
+                        bisa dijual kembali!
+                      </span>
+                    </div>
+                  )}
               </div>
             </div>
 
