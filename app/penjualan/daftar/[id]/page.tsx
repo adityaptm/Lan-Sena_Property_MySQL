@@ -25,7 +25,6 @@ import {
 import { formatRupiah } from "@/lib/format";
 import {
   SaleAdditionalCost,
-  SaleDiscount,
   SalePayment,
   SaleBillingLetter,
   SaleStepHistory,
@@ -39,12 +38,16 @@ import { UpdateBiayaTambahanForm } from "@/components/penjualan/forms/UpdateBiay
 import { UpdateDataKonsumenForm } from "@/components/penjualan/forms/UpdateDataKonsumenForm";
 import { CetakPersyaratanKprForm } from "@/components/penjualan/forms";
 
-// ---------------------------------------------------------------------------
-// dbRequest: generic helper that talks to our own /api/db route.
-// This is the SAME pattern used by CetakSerahTerimaKunciForm — it replaces
-// every Supabase call (`.from().select()/.insert()/.update()/.delete()`)
-// used to live directly in this component.
-// ---------------------------------------------------------------------------
+interface SaleDiscount {
+  id: string;
+  sale_id: string;
+  tanggal: string;
+  nominal: number;
+  keterangan?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 async function dbRequest(body: any): Promise<any> {
   const res = await fetch("/api/db", {
     method: "POST",
@@ -113,7 +116,6 @@ export default function DetailPenjualanPage() {
     currentUser,
     salesSteps,
     certificateSteps,
-    kprSteps,
     refresh,
   } = useData();
   const router = useRouter();
@@ -274,6 +276,7 @@ export default function DetailPenjualanPage() {
   const [saving, setSaving] = useState(false);
 
   const [potonganForm, setPotonganForm] = useState({
+    tanggal: new Date().toISOString().slice(0, 10),
     nominal: "",
     keterangan: "",
   });
@@ -300,7 +303,7 @@ export default function DetailPenjualanPage() {
 
   // Menyimpan id payment yang sedang diedit. null = mode tambah baru.
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
-  // Menyimpan id baris sales_discount yang sedang diedit. null = mode tambah baru.
+  // Menyimpan id baris sale_discounts yang sedang diedit. null = mode tambah baru.
   const [editingDiscountId, setEditingDiscountId] = useState<string | null>(
     null,
   );
@@ -333,25 +336,27 @@ export default function DetailPenjualanPage() {
   // Buka modal Potongan dalam mode tambah baris baru (kosong)
   const openPotonganModal = () => {
     setEditingDiscountId(null);
-    setPotonganForm({ nominal: "", keterangan: "" });
+    setPotonganForm({
+      tanggal: new Date().toISOString().slice(0, 10),
+      nominal: "",
+      keterangan: "",
+    });
     setShowPotonganModal(true);
   };
 
-  // Buka modal Potongan dalam mode edit, isi form dari baris sales_discount yang dipilih
+  // Buka modal Potongan dalam mode edit, isi form dari baris sale_discounts yang dipilih
   const openEditPotonganModal = (d: SaleDiscount) => {
     setEditingDiscountId(d.id);
     setPotonganForm({
+      tanggal: d.tanggal || new Date().toISOString().slice(0, 10),
       nominal: String(d.nominal).replace(/\B(?=(\d{3})+(?!\d))/g, "."),
       keterangan: d.keterangan || "",
     });
     setShowPotonganModal(true);
   };
 
-  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
-
-  // Buka modal Approval Pengajuan KPR dalam mode Tambah Baru
+  // Buka modal Approval Pengajuan KPR, default kredit_acc dari maksimal kredit unit
   const openApprovalModal = () => {
-    setEditingSubmissionId(null);
     setApprovalForm({
       tanggal: new Date().toISOString().slice(0, 10),
       status: "PENDING",
@@ -362,19 +367,6 @@ export default function DetailPenjualanPage() {
           : "",
       biaya_tambahan: "0",
       keterangan: "",
-    });
-    setShowApprovalModal(true);
-  };
-
-  // Buka modal Approval Pengajuan KPR dalam mode Edit
-  const openEditApprovalModal = (k: SaleKprSubmission) => {
-    setEditingSubmissionId(k.id);
-    setApprovalForm({
-      tanggal: k.tanggal ? k.tanggal.slice(0, 10) : new Date().toISOString().slice(0, 10),
-      status: k.status || "PENDING",
-      kredit_acc: String(k.kredit_acc || 0).replace(/\B(?=(\d{3})+(?!\d))/g, "."),
-      biaya_tambahan: String(k.biaya_tambahan || 0).replace(/\B(?=(\d{3})+(?!\d))/g, "."),
-      keterangan: k.keterangan || "",
     });
     setShowApprovalModal(true);
   };
@@ -462,11 +454,13 @@ export default function DetailPenjualanPage() {
   };
 
   // Simpan potongan sebagai baris baru (atau update baris yang sedang
-  // diedit) di tabel sales_discount — bukan lagi menimpa kolom tunggal
+  // diedit) di tabel sale_discounts — bukan lagi menimpa kolom tunggal
   // sales.potongan, supaya riwayat & keterangan tiap potongan tersimpan.
+  // Catatan: tabel sale_discounts tidak punya kolom created_by, tapi
+  // kolom tanggal wajib diisi (NOT NULL tanpa default di SQL).
   const handleSavePotongan = async () => {
-    if (!potonganForm.nominal) {
-      alert("Nominal potongan wajib diisi.");
+    if (!potonganForm.nominal || !potonganForm.tanggal) {
+      alert("Tanggal dan Nominal potongan wajib diisi.");
       return;
     }
     setSaving(true);
@@ -478,6 +472,7 @@ export default function DetailPenjualanPage() {
           action: "update",
           table: "sale_discounts",
           data: {
+            tanggal: potonganForm.tanggal,
             nominal: nominalValue,
             keterangan: potonganForm.keterangan || "",
           },
@@ -489,7 +484,7 @@ export default function DetailPenjualanPage() {
           table: "sale_discounts",
           data: {
             sale_id: id,
-            tanggal: new Date().toISOString().slice(0, 10),
+            tanggal: potonganForm.tanggal,
             nominal: nominalValue,
             keterangan: potonganForm.keterangan || "",
           },
@@ -498,7 +493,11 @@ export default function DetailPenjualanPage() {
 
       setShowPotonganModal(false);
       setEditingDiscountId(null);
-      setPotonganForm({ nominal: "", keterangan: "" });
+      setPotonganForm({
+        tanggal: new Date().toISOString().slice(0, 10),
+        nominal: "",
+        keterangan: "",
+      });
       await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || "Gagal menyimpan potongan.");
@@ -575,7 +574,18 @@ export default function DetailPenjualanPage() {
   };
 
   // Simpan hasil Approval Pengajuan KPR: catat sebagai riwayat baru di
-  // sale_kpr_submissions, lalu sinkronkan status & kredit terbaru ke tabel sales.
+  // sale_kpr_submissions, lalu sinkronkan status & kredit terbaru ke tabel sales
+  // HANYA kalau statusnya sudah final (ACCEPTED/REJECTED). Kalau masih PENDING,
+  // sales tidak diubah — cukup tercatat di riwayat, karena belum ada keputusan bank.
+  //
+  // - ACCEPTED  -> kpr_status jadi "SP3K", kredit_pengajuan diisi nilai yang di-ACC.
+  //                Ini otomatis bikin transaksi kehitung sebagai piutang Bank di
+  //                Laporan Hutang Piutang (tabel Penjualan Unit KPR (Bank) memfilter
+  //                kpr_status 'SP3K' / 'Akad'), dan tagihan konsumen (KPR Cust)
+  //                otomatis berkurang sebesar kredit yang di-ACC.
+  // - REJECTED  -> kpr_status mundur ke "Wawancara" (siap diajukan ulang) dan
+  //                kredit_pengajuan direset ke 0, supaya TIDAK ikut kehitung
+  //                sebagai piutang bank, dan tagihan konsumen kembali penuh.
   const handleSaveApproval = async () => {
     if (
       !approvalForm.tanggal ||
@@ -590,86 +600,74 @@ export default function DetailPenjualanPage() {
       const kreditAccValue = Number(approvalForm.kredit_acc.replace(/\D/g, ""));
       const biayaTambahanValue =
         Number(approvalForm.biaya_tambahan.replace(/\D/g, "")) || 0;
-      if (editingSubmissionId) {
+      const noReferensi = `KPR/${new Date(approvalForm.tanggal).getFullYear()}/${String(new Date(approvalForm.tanggal).getMonth() + 1).padStart(2, "0")}/${String(kprSubmissions.length + 1).padStart(4, "0")}`;
+
+      // 1. Catat riwayat pengajuan/approval KPR (selalu tersimpan, apapun statusnya)
+      await dbRequest({
+        action: "insert",
+        table: "sale_kpr_submissions",
+        data: {
+          sale_id: id,
+          no_referensi: noReferensi,
+          tanggal: approvalForm.tanggal,
+          status: approvalForm.status,
+          kredit_acc: kreditAccValue,
+          biaya_tambahan: biayaTambahanValue,
+          keterangan: approvalForm.keterangan || "",
+        },
+      });
+
+      // 2. Sinkronkan ke sales + catat Step Penjualan HANYA kalau statusnya final
+      if (approvalForm.status === "ACCEPTED") {
         await dbRequest({
           action: "update",
-          table: "sale_kpr_submissions",
+          table: "sales",
           data: {
-            tanggal: approvalForm.tanggal,
-            status: approvalForm.status,
-            kredit_acc: kreditAccValue,
-            biaya_tambahan: biayaTambahanValue,
-            keterangan: approvalForm.keterangan || "",
+            kredit_pengajuan: kreditAccValue,
+            kpr_status: "SP3K",
           },
-          filters: byId(editingSubmissionId),
+          filters: byId(id),
         });
-      } else {
-        const noReferensi = `KPR/${new Date(approvalForm.tanggal).getFullYear()}/${String(new Date(approvalForm.tanggal).getMonth() + 1).padStart(2, "0")}/${String(kprSubmissions.length + 1).padStart(4, "0")}`;
 
         await dbRequest({
           action: "insert",
-          table: "sale_kpr_submissions",
+          table: "sale_step_history",
           data: {
             sale_id: id,
-            no_referensi: noReferensi,
-            tanggal: approvalForm.tanggal,
-            status: approvalForm.status,
-            kredit_acc: kreditAccValue,
-            biaya_tambahan: biayaTambahanValue,
-            keterangan: approvalForm.keterangan || "",
+            jenis_step: "penjualan",
+            status: "SP3K",
+            keterangan:
+              approvalForm.keterangan ||
+              `KPR disetujui oleh Bank (ACCEPTED) — kredit Rp ${kreditAccValue.toLocaleString("id-ID")}.`,
+            changed_by: currentUser?.id,
+          },
+        });
+      } else if (approvalForm.status === "REJECTED") {
+        await dbRequest({
+          action: "update",
+          table: "sales",
+          data: {
+            kredit_pengajuan: 0,
+            kpr_status: "Wawancara",
+          },
+          filters: byId(id),
+        });
+
+        await dbRequest({
+          action: "insert",
+          table: "sale_step_history",
+          data: {
+            sale_id: id,
+            jenis_step: "penjualan",
+            status: "Wawancara",
+            keterangan:
+              approvalForm.keterangan ||
+              "Pengajuan KPR ditolak oleh Bank (REJECTED).",
+            changed_by: currentUser?.id,
           },
         });
       }
-
-      // Sinkronkan ke sales: kredit_pengajuan & kpr_status ikut status approval terbaru
-      const kprStatusMap: Record<string, string> = {
-        ACCEPTED: "ACCEPTED",
-        REJECTED: "REJECTED",
-        PENDING: "PENDING",
-      };
-      const updateData: any = {
-        kredit_pengajuan: kreditAccValue,
-        kpr_status: kprStatusMap[approvalForm.status] || approvalForm.status,
-      };
-      if (approvalForm.status === "REJECTED") {
-        updateData.status = "Batal";
-        if (sale?.unit_id) {
-          await dbRequest({
-            action: "update",
-            table: "units",
-            data: { status: "Tersedia" },
-            filters: byId(sale.unit_id),
-          });
-        }
-      } else if (approvalForm.status === "ACCEPTED") {
-        updateData.kpr_status = "SP3K";
-      }
-      await dbRequest({
-        action: "update",
-        table: "sales",
-        data: updateData,
-        filters: byId(id),
-      });
-
-      // Catat riwayat step secara otomatis
-      const stepName =
-        approvalForm.status === "ACCEPTED"
-          ? "KPR - KELUAR SP3K / ACC BANK"
-          : approvalForm.status === "REJECTED"
-          ? "KPR - CANCEL/RIJEK"
-          : "KPR - DIPERIKSA BANK";
-
-      await dbRequest({
-        action: "insert",
-        table: "sale_step_history",
-        data: {
-          sale_id: id,
-          jenis_step: "penjualan",
-          status: stepName,
-          keterangan: `Approval KPR ${approvalForm.status} — Nominal ACC: Rp ${kreditAccValue.toLocaleString("id-ID")}${approvalForm.keterangan ? ". " + approvalForm.keterangan : ""}`,
-          changed_by: currentUser?.id,
-        },
-      });
+      // PENDING: tidak mengubah apa pun di sales, cukup tercatat di riwayat kpr_submissions
 
       setShowApprovalModal(false);
       await triggerRefresh();
@@ -703,61 +701,21 @@ export default function DetailPenjualanPage() {
     }
   };
 
-  const [editingStepId, setEditingStepId] = useState<string | null>(null);
-
-  const openEditStepModal = (hist: SaleStepHistory) => {
-    setEditingStepId(hist.id);
-    setProgresForm({
-      status: hist.status || "",
-      keterangan: hist.keterangan || "",
-    });
-    setShowProgresModal(true);
-  };
-
-  const handleDeleteStep = async (stepId: string) => {
-    if (!confirm("Yakin ingin menghapus riwayat aktivitas ini?")) return;
-    setSaving(true);
-    try {
-      await dbRequest({
-        action: "delete",
-        table: "sale_step_history",
-        filters: byId(stepId),
-      });
-      await triggerRefresh();
-    } catch (err: any) {
-      alert(err?.message || "Gagal menghapus riwayat.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleSaveProgres = async () => {
     if (!progresForm.status) return;
     setSaving(true);
     try {
-      if (editingStepId) {
-        await dbRequest({
-          action: "update",
-          table: "sale_step_history",
-          data: {
-            status: progresForm.status,
-            keterangan: progresForm.keterangan || "",
-          },
-          filters: byId(editingStepId),
-        });
-      } else {
-        await dbRequest({
-          action: "insert",
-          table: "sale_step_history",
-          data: {
-            sale_id: id,
-            jenis_step: activeTab,
-            status: progresForm.status,
-            keterangan: progresForm.keterangan || "",
-            changed_by: currentUser?.id,
-          },
-        });
-      }
+      await dbRequest({
+        action: "insert",
+        table: "sale_step_history",
+        data: {
+          sale_id: id,
+          jenis_step: activeTab,
+          status: progresForm.status,
+          keterangan: progresForm.keterangan || "",
+          changed_by: currentUser?.id,
+        },
+      });
 
       if (activeTab === "penjualan" && sale?.unit_id) {
         const selectedStep = salesSteps.find(
@@ -785,9 +743,8 @@ export default function DetailPenjualanPage() {
         }
       }
 
+      alert("Progres berhasil disimpan.");
       setShowProgresModal(false);
-      setEditingStepId(null);
-      await triggerRefresh();
       setProgresForm({ status: "", keterangan: "" });
       await triggerRefresh();
     } catch (err: any) {
@@ -836,7 +793,7 @@ export default function DetailPenjualanPage() {
     (sum, item) => sum + (item.nominal || 0),
     0,
   );
-  // Total potongan sekarang dijumlah dari tabel sales_discount (riwayat),
+  // Total potongan sekarang dijumlah dari tabel sale_discounts (riwayat),
   // bukan lagi dari kolom tunggal sales.potongan.
   const totalPotongan = discounts.reduce(
     (sum, item) => sum + (item.nominal || 0),
@@ -846,15 +803,10 @@ export default function DetailPenjualanPage() {
     (sale.harga_jual_awal || sale.total_harga) -
     totalPotongan +
     totalBiayaTambahan;
-  const uangMasukPembayaran = payments.reduce(
+  const uangMasuk = payments.reduce(
     (sum, item) => sum + (item.nominal || 0),
     0,
   );
-  // Jika KPR sudah ACC, nominal kredit_acc dari bank dihitung sebagai "Sudah Dibayar"
-  const kprAccAmount = kprSubmissions
-    .filter((k) => k.status === "ACCEPTED")
-    .reduce((sum, k) => sum + (k.kredit_acc || 0), 0);
-  const uangMasuk = uangMasukPembayaran + kprAccAmount;
   const sisaTagihan = totalHargaFinal - uangMasuk;
 
   // Status KPR saat ini = status dari riwayat approval paling baru, atau WAITING kalau belum pernah diajukan
@@ -872,10 +824,7 @@ export default function DetailPenjualanPage() {
   const TABS = [
     { id: "angsuran", label: "Angsuran Konsumen" },
     ...(sale.metode_bayar === "KPR"
-      ? [
-          { id: "info_kpr", label: "Info KPR" },
-          { id: "kpr_berkas", label: "Step KPR Berkas" },
-        ]
+      ? [{ id: "info_kpr", label: "Info KPR" }]
       : []),
     { id: "penjualan", label: "Step Penjualan" },
     { id: "sertifikat", label: "Step Sertifikat" },
@@ -1401,8 +1350,7 @@ export default function DetailPenjualanPage() {
               )}
               {(activeTab === "penjualan" ||
                 activeTab === "sertifikat" ||
-                activeTab === "posisi_sertifikat" ||
-                activeTab === "kpr_berkas") && (
+                activeTab === "posisi_sertifikat") && (
                 <button
                   onClick={() => setShowProgresModal(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
@@ -1766,26 +1714,14 @@ export default function DetailPenjualanPage() {
                       )}
                     </span>
                   </div>
-                  <div className="grid grid-cols-[130px_10px_1fr] items-center">
+                  <div className="grid grid-cols-[130px_10px_1fr]">
                     <span className="font-semibold text-slate-600">Status</span>
                     <span>:</span>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-block w-fit px-2 py-0.5 rounded border text-xs font-bold ${statusBadgeClass(currentKprStatus)}`}
-                      >
-                        {currentKprStatus}
-                      </span>
-                      {currentKprStatus === "ACCEPTED" && (
-                        <span className="text-xs text-emerald-600 font-medium">
-                          (Pengajuan KPR Disetujui / ACC)
-                        </span>
-                      )}
-                      {currentKprStatus === "REJECTED" && (
-                        <span className="text-xs text-rose-600 font-medium">
-                          (Pengajuan KPR Ditolak / Rejected)
-                        </span>
-                      )}
-                    </div>
+                    <span
+                      className={`inline-block w-fit px-2 py-0.5 rounded border text-xs font-bold ${statusBadgeClass(currentKprStatus)}`}
+                    >
+                      {currentKprStatus}
+                    </span>
                   </div>
                 </div>
 
@@ -1799,7 +1735,7 @@ export default function DetailPenjualanPage() {
                         <th className="px-4 py-2">No Kwitansi & Tgl</th>
                         <th className="px-4 py-2">Keterangan</th>
                         <th className="px-4 py-2 text-right">Nominal</th>
-                        <th className="px-4 py-2 w-28 text-center">Aksi</th>
+                        <th className="px-4 py-2 w-24 text-center">Batalkan</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1840,22 +1776,13 @@ export default function DetailPenjualanPage() {
                               {formatRupiah(k.kredit_acc)}
                             </td>
                             <td className="px-4 py-2 text-center">
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  onClick={() => openEditApprovalModal(k)}
-                                  className="p-1.5 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded transition"
-                                  title="Edit Pengajuan KPR"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleCancelSubmission(k.id)}
-                                  className="p-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded transition"
-                                  title="Hapus / Batalkan"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => handleCancelSubmission(k.id)}
+                                className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
+                                title="Batalkan"
+                              >
+                                <XCircle className="w-4 h-4 mx-auto" />
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -1885,35 +1812,17 @@ export default function DetailPenjualanPage() {
                     stepHistory
                       .filter((h) => h.jenis_step === activeTab)
                       .map((hist) => (
-                        <div key={hist.id} className="relative group border-b border-slate-100 pb-3 last:border-0">
+                        <div key={hist.id} className="relative">
                           <div className="absolute -left-[23px] top-1 w-3 h-3 bg-blue-500 rounded-full border-[3px] border-white shadow-sm" />
-                          <div className="mb-0.5 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-slate-800 text-sm">
-                                {hist.status}
-                              </span>
-                              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">
-                                {new Date(hist.created_at).toLocaleString(
-                                  "id-ID",
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => openEditStepModal(hist)}
-                                className="p-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded transition"
-                                title="Edit Riwayat Step"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteStep(hist.id)}
-                                className="p-1 bg-red-50 hover:bg-red-100 text-red-600 rounded transition"
-                                title="Hapus Riwayat Step"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                          <div className="mb-0.5 flex items-center gap-2">
+                            <span className="font-bold text-slate-800 text-sm">
+                              {hist.status}
+                            </span>
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">
+                              {new Date(hist.created_at).toLocaleString(
+                                "id-ID",
+                              )}
+                            </span>
                           </div>
                           <p className="text-sm text-slate-600">
                             {hist.keterangan ||
@@ -1921,7 +1830,7 @@ export default function DetailPenjualanPage() {
                           </p>
                           <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
                             <Clock className="w-3 h-3" /> Diupdate oleh:{" "}
-                            {hist.changed_by_nama || "-"}
+                            {hist.changed_by_nama}
                           </p>
                         </div>
                       ))
@@ -1952,6 +1861,22 @@ export default function DetailPenjualanPage() {
               </button>
             </div>
             <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Tanggal *
+                </label>
+                <input
+                  type="date"
+                  value={potonganForm.tanggal}
+                  onChange={(e) =>
+                    setPotonganForm({
+                      ...potonganForm,
+                      tanggal: e.target.value,
+                    })
+                  }
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">
                   Nominal Potongan (Rp) *
@@ -1999,7 +1924,9 @@ export default function DetailPenjualanPage() {
               </button>
               <button
                 onClick={handleSavePotongan}
-                disabled={saving || !potonganForm.nominal}
+                disabled={
+                  saving || !potonganForm.nominal || !potonganForm.tanggal
+                }
                 className="px-4 py-2 text-sm bg-emerald-500 hover:bg-emerald-600 text-white rounded font-semibold disabled:opacity-50"
               >
                 {saving ? "Menyimpan..." : "Simpan"}
@@ -2382,7 +2309,7 @@ export default function DetailPenjualanPage() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
             <h3 className="font-bold text-slate-800 text-lg mb-4">
-              {editingStepId ? "Edit Progres" : "Input Progres"} - {TABS.find((t) => t.id === activeTab)?.label}
+              Input Progres - {TABS.find((t) => t.id === activeTab)?.label}
             </h3>
             <div className="space-y-3">
               <div>
@@ -2416,21 +2343,6 @@ export default function DetailPenjualanPage() {
                     {certificateSteps.map((c) => (
                       <option key={c.id} value={c.nama_step}>
                         {c.nama_step}
-                      </option>
-                    ))}
-                  </select>
-                ) : activeTab === "kpr_berkas" ? (
-                  <select
-                    value={progresForm.status}
-                    onChange={(e) =>
-                      setProgresForm({ ...progresForm, status: e.target.value })
-                    }
-                    className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">Pilih Step KPR Berkas...</option>
-                    {kprSteps.map((k) => (
-                      <option key={k.id} value={k.nama_step}>
-                        {k.nama_step}
                       </option>
                     ))}
                   </select>
