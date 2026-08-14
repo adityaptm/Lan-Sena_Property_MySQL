@@ -36,11 +36,10 @@ function loadEnvFile() {
 loadEnvFile();
 
 const config = {
-  host: process.env.MYSQL_HOST || "127.0.0.1",
-  user: process.env.MYSQL_USER || "root",
-  password: process.env.MYSQL_PASSWORD || "",
-  database: process.env.MYSQL_DATABASE || "lansena_property",
-  port: Number(process.env.MYSQL_PORT) || 3306,
+  host: process.env.DB_HOST || "127.0.0.1",
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   multipleStatements: true,
 };
 
