@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/lib/data-context";
 import { DataTable, Column } from "@/components/ui/DataTable";
@@ -66,6 +66,7 @@ export default function UnitRumahPage() {
   } = useData();
 
   const [editingMasterId, setEditingMasterId] = useState<string | null>(null);
+  const [activeStatusFilter, setActiveStatusFilter] = useState<Unit["status"] | null>(null);
 
   const [activeTab, setActiveTab] = useState<"units" | "master">("units");
   const [masterSubTab, setMasterSubTab] = useState<
@@ -468,6 +469,11 @@ export default function UnitRumahPage() {
     { label: "Akad", dot: "bg-emerald-500" },
     { label: "Lunas", dot: "bg-emerald-500" },
   ];
+
+  const filteredUnits = useMemo(() => {
+    if (!activeStatusFilter) return units;
+    return units.filter((u) => u.status === activeStatusFilter);
+  }, [units, activeStatusFilter]);
   // ---- end presentational config ----
 
   const unitColumns: Column<Unit>[] = [
@@ -589,32 +595,70 @@ export default function UnitRumahPage() {
 
         {activeTab === "units" ? (
           <div className="space-y-4">
-            {/* Status overview strip — presentational only, derived from existing `units` data */}
+            {/* Status overview strip — clickable filter buttons */}
             <div className="flex flex-wrap items-center gap-2">
               {UNIT_STATUS_STATS.map((s) => {
                 const count = units.filter((u) => u.status === s.label).length;
+                const isActive = activeStatusFilter === s.label;
                 return (
-                  <div
+                  <button
                     key={s.label}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs shadow-sm"
+                    type="button"
+                    onClick={() =>
+                      setActiveStatusFilter(isActive ? null : s.label)
+                    }
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs shadow-sm transition border cursor-pointer select-none ${
+                      isActive
+                        ? "bg-blue-50 border-blue-500 ring-2 ring-blue-400 font-bold text-blue-900 shadow-md"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700"
+                    }`}
+                    title={`Klik untuk memfilter unit ${s.label}`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                    <span className="text-slate-500 font-medium">
+                    <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                    <span className={isActive ? "text-blue-900 font-bold" : "text-slate-600 font-medium"}>
                       {s.label}
                     </span>
-                    <span className="font-bold text-slate-800">{count}</span>
-                  </div>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        isActive
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
                 );
               })}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg text-xs shadow-sm ml-auto sm:ml-0">
-                <span className="text-slate-300 font-medium">Total Unit</span>
-                <span className="font-bold text-white">{units.length}</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setActiveStatusFilter(null)}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs shadow-sm transition border cursor-pointer select-none ml-auto sm:ml-0 ${
+                  activeStatusFilter === null
+                    ? "bg-slate-900 text-white border-slate-900 ring-2 ring-slate-400"
+                    : "bg-slate-700 hover:bg-slate-800 text-slate-200 border-slate-600"
+                }`}
+                title="Klik untuk melihat semua unit"
+              >
+                <span className="font-medium">Total Unit</span>
+                <span className="font-bold text-white px-1.5 py-0.5 bg-slate-800 rounded-full text-[11px]">
+                  {units.length}
+                </span>
+                {activeStatusFilter && (
+                  <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-bold ml-1 animate-pulse">
+                    Filter: {activeStatusFilter} (Klik reset)
+                  </span>
+                )}
+              </button>
             </div>
 
             <DataTable
-              title="Tabel Gabungan Unit Rumah"
-              data={units}
+              title={
+                activeStatusFilter
+                  ? `Tabel Unit Rumah (Filter: ${activeStatusFilter})`
+                  : "Tabel Gabungan Unit Rumah"
+              }
+              data={filteredUnits}
               columns={unitColumns}
               searchPlaceholder="Cari no. unit, lokasi, tipe, status..."
               exportFileName="Data_Unit_Lansena"
@@ -871,15 +915,22 @@ export default function UnitRumahPage() {
                   <EmptyState label="Belum ada blok perumahan" />
                 )}
                 {masterSubTab === "block" &&
-                  blocks.map((b) => (
-                    <MasterCard
-                      key={b.id}
-                      title={b.nama_blok}
-                      subtitle={b.location_nama}
-                      onEdit={() => openEditMasterModal("block", b)}
-                      onDelete={() => handleDeleteMaster("block", b.id)}
-                    />
-                  ))}
+                  blocks.map((b) => {
+                    const locName =
+                      b.location_nama ||
+                      locations.find((l) => l.id === b.location_id)?.nama_lokasi ||
+                      "Perumahan belum ditentukan";
+                    return (
+                      <MasterCard
+                        key={b.id}
+                        title={`Blok ${b.nama_blok}`}
+                        subtitle={`📍 ${locName}`}
+                        subtitleClassName="text-teal-700 font-semibold bg-teal-50 px-2 py-0.5 rounded text-[11px] inline-flex items-center gap-1 mt-1 border border-teal-100"
+                        onEdit={() => openEditMasterModal("block", b)}
+                        onDelete={() => handleDeleteMaster("block", b.id)}
+                      />
+                    );
+                  })}
 
                 {masterSubTab === "unitType" && unitTypes.length === 0 && (
                   <EmptyState label="Belum ada tipe unit" />

@@ -603,6 +603,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         };
       });
 
+      const mappedBlocks = blk.map((b) => {
+        const locItem = loc.find((l) => l.id === b.location_id);
+        return {
+          ...b,
+          location_nama: locItem ? locItem.nama_lokasi : undefined,
+        };
+      });
+
       setCustomers(cust);
       setBanks(bnk);
       setSalesSteps(ss);
@@ -610,7 +618,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setKprSteps(ks);
       setPriceItems(pi);
       setLocations(loc);
-      setBlocks(blk);
+      setBlocks(mappedBlocks);
       setUnitTypes(ut);
       setSubsidyTypes(sub);
       setUnits(mappedUnits);

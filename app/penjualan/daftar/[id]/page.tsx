@@ -307,6 +307,8 @@ export default function DetailPenjualanPage() {
   const [editingDiscountId, setEditingDiscountId] = useState<string | null>(
     null,
   );
+  // Menyimpan id baris sale_kpr_submissions yang sedang diedit. null = mode tambah baru.
+  const [editingKprId, setEditingKprId] = useState<string | null>(null);
 
   const openAngsuranModal = () => {
     setEditingPaymentId(null);
@@ -357,6 +359,7 @@ export default function DetailPenjualanPage() {
 
   // Buka modal Approval Pengajuan KPR, default kredit_acc dari maksimal kredit unit
   const openApprovalModal = () => {
+    setEditingKprId(null);
     setApprovalForm({
       tanggal: new Date().toISOString().slice(0, 10),
       status: "PENDING",
@@ -367,6 +370,21 @@ export default function DetailPenjualanPage() {
           : "",
       biaya_tambahan: "0",
       keterangan: "",
+    });
+    setShowApprovalModal(true);
+  };
+
+  // Buka modal Approval Pengajuan KPR dalam mode edit
+  const openEditApprovalModal = (k: SaleKprSubmission) => {
+    setEditingKprId(k.id);
+    setApprovalForm({
+      tanggal: k.tanggal
+        ? new Date(k.tanggal).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10),
+      status: k.status as "PENDING" | "ACCEPTED" | "REJECTED",
+      kredit_acc: formatRibuan(String(k.kredit_acc || 0)),
+      biaya_tambahan: formatRibuan(String(k.biaya_tambahan || 0)),
+      keterangan: k.keterangan || "",
     });
     setShowApprovalModal(true);
   };
@@ -602,20 +620,35 @@ export default function DetailPenjualanPage() {
         Number(approvalForm.biaya_tambahan.replace(/\D/g, "")) || 0;
       const noReferensi = `KPR/${new Date(approvalForm.tanggal).getFullYear()}/${String(new Date(approvalForm.tanggal).getMonth() + 1).padStart(2, "0")}/${String(kprSubmissions.length + 1).padStart(4, "0")}`;
 
-      // 1. Catat riwayat pengajuan/approval KPR (selalu tersimpan, apapun statusnya)
-      await dbRequest({
-        action: "insert",
-        table: "sale_kpr_submissions",
-        data: {
-          sale_id: id,
-          no_referensi: noReferensi,
-          tanggal: approvalForm.tanggal,
-          status: approvalForm.status,
-          kredit_acc: kreditAccValue,
-          biaya_tambahan: biayaTambahanValue,
-          keterangan: approvalForm.keterangan || "",
-        },
-      });
+      // 1. Simpan atau perbarui riwayat pengajuan/approval KPR
+      if (editingKprId) {
+        await dbRequest({
+          action: "update",
+          table: "sale_kpr_submissions",
+          data: {
+            tanggal: approvalForm.tanggal,
+            status: approvalForm.status,
+            kredit_acc: kreditAccValue,
+            biaya_tambahan: biayaTambahanValue,
+            keterangan: approvalForm.keterangan || "",
+          },
+          filters: byId(editingKprId),
+        });
+      } else {
+        await dbRequest({
+          action: "insert",
+          table: "sale_kpr_submissions",
+          data: {
+            sale_id: id,
+            no_referensi: noReferensi,
+            tanggal: approvalForm.tanggal,
+            status: approvalForm.status,
+            kredit_acc: kreditAccValue,
+            biaya_tambahan: biayaTambahanValue,
+            keterangan: approvalForm.keterangan || "",
+          },
+        });
+      }
 
       // 2. Sinkronkan ke sales + catat Step Penjualan HANYA kalau statusnya final
       if (approvalForm.status === "ACCEPTED") {
@@ -670,6 +703,7 @@ export default function DetailPenjualanPage() {
       // PENDING: tidak mengubah apa pun di sales, cukup tercatat di riwayat kpr_submissions
 
       setShowApprovalModal(false);
+      setEditingKprId(null);
       await triggerRefresh();
     } catch (err: any) {
       alert(err?.message || "Gagal menyimpan approval pengajuan.");
@@ -807,7 +841,6 @@ export default function DetailPenjualanPage() {
     (sum, item) => sum + (item.nominal || 0),
     0,
   );
-  const sisaTagihan = totalHargaFinal - uangMasuk;
 
   // Status KPR saat ini = status dari riwayat approval paling baru, atau WAITING kalau belum pernah diajukan
   const currentKprStatus = kprSubmissions[0]?.status || "WAITING";
@@ -815,6 +848,24 @@ export default function DetailPenjualanPage() {
     (sum, k) => sum + (k.kredit_acc || 0),
     0,
   );
+
+  // KPR yang disetujui (ACCEPTED) dari bank
+  const kreditKprAcc =
+    kprSubmissions
+      .filter((k) => k.status === "ACCEPTED")
+      .reduce((sum, k) => sum + (k.kredit_acc || 0), 0) ||
+    (sale.metode_bayar === "KPR" &&
+    (currentKprStatus === "ACCEPTED" ||
+      sale.kpr_status === "SP3K" ||
+      sale.kpr_status === "Akad")
+      ? sale.kredit_pengajuan || 0
+      : 0);
+
+  // Sisa tagihan ke konsumen berkurang jika KPR sudah di-ACC
+  const sisaTagihan =
+    sale.metode_bayar === "KPR"
+      ? Math.max(0, totalHargaFinal - uangMasuk - kreditKprAcc)
+      : Math.max(0, totalHargaFinal - uangMasuk);
 
   const waMessage = encodeURIComponent(
     `Halo ${customer?.nama || ""}, saya dari tim Lansena Property terkait unit ${unit?.no_unit ? "No. " + unit.no_unit : ""}${unit?.block_nama ? " Blok " + unit.block_nama : ""}${unit?.location_nama ? " di " + unit.location_nama : ""}. Mohon waktunya sebentar ya, terima kasih.`,
@@ -1240,13 +1291,24 @@ export default function DetailPenjualanPage() {
                 </div>
                 <div className="grid grid-cols-[160px_10px_1fr]">
                   <span className="font-semibold text-slate-600">
-                    Uang Masuk
+                    Uang Masuk (Tunai)
                   </span>
                   <span>:</span>
                   <span className="text-blue-600 font-bold">
                     {formatRupiah(uangMasuk)}
                   </span>
                 </div>
+                {sale.metode_bayar === "KPR" && (
+                  <div className="grid grid-cols-[160px_10px_1fr]">
+                    <span className="font-semibold text-emerald-600">
+                      KPR Disetujui (ACC)
+                    </span>
+                    <span>:</span>
+                    <span className="text-emerald-700 font-bold">
+                      {formatRupiah(kreditKprAcc)}
+                    </span>
+                  </div>
+                )}
                 <div className="grid grid-cols-[160px_10px_1fr] pt-2 border-t border-slate-100">
                   <span className="font-bold text-red-600">Sisa Tagihan</span>
                   <span>:</span>
@@ -1363,28 +1425,44 @@ export default function DetailPenjualanPage() {
             {activeTab === "angsuran" ? (
               <div className="space-y-6">
                 {/* Summary Angsuran */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div
+                  className={`grid ${
+                    sale.metode_bayar === "KPR"
+                      ? "grid-cols-2 sm:grid-cols-4"
+                      : "grid-cols-1 sm:grid-cols-3"
+                  } gap-4 mb-6`}
+                >
                   <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-center">
                     <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
                       Total Tagihan
                     </p>
-                    <p className="text-xl font-bold text-slate-800">
+                    <p className="text-lg sm:text-xl font-bold text-slate-800">
                       {formatRupiah(totalHargaFinal)}
                     </p>
                   </div>
                   <div className="bg-blue-50 p-4 rounded-md border border-blue-200 text-center">
                     <p className="text-xs font-semibold text-blue-600 mb-1 uppercase tracking-wider">
-                      Sudah Dibayar
+                      Sudah Dibayar (Tunai)
                     </p>
-                    <p className="text-xl font-bold text-blue-700">
+                    <p className="text-lg sm:text-xl font-bold text-blue-700">
                       {formatRupiah(uangMasuk)}
                     </p>
                   </div>
+                  {sale.metode_bayar === "KPR" && (
+                    <div className="bg-emerald-50 p-4 rounded-md border border-emerald-200 text-center">
+                      <p className="text-xs font-semibold text-emerald-600 mb-1 uppercase tracking-wider">
+                        KPR Disetujui (ACC)
+                      </p>
+                      <p className="text-lg sm:text-xl font-bold text-emerald-700">
+                        {formatRupiah(kreditKprAcc)}
+                      </p>
+                    </div>
+                  )}
                   <div className="bg-red-50 p-4 rounded-md border border-red-200 text-center">
                     <p className="text-xs font-semibold text-red-600 mb-1 uppercase tracking-wider">
-                      Sisa
+                      Sisa Tagihan
                     </p>
-                    <p className="text-xl font-bold text-red-700">
+                    <p className="text-lg sm:text-xl font-bold text-red-700">
                       {formatRupiah(sisaTagihan)}
                     </p>
                   </div>
@@ -1735,7 +1813,7 @@ export default function DetailPenjualanPage() {
                         <th className="px-4 py-2">No Kwitansi & Tgl</th>
                         <th className="px-4 py-2">Keterangan</th>
                         <th className="px-4 py-2 text-right">Nominal</th>
-                        <th className="px-4 py-2 w-24 text-center">Batalkan</th>
+                        <th className="px-4 py-2 w-28 text-center">Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1776,13 +1854,22 @@ export default function DetailPenjualanPage() {
                               {formatRupiah(k.kredit_acc)}
                             </td>
                             <td className="px-4 py-2 text-center">
-                              <button
-                                onClick={() => handleCancelSubmission(k.id)}
-                                className="p-1 bg-red-100 text-red-600 hover:bg-red-200 rounded"
-                                title="Batalkan"
-                              >
-                                <XCircle className="w-4 h-4 mx-auto" />
-                              </button>
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => openEditApprovalModal(k)}
+                                  className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded border border-blue-200 transition"
+                                  title="Edit Pengajuan KPR"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleCancelSubmission(k.id)}
+                                  className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded border border-red-200 transition"
+                                  title="Hapus / Batalkan Pengajuan KPR"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -2075,10 +2162,13 @@ export default function DetailPenjualanPage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-800 text-lg">
-                Form Approval Pengajuan
+                {editingKprId ? "Edit Approval Pengajuan KPR" : "Form Approval Pengajuan KPR"}
               </h3>
               <button
-                onClick={() => setShowApprovalModal(false)}
+                onClick={() => {
+                  setShowApprovalModal(false);
+                  setEditingKprId(null);
+                }}
                 className="text-slate-400 hover:text-slate-600 text-xl leading-none"
               >
                 &times;
