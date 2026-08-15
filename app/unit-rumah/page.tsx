@@ -22,6 +22,7 @@ import {
   Tag,
   ChevronRight,
   Building,
+  User,
 } from "lucide-react";
 import { formatRupiah, parseRupiah } from "@/lib/format";
 import { AddressSelector } from "@/components/ui/AddressSelector";
@@ -585,8 +586,12 @@ export default function UnitRumahPage() {
             {r.status}
           </Badge>
           {r.customer_nama && (
-            <span className="text-[11px] text-slate-600 font-semibold truncate max-w-[140px]" title={r.customer_nama}>
-              👤 {r.customer_nama}
+            <span
+              className="text-[11px] text-slate-600 font-semibold truncate max-w-[140px] inline-flex items-center gap-1"
+              title={r.customer_nama}
+            >
+              <User className="w-3 h-3 text-slate-400 shrink-0" />
+              <span>{r.customer_nama}</span>
             </span>
           )}
         </div>
@@ -941,7 +946,12 @@ export default function UnitRumahPage() {
                       <MasterCard
                         key={b.id}
                         title={`Blok ${b.nama_blok}`}
-                        subtitle={`📍 ${locName}`}
+                        subtitle={
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-teal-600 shrink-0" />
+                            <span>{locName}</span>
+                          </span>
+                        }
                         subtitleClassName="text-teal-700 font-semibold bg-teal-50 px-2 py-0.5 rounded text-[11px] inline-flex items-center gap-1 mt-1 border border-teal-100"
                         onEdit={() => openEditMasterModal("block", b)}
                         onDelete={() => handleDeleteMaster("block", b.id)}
@@ -1573,7 +1583,7 @@ function MasterCard({
   onDelete,
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   subtitleClassName?: string;
   onEdit: () => void;
   onDelete: () => void;
@@ -1583,13 +1593,13 @@ function MasterCard({
       <div className="space-y-0.5 min-w-0">
         <p className="font-bold text-slate-800 truncate">{title}</p>
         {subtitle && (
-          <p
+          <div
             className={
               subtitleClassName || "text-slate-400 text-[11px] truncate"
             }
           >
             {subtitle}
-          </p>
+          </div>
         )}
       </div>
       <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
