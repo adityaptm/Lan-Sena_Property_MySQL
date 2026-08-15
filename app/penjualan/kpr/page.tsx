@@ -37,8 +37,10 @@ export default function KPRStatusPage() {
           variant={
             r.kpr_status === 'Akad'
               ? 'emerald'
-              : r.kpr_status === 'SP3K'
+              : r.kpr_status === 'SP3K' || r.kpr_status === 'ACCEPTED'
               ? 'teal'
+              : r.kpr_status === 'REJECTED' || (r.kpr_status || '').toUpperCase().includes('REJECT')
+              ? 'rose'
               : r.kpr_status === 'OTS'
               ? 'sky'
               : 'amber'

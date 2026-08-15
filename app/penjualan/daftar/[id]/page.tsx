@@ -681,7 +681,7 @@ export default function DetailPenjualanPage() {
           table: "sales",
           data: {
             kredit_pengajuan: 0,
-            kpr_status: "Wawancara",
+            kpr_status: "REJECTED",
           },
           filters: byId(id),
         });
@@ -692,7 +692,7 @@ export default function DetailPenjualanPage() {
           data: {
             sale_id: id,
             jenis_step: "penjualan",
-            status: "Wawancara",
+            status: "REJECTED",
             keterangan:
               approvalForm.keterangan ||
               "Pengajuan KPR ditolak oleh Bank (REJECTED).",
@@ -1178,9 +1178,24 @@ export default function DetailPenjualanPage() {
                     Jenis Penjualan
                   </span>
                   <span>:</span>
-                  <span className="font-bold text-slate-800">
-                    {sale.metode_bayar}
-                    {sale.kpr_status ? ` (${sale.kpr_status})` : ""}
+                  <span className="font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+                    <span>{sale.metode_bayar}</span>
+                    {sale.metode_bayar === "KPR" && (
+                      <span
+                        className={`text-[11px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${
+                          (sale.kpr_status || currentKprStatus) === "REJECTED" ||
+                          (sale.kpr_status || "").toUpperCase().includes("REJECT")
+                            ? "bg-rose-100 text-rose-700 border-rose-300"
+                            : (sale.kpr_status || currentKprStatus) === "ACCEPTED" ||
+                              sale.kpr_status === "SP3K" ||
+                              sale.kpr_status === "Akad"
+                            ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                            : "bg-amber-100 text-amber-700 border-amber-300"
+                        }`}
+                      >
+                        {sale.kpr_status || currentKprStatus || "WAITING"}
+                      </span>
+                    )}
                   </span>
                 </div>
                 {sale.metode_bayar === "KPR" && (
@@ -1796,9 +1811,11 @@ export default function DetailPenjualanPage() {
                     <span className="font-semibold text-slate-600">Status</span>
                     <span>:</span>
                     <span
-                      className={`inline-block w-fit px-2 py-0.5 rounded border text-xs font-bold ${statusBadgeClass(currentKprStatus)}`}
+                      className={`inline-block w-fit px-2.5 py-0.5 rounded border text-xs font-bold ${statusBadgeClass(
+                        sale.kpr_status === "REJECTED" ? "REJECTED" : currentKprStatus,
+                      )}`}
                     >
-                      {currentKprStatus}
+                      {sale.kpr_status === "REJECTED" ? "REJECTED" : currentKprStatus}
                     </span>
                   </div>
                 </div>
