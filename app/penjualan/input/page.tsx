@@ -260,18 +260,7 @@ export default function InputPenjualanPage() {
       return;
     }
 
-    // Validasi pencegahan double booking / unit tidak tersedia
-    if (
-      selectedUnit &&
-      selectedUnit.status &&
-      selectedUnit.status !== "Tersedia"
-    ) {
-      alert(
-        `Unit BLOK ${selectedUnit.block_nama || ""} No ${selectedUnit.no_unit} saat ini berstatus "${selectedUnit.status}" (Sudah Dibooking / Terjual). Tidak dapat menginput penjualan ganda untuk unit yang sama!`,
-      );
-      return;
-    }
-
+    // Validasi pencegahan double booking (hanya jika ada transaksi penjualan aktif yang belum Batal/Reject)
     const existingActiveSale = sales.find(
       (s) =>
         s.unit_id === unitId &&
