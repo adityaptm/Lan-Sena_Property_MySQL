@@ -70,7 +70,11 @@ export default function KPRStatusPage() {
         exportFileName="Monitoring_KPR_Lansena"
         actions={(row) => (
           <div className="flex items-center justify-end gap-1">
-            {row.kpr_status !== 'Akad' && (
+            {(row.kpr_status || '').toUpperCase().includes('REJECT') ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-300 uppercase tracking-wider">
+                REJECTED
+              </span>
+            ) : row.kpr_status !== 'Akad' && (
               <select
                 value={row.kpr_status || 'Berkas Lengkap'}
                 onChange={(e) => updateKprStatus(row.id, e.target.value as any)}

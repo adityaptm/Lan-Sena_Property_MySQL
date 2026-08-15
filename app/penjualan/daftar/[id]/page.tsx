@@ -309,6 +309,8 @@ export default function DetailPenjualanPage() {
   );
   // Menyimpan id baris sale_kpr_submissions yang sedang diedit. null = mode tambah baru.
   const [editingKprId, setEditingKprId] = useState<string | null>(null);
+  // Menyimpan id baris sale_step_history yang sedang diedit. null = mode tambah baru.
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
 
   const openAngsuranModal = () => {
     setEditingPaymentId(null);
@@ -735,21 +737,62 @@ export default function DetailPenjualanPage() {
     }
   };
 
-  const handleSaveProgres = async () => {
-    if (!progresForm.status) return;
+  const openEditProgresModal = (hist: SaleStepHistory) => {
+    setEditingStepId(hist.id);
+    setProgresForm({
+      status: hist.status || "",
+      keterangan: hist.keterangan || "",
+    });
+    setShowProgresModal(true);
+  };
+
+  const handleDeleteProgres = async (stepId: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus riwayat progres ini?")) return;
     setSaving(true);
     try {
       await dbRequest({
-        action: "insert",
+        action: "delete",
         table: "sale_step_history",
-        data: {
-          sale_id: id,
-          jenis_step: activeTab,
-          status: progresForm.status,
-          keterangan: progresForm.keterangan || "",
-          changed_by: currentUser?.id,
-        },
+        filters: byId(stepId),
       });
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err?.message || "Gagal menghapus riwayat progres.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveProgres = async () => {
+    if (!progresForm.status) {
+      alert("Status/Step wajib dipilih.");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editingStepId) {
+        await dbRequest({
+          action: "update",
+          table: "sale_step_history",
+          data: {
+            status: progresForm.status,
+            keterangan: progresForm.keterangan || "",
+          },
+          filters: byId(editingStepId),
+        });
+      } else {
+        await dbRequest({
+          action: "insert",
+          table: "sale_step_history",
+          data: {
+            sale_id: id,
+            jenis_step: activeTab,
+            status: progresForm.status,
+            keterangan: progresForm.keterangan || "",
+            changed_by: currentUser?.id,
+          },
+        });
+      }
 
       if (activeTab === "penjualan" && sale?.unit_id) {
         const selectedStep = salesSteps.find(
@@ -777,8 +820,8 @@ export default function DetailPenjualanPage() {
         }
       }
 
-      alert("Progres berhasil disimpan.");
       setShowProgresModal(false);
+      setEditingStepId(null);
       setProgresForm({ status: "", keterangan: "" });
       await triggerRefresh();
     } catch (err: any) {
@@ -1429,7 +1472,11 @@ export default function DetailPenjualanPage() {
                 activeTab === "sertifikat" ||
                 activeTab === "posisi_sertifikat") && (
                 <button
-                  onClick={() => setShowProgresModal(true)}
+                  onClick={() => {
+                    setEditingStepId(null);
+                    setProgresForm({ status: "", keterangan: "" });
+                    setShowProgresModal(true);
+                  }}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
                 >
                   + Input Progres
@@ -1916,23 +1963,44 @@ export default function DetailPenjualanPage() {
                     stepHistory
                       .filter((h) => h.jenis_step === activeTab)
                       .map((hist) => (
-                        <div key={hist.id} className="relative">
-                          <div className="absolute -left-[23px] top-1 w-3 h-3 bg-blue-500 rounded-full border-[3px] border-white shadow-sm" />
-                          <div className="mb-0.5 flex items-center gap-2">
-                            <span className="font-bold text-slate-800 text-sm">
-                              {hist.status}
-                            </span>
-                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">
-                              {new Date(hist.created_at).toLocaleString(
-                                "id-ID",
-                              )}
-                            </span>
+                        <div
+                          key={hist.id}
+                          className="relative group p-3.5 bg-slate-50 hover:bg-white border border-slate-200 hover:border-slate-300 rounded-lg transition shadow-xs"
+                        >
+                          <div className="absolute -left-[23px] top-4 w-3 h-3 bg-blue-500 rounded-full border-[3px] border-white shadow-sm" />
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-slate-800 text-sm">
+                                {hist.status}
+                              </span>
+                              <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono font-semibold">
+                                {new Date(hist.created_at).toLocaleString(
+                                  "id-ID",
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <button
+                                onClick={() => openEditProgresModal(hist)}
+                                className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 transition"
+                                title="Edit Progres"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProgres(hist.id)}
+                                className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 transition"
+                                title="Hapus Riwayat Progres"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                           <p className="text-sm text-slate-600">
                             {hist.keterangan ||
                               "Tidak ada keterangan tambahan."}
                           </p>
-                          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                          <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
                             <Clock className="w-3 h-3" /> Diupdate oleh:{" "}
                             {hist.changed_by_nama}
                           </p>
@@ -2411,13 +2479,26 @@ export default function DetailPenjualanPage() {
         />
       )}
 
-      {/* Modal Input Progres */}
+      {/* Modal Input / Edit Progres */}
       {showProgresModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="font-bold text-slate-800 text-lg mb-4">
-              Input Progres - {TABS.find((t) => t.id === activeTab)?.label}
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 text-lg">
+                {editingStepId ? "Edit Progres" : "Input Progres"} -{" "}
+                {TABS.find((t) => t.id === activeTab)?.label}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowProgresModal(false);
+                  setEditingStepId(null);
+                  setProgresForm({ status: "", keterangan: "" });
+                }}
+                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">

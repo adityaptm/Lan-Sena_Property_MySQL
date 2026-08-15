@@ -105,20 +105,24 @@ export default function LaporanPenjualanKPRPage() {
       const item = groupMap[key];
       item.salesList.push(s);
 
-      if (s.status !== 'Batal') {
-        item.terjual += 1;
-        if (s.status === 'Lunas') {
-          item.sudahLunas += 1;
-        } else {
-          item.belumLunas += 1;
-        }
-      }
-
       // Check step/status matching
       const currentStep = (s.kpr_status || s.status || '').toUpperCase().trim();
-      if (currentStep === 'BATAL' || currentStep === 'REJECTED') {
+      const isRejected = currentStep === 'REJECTED' || currentStep.includes('REJECT');
+      const isBatal = currentStep === 'BATAL' || s.status === 'Batal';
+
+      if (isRejected || isBatal) {
         item.stepCounts['CANCEL/RIJEK'] = (item.stepCounts['CANCEL/RIJEK'] || 0) + 1;
+        // REJECTED/BATAL tidak dihitung ke terjual/belumLunas/sudahLunas
       } else {
+        if (s.status !== 'Batal') {
+          item.terjual += 1;
+          if (s.status === 'Lunas') {
+            item.sudahLunas += 1;
+          } else {
+            item.belumLunas += 1;
+          }
+        }
+
         let matched = false;
         for (const col of KPR_COLUMNS) {
           if (col === currentStep || currentStep.includes(col) || col.includes(currentStep)) {

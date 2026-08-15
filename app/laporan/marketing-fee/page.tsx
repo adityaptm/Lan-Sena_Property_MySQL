@@ -42,7 +42,11 @@ export default function LaporanMarketingFeePage() {
 
   // Build Marketer Fee Summary List
   const marketerFeeList = useMemo(() => {
-    const activeSales = sales.filter((s) => s.status !== 'Batal');
+    const activeSales = sales.filter(
+      (s) =>
+        s.status !== 'Batal' &&
+        !(s.kpr_status || '').toUpperCase().includes('REJECT'),
+    );
 
     // Grouping map by Marketer
     const map: Record<

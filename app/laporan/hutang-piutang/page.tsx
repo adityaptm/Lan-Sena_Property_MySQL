@@ -220,7 +220,8 @@ export default function LaporanHutangPiutangPage() {
       (s) =>
         s.status !== "Batal" &&
         s.metode_bayar &&
-        s.metode_bayar.toUpperCase() === "KPR",
+        s.metode_bayar.toUpperCase() === "KPR" &&
+        !(s.kpr_status || "").toUpperCase().includes("REJECT"),
     );
 
     return activeKprSales.map((s) => {
@@ -308,7 +309,8 @@ export default function LaporanHutangPiutangPage() {
         s.status !== "Batal" &&
         s.metode_bayar === "KPR" &&
         s.bank_id &&
-        bankGroup[s.bank_id]
+        bankGroup[s.bank_id] &&
+        !(s.kpr_status || "").toUpperCase().includes("REJECT")
       ) {
         const nominalKpr = s.kredit_pengajuan || 0;
         if (

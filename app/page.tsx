@@ -49,7 +49,13 @@ export default function DashboardPage() {
   const bookedUnits = units.filter((u) => u.status === 'Booking' || u.status === 'DP');
   const soldUnits = units.filter((u) => u.status === 'Akad' || u.status === 'Lunas');
 
-  const totalSalesRevenue = sales.reduce((acc, curr) => acc + (curr.total_harga || 0), 0);
+  const totalSalesRevenue = sales
+    .filter(
+      (s) =>
+        s.status !== 'Batal' &&
+        !(s.kpr_status || '').toUpperCase().includes('REJECT'),
+    )
+    .reduce((acc, curr) => acc + (curr.total_harga || 0), 0);
   const totalCashBankBalance = cashBankAccounts.reduce((acc, curr) => acc + (curr.saldo || 0), 0);
   const lowStockItems = items.filter((i) => i.stok <= i.min_stok);
 
@@ -145,7 +151,13 @@ export default function DashboardPage() {
     }[] = [];
 
     // From sales table
-    sales.forEach((s) => {
+    sales
+      .filter(
+        (s) =>
+          s.status !== 'Batal' &&
+          !(s.kpr_status || '').toUpperCase().includes('REJECT'),
+      )
+      .forEach((s) => {
       list.push({
         unit: s.unit_no ? `BLOK ${s.block_nama || ''} NO ${s.unit_no}`.trim() : `Unit Sales #${s.id.slice(0, 4)}`,
         tglBooking: s.tanggal_booking ? new Date(s.tanggal_booking).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Terbaru',
@@ -173,10 +185,21 @@ export default function DashboardPage() {
   const progresKpr = useMemo(() => {
     return STANDARD_KPR_STATUSES.map((statusName) => {
       const count = sales.filter((s) => {
+        if (
+          s.status === 'Batal' ||
+          (s.kpr_status || '').toUpperCase().includes('REJECT')
+        ) {
+          return false;
+        }
         const kpr = (s.kpr_status || '').toUpperCase();
         const st = (s.status || '').toUpperCase();
         const target = statusName.toUpperCase();
-        return kpr === target || st === target || kpr.includes(target) || target.includes(kpr && kpr.length > 3 ? kpr : 'XYZ123');
+        return (
+          kpr === target ||
+          st === target ||
+          kpr.includes(target) ||
+          target.includes(kpr && kpr.length > 3 ? kpr : 'XYZ123')
+        );
       }).length;
 
       return {
