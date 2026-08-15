@@ -721,12 +721,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const item = trashItems.find((t) => t.id === trashId);
     if (!item) return;
 
+    const rawData = item.record_data as any;
     let parsed: Record<string, any>;
     try {
-      if (typeof item.record_data === "object" && item.record_data !== null) {
-        parsed = { ...item.record_data };
-      } else if (typeof item.record_data === "string") {
-        parsed = JSON.parse(item.record_data);
+      if (typeof rawData === "object" && rawData !== null) {
+        parsed = { ...rawData };
+      } else if (typeof rawData === "string") {
+        parsed = JSON.parse(rawData);
       } else {
         throw new Error("Invalid record data format");
       }

@@ -481,7 +481,7 @@ export interface TrashItem {
   source_table: string;
   record_id: string;
   record_label?: string;
-  record_data: string;
+  record_data: string | Record<string, any>;
   deleted_by?: string;
   deleted_by_nama?: string;
   deleted_at: string;
