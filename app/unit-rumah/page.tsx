@@ -572,17 +572,24 @@ export default function UnitRumahPage() {
     {
       header: "Status Unit",
       accessorKey: (r) => (
-        <Badge
-          variant={
-            r.status === "Tersedia"
-              ? "sky"
-              : r.status === "Booking" || r.status === "DP"
-                ? "amber"
-                : "emerald"
-          }
-        >
-          {r.status}
-        </Badge>
+        <div className="flex flex-col items-start gap-1">
+          <Badge
+            variant={
+              r.status === "Tersedia"
+                ? "sky"
+                : r.status === "Booking" || r.status === "DP"
+                  ? "amber"
+                  : "emerald"
+            }
+          >
+            {r.status}
+          </Badge>
+          {r.customer_nama && (
+            <span className="text-[11px] text-slate-600 font-semibold truncate max-w-[140px]" title={r.customer_nama}>
+              👤 {r.customer_nama}
+            </span>
+          )}
+        </div>
       ),
       sortable: true,
     },

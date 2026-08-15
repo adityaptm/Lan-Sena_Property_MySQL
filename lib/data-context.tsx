@@ -539,8 +539,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const subType = sub.find((s) => s.id === unit.subsidy_type_id);
         const sStep = ss.find((s) => s.id === unit.sales_step_id);
         const cStep = cs.find((c) => c.id === unit.certificate_step_id);
+
+        // Cari transaksi penjualan aktif untuk unit ini
+        const activeSale = sal.find(
+          (s: any) =>
+            s.unit_id === unit.id &&
+            (s.status || "").toUpperCase() !== "BATAL" &&
+            !(s.kpr_status || "").toUpperCase().includes("REJECT"),
+        );
+        const derivedStatus: Unit["status"] = activeSale
+          ? (activeSale.status as Unit["status"])
+          : (unit.status || "Tersedia");
+
         return {
           ...unit,
+          status: derivedStatus,
+          customer_nama: activeSale
+            ? cust.find((c: any) => c.id === activeSale.customer_id)?.nama
+            : undefined,
           block_nama: block ? block.nama_blok : undefined,
           location_nama: locItem ? locItem.nama_lokasi : undefined,
           location_kode_lokasi: locItem ? locItem.kode_lokasi : undefined,
@@ -1459,9 +1475,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return inserted;
   };
 
-  const updateSale = (id: string, s: Partial<Sale>) => update("sales", id, s);
-  const updateSaleStatus = (id: string, status: Sale["status"]) =>
-    update("sales", id, { status });
+  const updateSale = async (id: string, s: Partial<Sale>) => {
+    await update("sales", id, s);
+    const existing = sales.find((sale) => sale.id === id);
+    const targetUnitId = s.unit_id || existing?.unit_id;
+    if (targetUnitId && s.status) {
+      const unitStatus =
+        s.status === "Batal" ? "Tersedia" : (s.status as Unit["status"]);
+      await update("units", targetUnitId, { status: unitStatus });
+    }
+  };
+
+  const updateSaleStatus = async (id: string, status: Sale["status"]) => {
+    await update("sales", id, { status });
+    const existing = sales.find((sale) => sale.id === id);
+    if (existing?.unit_id) {
+      const unitStatus =
+        status === "Batal" ? "Tersedia" : (status as Unit["status"]);
+      await update("units", existing.unit_id, { status: unitStatus });
+    }
+  };
+
   const updateKprStatus = (id: string, kpr_status: Sale["kpr_status"]) =>
     update("sales", id, { kpr_status });
 

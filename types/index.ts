@@ -147,6 +147,7 @@ export interface Unit {
   subsidy_type_nama?: string;
   sales_step_nama?: string;
   certificate_step_nama?: string;
+  customer_nama?: string;
 }
 
 export interface MarketerType {
