@@ -106,10 +106,7 @@ export default function UnitRumahPage() {
     status: "Tersedia" as Unit["status"],
   });
 
-  // Modal Master Add State
-  const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
-  const [masterFormText, setMasterFormText] = useState("");
-  const [masterFormExtra, setMasterFormExtra] = useState({
+  const DEFAULT_MASTER_FORM_EXTRA = {
     luas_tanah: 72,
     luas_bangunan: 36,
     nominal: 10000000,
@@ -124,7 +121,12 @@ export default function UnitRumahPage() {
     pic_nama: "",
     pic_hp: "",
     pic_email: "",
-  });
+  };
+
+  // Modal Master Add State
+  const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
+  const [masterFormText, setMasterFormText] = useState("");
+  const [masterFormExtra, setMasterFormExtra] = useState(DEFAULT_MASTER_FORM_EXTRA);
 
   const openAddUnitModal = () => {
     setEditingUnitId(null);
@@ -329,22 +331,7 @@ export default function UnitRumahPage() {
       setIsMasterModalOpen(false);
       setEditingMasterId(null);
       setMasterFormText("");
-      setMasterFormExtra({
-        luas_tanah: 72,
-        luas_bangunan: 36,
-        nominal: 10000000,
-        location_id: "",
-        alamat: "",
-        kode_lokasi: "",
-        kampung_dusun: "",
-        rt: "",
-        rw: "",
-        kelurahan_id: null,
-        cabang: "",
-        pic_nama: "",
-        pic_hp: "",
-        pic_email: "",
-      });
+      setMasterFormExtra(DEFAULT_MASTER_FORM_EXTRA);
     } catch (err: any) {
       alert("Gagal menyimpan master data: " + err.message);
     }
@@ -718,18 +705,7 @@ export default function UnitRumahPage() {
                     onClick={() => {
                       setMasterSubTab("location");
                       setMasterFormText("");
-                      setMasterFormExtra({
-                        luas_tanah: 72,
-                        luas_bangunan: 36,
-                        nominal: 10000000,
-                        location_id: "",
-                        alamat: "",
-                        kode_lokasi: "",
-                        kampung_dusun: "",
-                        rt: "",
-                        rw: "",
-                        kelurahan_id: null,
-                      });
+                      setMasterFormExtra(DEFAULT_MASTER_FORM_EXTRA);
                       setIsMasterModalOpen(true);
                     }}
                     className="flex items-center justify-center gap-1.5 px-3 py-1.5 sm:py-2 bg-white hover:bg-teal-50 text-teal-700 border border-teal-200 font-bold rounded-md text-xs transition shadow-xs grow sm:grow-0"
@@ -742,16 +718,8 @@ export default function UnitRumahPage() {
                       setMasterSubTab("block");
                       setMasterFormText("");
                       setMasterFormExtra({
-                        luas_tanah: 72,
-                        luas_bangunan: 36,
-                        nominal: 10000000,
+                        ...DEFAULT_MASTER_FORM_EXTRA,
                         location_id: locations[0]?.id || "",
-                        alamat: "",
-                        kode_lokasi: "",
-                        kampung_dusun: "",
-                        rt: "",
-                        rw: "",
-                        kelurahan_id: null,
                       });
                       setIsMasterModalOpen(true);
                     }}
@@ -867,16 +835,8 @@ export default function UnitRumahPage() {
                     setEditingMasterId(null);
                     setMasterFormText("");
                     setMasterFormExtra({
-                      luas_tanah: 72,
-                      luas_bangunan: 36,
-                      nominal: 10000000,
+                      ...DEFAULT_MASTER_FORM_EXTRA,
                       location_id: locations[0]?.id || "",
-                      alamat: "",
-                      kode_lokasi: "",
-                      kampung_dusun: "",
-                      rt: "",
-                      rw: "",
-                      kelurahan_id: null,
                     });
                     setIsMasterModalOpen(true);
                   }}
