@@ -178,6 +178,7 @@ export default function InputPenjualanPage() {
 
   // --- Form utama ---
   const [formData, setFormData] = useState({
+    marketer_id: "",
     marketer_nama: "",
     metode_bayar: "KPR" as "KPR" | "Cash Bertahap" | "Cash Keras",
     bank_nama: "Mandiri",
@@ -307,20 +308,12 @@ export default function InputPenjualanPage() {
         if (existing) custNama = existing.nama;
       }
 
-      // 2. Resolve Marketer ID
-      let markId = marketers.find(
-        (m) =>
-          (m.nama || "").toLowerCase() === formData.marketer_nama.toLowerCase(),
-      )?.id;
-
-      if (!markId && formData.marketer_nama) {
-        const newMarketer = await dbRequest({
-          action: "insert",
-          table: "marketers",
-          data: { nama: formData.marketer_nama, no_hp: "-" },
-        });
-        if (newMarketer) markId = newMarketer?.id;
-      }
+      // 2. Resolve Marketer ID & Nama
+      const selectedMarketer = marketers.find(
+        (m) => m.id === formData.marketer_id || (m.nama || "").toLowerCase() === formData.marketer_nama.toLowerCase(),
+      );
+      const markId = selectedMarketer?.id || formData.marketer_id || undefined;
+      const markNama = selectedMarketer?.nama || formData.marketer_nama || "";
 
       // 3. Resolve Bank ID
       let bankId: string | undefined = undefined;
@@ -361,7 +354,7 @@ export default function InputPenjualanPage() {
         block_nama: selectedUnit?.block_nama,
         location_nama: selectedUnit?.location_nama,
         marketer_id: markId,
-        marketer_nama: formData.marketer_nama,
+        marketer_nama: markNama,
         metode_bayar: formData.metode_bayar,
         bank_id: bankId,
         bank_nama: finalBankNama,
@@ -394,7 +387,7 @@ export default function InputPenjualanPage() {
   const stepDone = {
     customer: Boolean(selectedCustomerId || customerQuery.trim()),
     unit: Boolean(unitId),
-    payment: Boolean(formData.marketer_nama) && formData.harga_kesepakatan > 0,
+    payment: Boolean(formData.marketer_id || formData.marketer_nama) && formData.harga_kesepakatan > 0,
   };
 
   return (
@@ -619,22 +612,27 @@ export default function InputPenjualanPage() {
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                 Marketer / Sales Agent <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 required
-                list="marketers-list"
-                placeholder="Ketik nama marketer..."
-                value={formData.marketer_nama}
-                onChange={(e) =>
-                  setFormData({ ...formData, marketer_nama: e.target.value })
-                }
+                value={formData.marketer_id}
+                onChange={(e) => {
+                  const mId = e.target.value;
+                  const foundM = marketers.find((m) => m.id === mId);
+                  setFormData({
+                    ...formData,
+                    marketer_id: mId,
+                    marketer_nama: foundM?.nama || "",
+                  });
+                }}
                 className={INPUT}
-              />
-              <datalist id="marketers-list">
+              >
+                <option value="">-- Pilih Marketer / Sales Agent --</option>
                 {marketers.map((m) => (
-                  <option key={m.id} value={m.nama || ""} />
+                  <option key={m.id} value={m.id}>
+                    {m.nama} {m.marketer_type_nama ? `(${m.marketer_type_nama})` : ""}
+                  </option>
                 ))}
-              </datalist>
+              </select>
             </div>
           </SectionCard>
 

@@ -18,15 +18,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   logoContainer: {
-    width: 65,
-    height: 65,
+    width: 90,
+    height: 90,
     marginRight: 15,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logo: {
-    width: 65,
-    height: 65,
+    width: 90,
+    height: 90,
     objectFit: 'contain',
   },
   headerTextContainer: {

@@ -45,15 +45,15 @@ const styles = StyleSheet.create({
     marginLeft: 0,
   },
   logoContainer: {
-    width: 55,
-    height: 55,
-    marginRight: 10,
+    width: 75,
+    height: 75,
+    marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logo: { 
-    width: 55,
-    height: 55,
+    width: 75,
+    height: 75,
     objectFit: 'contain',
   },
   headerTextContainer: { 
