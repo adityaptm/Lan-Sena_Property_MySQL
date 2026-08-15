@@ -175,6 +175,7 @@ interface KwitansiProps {
   customer?: any;
   petugasNama?: string;
   baseUrl?: string;
+  logoSrc?: string;
 }
 
 function formatTanggalLong(dateStr?: string): string {
@@ -200,8 +201,8 @@ function formatKotaTanggal(dateStr?: string): string {
   return `Purwakarta, ${d.getDate().toString().padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRUL ROZI', baseUrl = '' }: KwitansiProps) {
-  const logoSrc = `${baseUrl}/logo.jpg`;
+export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRUL ROZI', baseUrl = '', logoSrc }: KwitansiProps) {
+  const resolvedLogo = logoSrc || `${baseUrl}/logo.jpg`;
 
   const noKwitansi = payment?.no_kwitansi || '-';
   const nominal = Number(payment?.nominal) || 0;
@@ -227,7 +228,7 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRU
         {/* KOP SURAT */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image src={logoSrc} style={styles.logo} />
+            {resolvedLogo ? <Image src={resolvedLogo} style={styles.logo} /> : null}
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>

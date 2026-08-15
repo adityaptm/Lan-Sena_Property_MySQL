@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { SalePayment } from '@/types';
+import { fetchLogoBase64 } from '@/lib/logo-utils';
 
 // Helper to query /api/db
 async function dbRequest(body: any): Promise<any> {
@@ -88,6 +89,7 @@ export default function PrintKwitansiClient() {
     async function generatePdf() {
       setIsLoading(true);
       try {
+        const logoSrc = await fetchLogoBase64();
         const { pdf } = await import('@react-pdf/renderer');
         const { KwitansiDocument } = await import(
           '@/components/pdf/KwitansiDocument'
@@ -101,6 +103,7 @@ export default function PrintKwitansiClient() {
             customer={customer}
             petugasNama={currentUserNama || 'FAHRUL ROZI'}
             baseUrl={window.location.origin}
+            logoSrc={logoSrc}
           />
         ).toBlob();
 

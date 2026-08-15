@@ -158,6 +158,7 @@ interface SerahTerimaKunciDocumentProps {
   masaPemeliharaan?: string | number;
   catatanPemeliharaan?: string;
   baseUrl?: string;
+  logoSrc?: string;
 }
 
 export function SerahTerimaKunciDocument({
@@ -169,6 +170,7 @@ export function SerahTerimaKunciDocument({
   masaPemeliharaan = '100',
   catatanPemeliharaan = 'tidak merenovasi dan memperbaiki sendiri',
   baseUrl = '',
+  logoSrc,
 }: SerahTerimaKunciDocumentProps) {
   const formatTanggalIndo = (dateString?: string) => {
     if (!dateString) return '-';
@@ -207,7 +209,7 @@ export function SerahTerimaKunciDocument({
         {/* KOP SURAT */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image src={`${baseUrl}/logo.jpg`} style={styles.logo} />
+            {(logoSrc || baseUrl) ? <Image src={logoSrc || `${baseUrl}/logo.jpg`} style={styles.logo} /> : null}
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>

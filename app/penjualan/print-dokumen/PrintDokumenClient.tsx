@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { fetchLogoBase64 } from '@/lib/logo-utils';
 
 interface Props {
   id?: string;
@@ -29,6 +30,7 @@ export default function PrintDokumenClient({
       setIsLoading(true);
 
       try {
+        const logoSrc = await fetchLogoBase64();
         const { pdf } = await import('@react-pdf/renderer');
         const { GenericDocument } = await import(
           '@/components/pdf/GenericDocument'
@@ -41,6 +43,7 @@ export default function PrintDokumenClient({
             unit={unit}
             type={type}
             baseUrl={window.location.origin}
+            logoSrc={logoSrc}
           />
         ).toBlob();
 

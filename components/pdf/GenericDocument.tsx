@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export const GenericDocument = ({ sale, customer, unit, type, baseUrl }: any) => {
+export const GenericDocument = ({ sale, customer, unit, type, baseUrl, logoSrc }: any) => {
   const tanggalCetak = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
   
   let title = 'DOKUMEN PENJUALAN';
@@ -112,7 +112,7 @@ export const GenericDocument = ({ sale, customer, unit, type, baseUrl }: any) =>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image src={`${baseUrl}/logo.jpg`} style={styles.logo} />
+            {(logoSrc || baseUrl) ? <Image src={logoSrc || `${baseUrl}/logo.jpg`} style={styles.logo} /> : null}
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>

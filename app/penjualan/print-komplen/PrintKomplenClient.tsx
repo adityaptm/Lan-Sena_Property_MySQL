@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { fetchLogoBase64 } from '@/lib/logo-utils';
 
 interface Props {
   id?: string;
@@ -33,6 +34,7 @@ export default function PrintKomplenClient({
       setIsLoading(true);
 
       try {
+        const logoSrc = await fetchLogoBase64();
         const { pdf } = await import('@react-pdf/renderer');
         const { SuratKomplenDocument } = await import(
           '@/components/pdf/SuratKomplenDocument'
@@ -47,6 +49,7 @@ export default function PrintKomplenClient({
             penerimaKomplen={penerima}
             isiKomplen={isi}
             baseUrl={window.location.origin}
+            logoSrc={logoSrc}
           />
         ).toBlob();
 

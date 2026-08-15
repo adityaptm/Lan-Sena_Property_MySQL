@@ -111,6 +111,7 @@ interface SuratKomplenDocumentProps {
   penerimaKomplen?: string;
   isiKomplen?: string;
   baseUrl?: string;
+  logoSrc?: string;
 }
 
 export function SuratKomplenDocument({
@@ -119,6 +120,8 @@ export function SuratKomplenDocument({
   tanggalKomplen,
   penerimaKomplen = '',
   isiKomplen = '',
+  baseUrl = '',
+  logoSrc,
 }: SuratKomplenDocumentProps) {
   // Format Tanggal ke Bahasa Indonesia
   const formatTanggalIndo = (dateString?: string) => {

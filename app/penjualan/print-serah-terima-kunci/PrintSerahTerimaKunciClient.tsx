@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { fetchLogoBase64 } from '@/lib/logo-utils';
 
 export default function PrintSerahTerimaKunciClient() {
   const searchParams = useSearchParams();
@@ -30,6 +31,7 @@ export default function PrintSerahTerimaKunciClient() {
       setIsLoading(true);
 
       try {
+        const logoSrc = await fetchLogoBase64();
         const { pdf } = await import('@react-pdf/renderer');
         const { SerahTerimaKunciDocument } = await import(
           '@/components/pdf/SerahTerimaKunciDocument'
@@ -46,6 +48,7 @@ export default function PrintSerahTerimaKunciClient() {
             masaPemeliharaan={pemeliharaan}
             catatanPemeliharaan={catatan}
             baseUrl={window.location.origin}
+            logoSrc={logoSrc}
           />
         ).toBlob();
 

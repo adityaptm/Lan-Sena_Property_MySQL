@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { fetchLogoBase64 } from '@/lib/logo-utils';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
 
@@ -33,6 +34,7 @@ export default function PrintSpprClient({ id }: Props) {
       try {
         const { pdf } = await import('@react-pdf/renderer');
         const { SpprDocument } = await import('@/components/pdf/SpprDocument');
+        const logoSrc = await fetchLogoBase64();
 
         // Resolve alamat lengkap via API route (client component can't import lib/db)
         const addressRes = await fetch('/api/resolve-address', {
@@ -57,6 +59,7 @@ export default function PrintSpprClient({ id }: Props) {
             customer={customerWithAddress}
             unit={unit}
             baseUrl={window.location.origin}
+            logoSrc={logoSrc}
           />
         ).toBlob();
 

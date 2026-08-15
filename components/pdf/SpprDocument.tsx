@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
+export const SpprDocument = ({ sale, customer, unit, baseUrl, logoSrc }: any) => {
   const tanggalCetak = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
 
   // Generate nomor surat: XXXX/KodeLokasi/SPPR/Bulan/Tahun
@@ -211,7 +211,7 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl }: any) => {
         {/* KOP SURAT */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image src={`${baseUrl}/logo.jpg`} style={styles.logo} />
+            {logoSrc ? <Image src={logoSrc} style={styles.logo} /> : null}
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>
