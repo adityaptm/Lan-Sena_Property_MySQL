@@ -110,11 +110,17 @@ export async function archiveToTrash(
 export async function restoreTrashRecord(item: {
   source_table: string;
   record_id: string;
-  record_data: string;
+  record_data: any;
 }) {
   let parsed: Record<string, any>;
   try {
-    parsed = JSON.parse(item.record_data);
+    if (typeof item.record_data === "object" && item.record_data !== null) {
+      parsed = { ...item.record_data };
+    } else if (typeof item.record_data === "string") {
+      parsed = JSON.parse(item.record_data);
+    } else {
+      throw new Error("Invalid record data format");
+    }
   } catch {
     throw new Error("Data trash rusak/tidak bisa dibaca.");
   }

@@ -181,7 +181,8 @@ export default function InputPenjualanPage() {
     marketer_id: "",
     marketer_nama: "",
     metode_bayar: "KPR" as "KPR" | "Cash Bertahap" | "Cash Keras",
-    bank_nama: "Mandiri",
+    bank_id: "",
+    bank_nama: "",
     harga_kesepakatan: 0,
     diskon: 0,
     booking_fee: 0,
@@ -321,13 +322,14 @@ export default function InputPenjualanPage() {
       if (formData.metode_bayar === "KPR") {
         const bankRecord = banks.find(
           (b) =>
+            b.id === formData.bank_id ||
             (b.nama_bank || "").toLowerCase() ===
-            formData.bank_nama.toLowerCase(),
+              (formData.bank_nama || "").toLowerCase(),
         );
         if (bankRecord) {
           bankId = bankRecord.id;
           finalBankNama = bankRecord.nama_bank;
-        } else {
+        } else if (formData.bank_nama) {
           const newBank = await dbRequest({
             action: "insert",
             table: "banks",
@@ -667,19 +669,28 @@ export default function InputPenjualanPage() {
               {formData.metode_bayar === "KPR" && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                    Pilih Bank Pengaju KPR
+                    Pilih Bank Pengaju KPR <span className="text-red-500">*</span>
                   </label>
                   <select
-                    value={formData.bank_nama}
-                    onChange={(e) =>
-                      setFormData({ ...formData, bank_nama: e.target.value })
-                    }
+                    required={formData.metode_bayar === "KPR"}
+                    value={formData.bank_id || formData.bank_nama}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const foundB = banks.find((b) => b.id === val || b.nama_bank === val);
+                      setFormData({
+                        ...formData,
+                        bank_id: foundB?.id || val,
+                        bank_nama: foundB?.nama_bank || val,
+                      });
+                    }}
                     className={INPUT}
                   >
-                    <option value="Mandiri">Mandiri</option>
-                    <option value="BTN">BTN</option>
-                    <option value="BRI">BRI</option>
-                    <option value="BJB">BJB</option>
+                    <option value="">-- Pilih Bank Pengaju KPR --</option>
+                    {banks.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.nama_bank} {b.cabang ? `(${b.cabang})` : ""}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}

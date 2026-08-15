@@ -21,6 +21,7 @@ import {
   Building2,
   Tag,
   ChevronRight,
+  Building,
 } from "lucide-react";
 import { formatRupiah, parseRupiah } from "@/lib/format";
 import { AddressSelector } from "@/components/ui/AddressSelector";
@@ -36,6 +37,7 @@ export default function UnitRumahPage() {
     certificateSteps,
     kprSteps,
     priceItems,
+    banks,
     addUnit,
     updateUnit,
     deleteUnit,
@@ -63,6 +65,9 @@ export default function UnitRumahPage() {
     addSubsidyType,
     updateSubsidyType,
     deleteSubsidyType,
+    addBank,
+    updateBank,
+    deleteBank,
   } = useData();
 
   const [editingMasterId, setEditingMasterId] = useState<string | null>(null);
@@ -78,6 +83,7 @@ export default function UnitRumahPage() {
     | "block"
     | "unitType"
     | "subsidyType"
+    | "bank"
   >("salesStep");
 
   // Modal Unit State
@@ -114,6 +120,10 @@ export default function UnitRumahPage() {
     rt: "",
     rw: "",
     kelurahan_id: null as string | null,
+    cabang: "",
+    pic_nama: "",
+    pic_hp: "",
+    pic_email: "",
   });
 
   const openAddUnitModal = () => {
@@ -240,6 +250,14 @@ export default function UnitRumahPage() {
           await updateSubsidyType(editingMasterId, {
             nama_type: masterFormText,
           });
+        } else if (masterSubTab === "bank") {
+          await updateBank(editingMasterId, {
+            nama_bank: masterFormText,
+            cabang: masterFormExtra.cabang || "Pusat",
+            pic_nama: masterFormExtra.pic_nama || "-",
+            pic_hp: masterFormExtra.pic_hp || "-",
+            pic_email: masterFormExtra.pic_email || "",
+          });
         }
       } else {
         if (masterSubTab === "salesStep") {
@@ -296,6 +314,15 @@ export default function UnitRumahPage() {
             nama_type: masterFormText,
             keterangan: "Skema pembiayaan",
           });
+        } else if (masterSubTab === "bank") {
+          if (!masterFormText) return;
+          await addBank({
+            nama_bank: masterFormText,
+            cabang: masterFormExtra.cabang || "Pusat",
+            pic_nama: masterFormExtra.pic_nama || "-",
+            pic_hp: masterFormExtra.pic_hp || "-",
+            pic_email: masterFormExtra.pic_email || "",
+          });
         }
       }
 
@@ -313,6 +340,10 @@ export default function UnitRumahPage() {
         rt: "",
         rw: "",
         kelurahan_id: null,
+        cabang: "",
+        pic_nama: "",
+        pic_hp: "",
+        pic_email: "",
       });
     } catch (err: any) {
       alert("Gagal menyimpan master data: " + err.message);
@@ -354,6 +385,15 @@ export default function UnitRumahPage() {
       }));
     } else if (tab === "subsidyType") {
       setMasterFormText(item.nama_type || "");
+    } else if (tab === "bank") {
+      setMasterFormText(item.nama_bank || "");
+      setMasterFormExtra((prev) => ({
+        ...prev,
+        cabang: item.cabang || "",
+        pic_nama: item.pic_nama || "",
+        pic_hp: item.pic_hp || "",
+        pic_email: item.pic_email || "",
+      }));
     }
     setIsMasterModalOpen(true);
   };
@@ -370,6 +410,7 @@ export default function UnitRumahPage() {
       else if (tab === "block") await deleteBlock(id);
       else if (tab === "unitType") await deleteUnitType(id);
       else if (tab === "subsidyType") await deleteSubsidyType(id);
+      else if (tab === "bank") await deleteBank(id);
     } catch (err: any) {
       alert(
         "Gagal menghapus master data: " + (err.message || "terkait data lain."),
@@ -458,6 +499,15 @@ export default function UnitRumahPage() {
       bg: "bg-rose-50",
       ring: "border-rose-400 bg-rose-50/60",
       count: subsidyTypes.length,
+    },
+    {
+      id: "bank",
+      label: "Bank Pengaju KPR",
+      icon: Building,
+      accent: "text-emerald-600",
+      bg: "bg-emerald-50",
+      ring: "border-emerald-400 bg-emerald-50/60",
+      count: banks.length,
     },
   ];
   const activeCategory = MASTER_CATEGORIES.find((c) => c.id === masterSubTab)!;
@@ -960,6 +1010,24 @@ export default function UnitRumahPage() {
                       onDelete={() => handleDeleteMaster("subsidyType", s.id)}
                     />
                   ))}
+
+                {masterSubTab === "bank" && banks.length === 0 && (
+                  <EmptyState label="Belum ada data bank pengaju KPR" />
+                )}
+                {masterSubTab === "bank" &&
+                  banks.map((b) => (
+                    <MasterCard
+                      key={b.id}
+                      title={b.nama_bank}
+                      subtitle={
+                        b.cabang
+                          ? `Cabang: ${b.cabang}${b.pic_nama && b.pic_nama !== "-" ? ` · PIC: ${b.pic_nama}` : ""}`
+                          : "Pusat"
+                      }
+                      onEdit={() => openEditMasterModal("bank", b)}
+                      onDelete={() => handleDeleteMaster("bank", b.id)}
+                    />
+                  ))}
               </div>
             </div>
           </div>
@@ -1417,6 +1485,56 @@ export default function UnitRumahPage() {
                 </Field>
               </div>
             </div>
+          )}
+
+          {/* Bank: Cabang, PIC Nama, PIC HP, PIC Email */}
+          {masterSubTab === "bank" && (
+            <>
+              <Field label="Kantor Cabang">
+                <input
+                  type="text"
+                  value={masterFormExtra.cabang}
+                  onChange={(e) =>
+                    setMasterFormExtra({
+                      ...masterFormExtra,
+                      cabang: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition"
+                  placeholder="Contoh: KCP Purwakarta / Pusat"
+                />
+              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Nama PIC Bank (Opsional)">
+                  <input
+                    type="text"
+                    value={masterFormExtra.pic_nama}
+                    onChange={(e) =>
+                      setMasterFormExtra({
+                        ...masterFormExtra,
+                        pic_nama: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition"
+                    placeholder="Contoh: Ahmad Fauzi"
+                  />
+                </Field>
+                <Field label="No. HP / WA PIC (Opsional)">
+                  <input
+                    type="text"
+                    value={masterFormExtra.pic_hp}
+                    onChange={(e) =>
+                      setMasterFormExtra({
+                        ...masterFormExtra,
+                        pic_hp: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition"
+                    placeholder="0812..."
+                  />
+                </Field>
+              </div>
+            </>
           )}
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
