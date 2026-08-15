@@ -273,6 +273,7 @@ export default function DetailPenjualanPage() {
   const [showAngsuranModal, setShowAngsuranModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showGantiBankModal, setShowGantiBankModal] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [potonganForm, setPotonganForm] = useState({
@@ -939,65 +940,100 @@ export default function DetailPenjualanPage() {
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <h1 className="text-xl font-bold text-slate-800">
             Informasi Penjualan
           </h1>
-          <div className="relative group">
-            <button className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md font-semibold text-sm transition">
+          <div className="relative">
+            <button
+              onClick={() => setShowActionMenu(!showActionMenu)}
+              className="flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-md font-semibold text-xs sm:text-sm transition shadow-xs w-full sm:w-auto"
+            >
               <Settings className="w-4 h-4" />
               <span>Kumpulan Aksi</span>
             </button>
-            <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 py-1">
-              <button
-                onClick={() => setShowPersyaratanModal(true)}
-                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700"
-              >
-                <Printer className="w-3.5 h-3.5" /> Cetak Persyaratan KPR
-              </button>
-              <button
-                onClick={() => window.open(`/penjualan/print-sppr?id=${id}`)}
-                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700"
-              >
-                <Printer className="w-3.5 h-3.5" /> Cetak SPPR
-              </button>
-              <button
-                onClick={() => setShowSerahTerimaModal(true)}
-                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700"
-              >
-                <Printer className="w-3.5 h-3.5" /> Cetak Serah Terima Kunci
-              </button>
-              <button
-                onClick={() => setShowKomplenModal(true)}
-                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100"
-              >
-                <Printer className="w-3.5 h-3.5" /> Cetak Surat Komplen
-              </button>
-              <button
-                onClick={() => setShowPindahUnitModal(true)}
-                className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm text-slate-700 font-medium mt-1"
-              >
-                Pindah Unit
-              </button>
-              <button
-                onClick={() => setShowUpdateMarketerModal(true)}
-                className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm text-slate-700 font-medium"
-              >
-                Update Marketer
-              </button>
-              <button
-                onClick={() => setShowBiayaModal(true)}
-                className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm text-slate-700 font-medium"
-              >
-                Update Biaya Tambahan
-              </button>
-              <button
-                onClick={() => setShowUpdateKonsumenModal(true)}
-                className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm text-slate-700 font-medium"
-              >
-                Update Data Konsumen
-              </button>
-            </div>
+            {showActionMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowActionMenu(false)}
+                />
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-md shadow-xl z-20 py-1">
+                  <button
+                    onClick={() => {
+                      setShowPersyaratanModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-xs sm:text-sm text-slate-700"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Cetak Persyaratan KPR
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.open(`/penjualan/print-sppr?id=${id}`);
+                      setShowActionMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-xs sm:text-sm text-slate-700"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Cetak SPPR
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSerahTerimaModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-xs sm:text-sm text-slate-700"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Cetak Serah Terima Kunci
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowKomplenModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-xs sm:text-sm text-slate-700 border-b border-slate-100"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Cetak Surat Komplen
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPindahUnitModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-xs sm:text-sm text-slate-700 font-medium mt-1"
+                  >
+                    Pindah Unit
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUpdateMarketerModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-xs sm:text-sm text-slate-700 font-medium"
+                  >
+                    Update Marketer
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowBiayaModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-xs sm:text-sm text-slate-700 font-medium"
+                  >
+                    Update Biaya Tambahan
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUpdateKonsumenModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-xs sm:text-sm text-slate-700 font-medium"
+                  >
+                    Update Data Konsumen
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -1413,25 +1449,25 @@ export default function DetailPenjualanPage() {
 
         {/* Tabs and Panel */}
         <div className="flex flex-col lg:flex-row gap-6">
-          <div className="w-full lg:w-64 shrink-0 flex flex-col gap-1">
+          <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1.5 pb-2 lg:pb-0 custom-scrollbar">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`text-left px-4 py-3 text-sm font-semibold rounded-md transition ${activeTab === tab.id ? "bg-blue-600 text-white shadow-md" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"}`}
+                className={`text-left whitespace-nowrap px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-md transition shrink-0 lg:shrink ${activeTab === tab.id ? "bg-blue-600 text-white shadow-md" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"}`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <div className="flex-1 bg-white border border-slate-200 rounded-md shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
-              <h3 className="font-bold text-lg text-slate-800">
+          <div className="flex-1 bg-white border border-slate-200 rounded-md shadow-sm p-4 sm:p-5 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-4">
+              <h3 className="font-bold text-base sm:text-lg text-slate-800">
                 {TABS.find((t) => t.id === activeTab)?.label}
               </h3>
               {activeTab === "angsuran" && (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={openAngsuranModal}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
@@ -1440,7 +1476,7 @@ export default function DetailPenjualanPage() {
                   </button>
                   <button
                     onClick={openPotonganModal}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-semibold"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
                   >
                     + Input Potongan
                   </button>

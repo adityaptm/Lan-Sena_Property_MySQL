@@ -285,17 +285,17 @@ export default function DaftarPenjualanPage() {
             Daftar Penjualan
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/penjualan/input"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00a65a] hover:bg-emerald-700 text-white font-semibold rounded text-xs transition shadow-xs"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#00a65a] hover:bg-emerald-700 text-white font-semibold rounded text-xs transition shadow-xs grow sm:grow-0"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Input Penjualan</span>
           </Link>
           <button
             onClick={handleExportAllExcel}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f39c12] hover:bg-amber-600 text-white font-semibold rounded text-xs transition shadow-xs"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#f39c12] hover:bg-amber-600 text-white font-semibold rounded text-xs transition shadow-xs grow sm:grow-0"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>Export Excel</span>
@@ -315,7 +315,7 @@ export default function DaftarPenjualanPage() {
                 setKategoriFilter(e.target.value as any);
                 setCurrentPage(1);
               }}
-              className="border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs grow sm:grow-0"
             >
               <option value="semua">Semua Penjualan</option>
               <option value="lambat">Penjualan Progres Lambat</option>
@@ -329,7 +329,7 @@ export default function DaftarPenjualanPage() {
                 setSearchTarget(e.target.value as any);
                 setCurrentPage(1);
               }}
-              className="border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs grow sm:grow-0"
             >
               <option value="konsumen">Nama Konsumen</option>
               <option value="blok">Nama Blok / Unit</option>
@@ -338,7 +338,7 @@ export default function DaftarPenjualanPage() {
             </select>
 
             {/* Input Search Box & Tombol Cari */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 w-full sm:w-auto">
               <input
                 type="text"
                 placeholder={
@@ -358,11 +358,11 @@ export default function DaftarPenjualanPage() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') setCurrentPage(1);
                 }}
-                className="w-48 sm:w-64 border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 sm:w-64 border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <button
                 onClick={() => setCurrentPage(1)}
-                className="flex items-center gap-1 px-3 py-1.5 bg-[#00c0ef] hover:bg-sky-600 text-white font-bold rounded text-xs transition shadow-2xs"
+                className="flex items-center justify-center gap-1 px-3 py-1.5 bg-[#00c0ef] hover:bg-sky-600 text-white font-bold rounded text-xs transition shadow-2xs shrink-0"
               >
                 <Search className="w-3.5 h-3.5" />
                 <span>Cari</span>

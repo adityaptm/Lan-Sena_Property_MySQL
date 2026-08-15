@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useData } from "@/lib/data-context";
 import { DataTable, Column } from "@/components/ui/DataTable";
@@ -27,6 +27,7 @@ export default function CustomerPage() {
   const { customers, addCustomer, updateCustomer, deleteCustomer } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [activeStatusFilter, setActiveStatusFilter] = useState<Customer["status"] | null>(null);
 
   const [formData, setFormData] = useState({
     nama: "",
@@ -263,6 +264,11 @@ export default function CustomerPage() {
     { label: "Batal", dot: "bg-rose-500" },
   ];
 
+  const filteredCustomers = useMemo(() => {
+    if (!activeStatusFilter) return customers;
+    return customers.filter((c) => c.status === activeStatusFilter);
+  }, [customers, activeStatusFilter]);
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-6">
@@ -277,37 +283,77 @@ export default function CustomerPage() {
           </div>
         </div>
 
-        {/* Status overview strip — presentational only, derived from existing `customers` data */}
+        {/* Status overview strip — Clickable filter buttons */}
         <div className="flex flex-wrap items-center gap-2">
           {STATUS_STATS.map((s) => {
             const count = customers.filter((c) => c.status === s.label).length;
+            const isActive = activeStatusFilter === s.label;
             return (
-              <div
+              <button
                 key={s.label}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs shadow-sm"
+                type="button"
+                onClick={() =>
+                  setActiveStatusFilter(isActive ? null : s.label)
+                }
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs shadow-xs transition border cursor-pointer select-none ${
+                  isActive
+                    ? "bg-blue-50 border-blue-500 ring-2 ring-blue-400 font-bold text-blue-900 shadow-md"
+                    : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700"
+                }`}
+                title={`Klik untuk memfilter customer status ${s.label}`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                <span className="text-slate-500 font-medium">{s.label}</span>
-                <span className="font-bold text-slate-800">{count}</span>
-              </div>
+                <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                <span className={isActive ? "text-blue-900 font-bold" : "text-slate-600 font-medium"}>
+                  {s.label}
+                </span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[11px] font-bold ${
+                    isActive
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
             );
           })}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg text-xs shadow-sm">
-            <span className="text-slate-300 font-medium">Total Customer</span>
-            <span className="font-bold text-white">{customers.length}</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveStatusFilter(null)}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs shadow-xs transition border cursor-pointer select-none ml-auto sm:ml-0 ${
+              activeStatusFilter === null
+                ? "bg-slate-900 text-white border-slate-900 ring-2 ring-slate-400"
+                : "bg-slate-700 hover:bg-slate-800 text-slate-200 border-slate-600"
+            }`}
+            title="Klik untuk melihat semua customer"
+          >
+            <span className="font-medium">Total Customer</span>
+            <span className="font-bold text-white px-1.5 py-0.5 bg-slate-800 rounded-full text-[11px]">
+              {customers.length}
+            </span>
+            {activeStatusFilter && (
+              <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-bold ml-1 animate-pulse">
+                Filter: {activeStatusFilter} (Reset)
+              </span>
+            )}
+          </button>
         </div>
 
         <DataTable
-          title="Daftar Customer"
-          data={customers}
+          title={
+            activeStatusFilter
+              ? `Daftar Customer (Filter: ${activeStatusFilter})`
+              : "Daftar Customer"
+          }
+          data={filteredCustomers}
           columns={columns}
           searchPlaceholder="Cari nama, NIK, No HP..."
           exportFileName="Data_Customer_Lansena"
           headerAction={
             <button
               onClick={openAddModal}
-              className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md text-sm transition shadow-md"
+              className="flex items-center justify-center gap-2 px-3.5 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md text-xs sm:text-sm transition shadow-md w-full sm:w-auto"
             >
               <Plus className="w-4 h-4" />
               <span>Tambah Customer</span>

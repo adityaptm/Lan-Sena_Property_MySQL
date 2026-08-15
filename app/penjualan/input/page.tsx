@@ -820,39 +820,39 @@ export default function InputPenjualanPage() {
 
           {/* Sticky summary + submit bar */}
           <div className="sticky bottom-4 z-10">
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-lg p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex-1 grid grid-cols-3 gap-3 text-xs">
-                <div>
-                  <span className="block text-slate-400">Total Net</span>
-                  <span className="font-bold text-emerald-600 text-sm">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 text-xs">
+                <div className="min-w-0">
+                  <span className="block text-slate-400 text-[10px] sm:text-xs">Total Net</span>
+                  <span className="font-bold text-emerald-600 text-xs sm:text-sm truncate block">
                     Rp {totalHarga.toLocaleString("id-ID")}
                   </span>
                 </div>
-                <div>
-                  <span className="block text-slate-400">Booking Fee</span>
-                  <span className="font-bold text-slate-700 text-sm">
+                <div className="min-w-0">
+                  <span className="block text-slate-400 text-[10px] sm:text-xs">Booking Fee</span>
+                  <span className="font-bold text-slate-700 text-xs sm:text-sm truncate block">
                     Rp {formData.booking_fee.toLocaleString("id-ID")}
                   </span>
                 </div>
-                <div>
-                  <span className="block text-slate-400">Uang Muka</span>
-                  <span className="font-bold text-slate-700 text-sm">
+                <div className="min-w-0">
+                  <span className="block text-slate-400 text-[10px] sm:text-xs">Uang Muka</span>
+                  <span className="font-bold text-slate-700 text-xs sm:text-sm truncate block">
                     Rp {formData.dp_nominal.toLocaleString("id-ID")}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => router.push("/penjualan/daftar")}
-                  className="px-5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-md text-xs font-semibold transition"
+                  className="flex-1 sm:flex-initial text-center px-4 py-2 sm:px-5 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-bold rounded-md text-sm transition shadow-md ${
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-4 py-2 sm:px-6 sm:py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-bold rounded-md text-xs sm:text-sm transition shadow-md ${
                     isSubmitting ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >

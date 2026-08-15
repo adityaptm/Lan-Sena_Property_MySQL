@@ -107,8 +107,8 @@ export function DataTable<T extends Record<string, any>>({
   return (
     <div className="space-y-4">
       {/* Header controls */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="relative max-w-sm w-full">
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+        <div className="relative w-full sm:max-w-xs md:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
@@ -118,24 +118,24 @@ export function DataTable<T extends Record<string, any>>({
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-md hover:bg-slate-50 text-sm font-medium transition-colors text-slate-700 shadow-sm"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-white border border-slate-300 rounded-md hover:bg-slate-50 text-xs sm:text-sm font-medium transition-colors text-slate-700 shadow-sm grow sm:grow-0"
           >
-            <Printer className="w-4 h-4" />
-            Print Data
+            <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Print</span>
           </button>
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-md hover:bg-slate-50 text-sm font-medium transition-colors text-slate-700 shadow-sm"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-white border border-slate-300 rounded-md hover:bg-slate-50 text-xs sm:text-sm font-medium transition-colors text-slate-700 shadow-sm grow sm:grow-0"
           >
-            <Download className="w-4 h-4" />
-            Export Excel
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Export Excel</span>
           </button>
           {headerAction}
         </div>

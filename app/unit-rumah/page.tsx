@@ -663,7 +663,7 @@ export default function UnitRumahPage() {
               searchPlaceholder="Cari no. unit, lokasi, tipe, status..."
               exportFileName="Data_Unit_Lansena"
               headerAction={
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => {
                       setMasterSubTab("location");
@@ -682,7 +682,7 @@ export default function UnitRumahPage() {
                       });
                       setIsMasterModalOpen(true);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-teal-50 text-teal-700 border border-teal-200 font-bold rounded-md text-xs transition shadow-sm"
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 sm:py-2 bg-white hover:bg-teal-50 text-teal-700 border border-teal-200 font-bold rounded-md text-xs transition shadow-xs grow sm:grow-0"
                   >
                     <MapPin className="w-3.5 h-3.5" />
                     <span>Perumahan Baru</span>
@@ -705,14 +705,14 @@ export default function UnitRumahPage() {
                       });
                       setIsMasterModalOpen(true);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 font-bold rounded-md text-xs transition shadow-sm"
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 sm:py-2 bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 font-bold rounded-md text-xs transition shadow-xs grow sm:grow-0"
                   >
                     <LandPlot className="w-3.5 h-3.5" />
                     <span>Blok Baru</span>
                   </button>
                   <button
                     onClick={openAddUnitModal}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md text-xs transition shadow-sm"
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md text-xs transition shadow-xs grow sm:grow-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Tambah Unit Rumah</span>
@@ -1507,7 +1507,7 @@ function MasterCard({
           </p>
         )}
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
         <button
           onClick={onEdit}
           className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 transition"
