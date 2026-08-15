@@ -10,7 +10,7 @@ import { Marketer } from '@/types';
 import { Plus, Pencil, Trash2, UserCheck } from 'lucide-react';
 
 export default function MarketerPage() {
-  const { marketers, marketerTypes, addMarketer, updateMarketerData, deleteMarketerData } = useData();
+  const { marketers, marketerTypes, sales, addMarketer, updateMarketerData, deleteMarketerData } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMarketer, setEditingMarketer] = useState<Marketer | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Marketer | null>(null);
@@ -102,7 +102,10 @@ export default function MarketerPage() {
     },
     {
       header: 'Unit Ditangani',
-      accessorKey: (r) => <span className="font-bold text-blue-600">{r.units_handled || 0} unit</span>,
+      accessorKey: (r) => {
+        const count = sales.filter((s) => s.marketer_id === r.id).length;
+        return <span className="font-bold text-blue-600">{count} unit</span>;
+      },
       sortable: true,
     },
     {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
+import { LOGO_BASE64 } from '@/lib/logo-base64';
 
 Font.register({
   family: 'Arial Narrow',
@@ -40,11 +41,16 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   logoContainer: {
-    width: 100,
-    marginRight: 4,
+    width: 65,
+    height: 65,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logo: {
-    width: '100%',
+    width: 65,
+    height: 65,
+    objectFit: 'contain',
   },
   headerTextContainer: {
     alignItems: 'center',
@@ -203,13 +209,15 @@ export function SerahTerimaKunciDocument({
   // 3. Ekstraksi Tipe Unit
   const tipeUnit = unit?.unit_type_nama || unit?.type || unit?.tipe || '-';
 
+  const resolvedLogo = logoSrc || LOGO_BASE64;
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* KOP SURAT */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            {(logoSrc || baseUrl) ? <Image src={logoSrc || `${baseUrl}/logo.jpg`} style={styles.logo} /> : null}
+            <Image src={resolvedLogo} style={styles.logo} />
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { formatRupiah, bulanKeRomawi } from '@/lib/format';
+import { LOGO_BASE64 } from '@/lib/logo-base64';
 
 Font.register({
   family: 'Arial Narrow',
@@ -45,11 +46,16 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   logoContainer: {
-    width: 80,
-    marginRight: 4,
+    width: 65,
+    height: 65,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logo: {
-    width: '100%',
+    width: 65,
+    height: 65,
+    objectFit: 'contain',
   },
   headerTextContainer: {
     alignItems: 'center',
@@ -181,6 +187,8 @@ const styles = StyleSheet.create({
 });
 
 export const SpprDocument = ({ sale, customer, unit, baseUrl, logoSrc }: any) => {
+  const resolvedLogo = logoSrc || LOGO_BASE64;
+
   const tanggalCetak = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
 
   // Generate nomor surat: XXXX/KodeLokasi/SPPR/Bulan/Tahun
@@ -211,7 +219,7 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl, logoSrc }: any) =>
         {/* KOP SURAT */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            {logoSrc ? <Image src={logoSrc} style={styles.logo} /> : null}
+            <Image src={resolvedLogo} style={styles.logo} />
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>

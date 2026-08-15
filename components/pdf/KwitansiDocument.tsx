@@ -1,6 +1,7 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { formatRupiah, terbilang } from '@/lib/format';
+import { LOGO_BASE64 } from '@/lib/logo-base64';
 
 Font.register({
   family: 'Arial Narrow',
@@ -44,11 +45,15 @@ const styles = StyleSheet.create({
     marginLeft: 0,
   },
   logoContainer: {
-    width: 70,
+    width: 55,
+    height: 55,
     marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logo: { 
-    width: '100%',
+    width: 55,
+    height: 55,
     objectFit: 'contain',
   },
   headerTextContainer: { 
@@ -202,7 +207,7 @@ function formatKotaTanggal(dateStr?: string): string {
 }
 
 export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRUL ROZI', baseUrl = '', logoSrc }: KwitansiProps) {
-  const resolvedLogo = logoSrc || `${baseUrl}/logo.jpg`;
+  const resolvedLogo = logoSrc || LOGO_BASE64;
 
   const noKwitansi = payment?.no_kwitansi || '-';
   const nominal = Number(payment?.nominal) || 0;
@@ -228,7 +233,7 @@ export function KwitansiDocument({ payment, unit, customer, petugasNama = 'FAHRU
         {/* KOP SURAT */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            {resolvedLogo ? <Image src={resolvedLogo} style={styles.logo} /> : null}
+            <Image src={resolvedLogo} style={styles.logo} />
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>

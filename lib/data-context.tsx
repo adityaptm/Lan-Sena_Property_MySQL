@@ -555,9 +555,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
       const mappedMarketers = mkt.map((m: any) => {
         const mtItem = mt.find((t: any) => t.id === m.marketer_type_id);
+        const handledCount = sal.filter((s: any) => s.marketer_id === m.id).length;
         return {
           ...m,
           marketer_type_nama: mtItem ? mtItem.nama_jenis : undefined,
+          units_handled: handledCount,
         };
       });
 

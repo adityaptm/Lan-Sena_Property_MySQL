@@ -1,5 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { LOGO_BASE64 } from '@/lib/logo-base64';
 
 const styles = StyleSheet.create({
   page: {
@@ -17,11 +18,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   logoContainer: {
-    width: 120,
+    width: 65,
+    height: 65,
     marginRight: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logo: {
-    width: '100%',
+    width: 65,
+    height: 65,
+    objectFit: 'contain',
   },
   headerTextContainer: {
     flex: 1,
@@ -112,7 +118,7 @@ export const GenericDocument = ({ sale, customer, unit, type, baseUrl, logoSrc }
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            {(logoSrc || baseUrl) ? <Image src={logoSrc || `${baseUrl}/logo.jpg`} style={styles.logo} /> : null}
+            <Image src={logoSrc || LOGO_BASE64} style={styles.logo} />
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.companyName}>PT LAN SENA JAYA</Text>
