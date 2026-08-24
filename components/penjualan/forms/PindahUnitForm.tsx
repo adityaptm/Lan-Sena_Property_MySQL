@@ -23,6 +23,8 @@ interface Props {
   onSuccess: () => void;
 }
 
+import { naturalSort } from '@/lib/format';
+
 export function PindahUnitForm({ sale, currentUnit, locations, blocks, units, onClose, onSuccess }: Props) {
   const [lokasiId, setLokasiId] = useState('');
   const [blokId, setBlokId] = useState('');
@@ -31,7 +33,10 @@ export function PindahUnitForm({ sale, currentUnit, locations, blocks, units, on
   const [selectedUnitId, setSelectedUnitId] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const filteredBlocks = blocks.filter(b => b.location_id === lokasiId);
+  const filteredBlocks = naturalSort(
+    blocks.filter((b) => b.location_id === lokasiId),
+    (b) => b.nama_blok || "",
+  );
 
   const handleTampilkanUnit = () => {
     if (!lokasiId || !blokId) return;

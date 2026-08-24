@@ -24,7 +24,7 @@ import {
   Building,
   User,
 } from "lucide-react";
-import { formatRupiah, parseRupiah } from "@/lib/format";
+import { formatRupiah, parseRupiah, naturalSort } from "@/lib/format";
 import { AddressSelector } from "@/components/ui/AddressSelector";
 
 export default function UnitRumahPage() {
@@ -937,7 +937,7 @@ export default function UnitRumahPage() {
                   <EmptyState label="Belum ada blok perumahan" />
                 )}
                 {masterSubTab === "block" &&
-                  blocks.map((b) => {
+                  naturalSort(blocks, (b) => b.nama_blok || "").map((b) => {
                     const locName =
                       b.location_nama ||
                       locations.find((l) => l.id === b.location_id)?.nama_lokasi ||
@@ -1143,13 +1143,14 @@ export default function UnitRumahPage() {
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition"
                 >
                   <option value="">-- Pilih Blok --</option>
-                  {blocks
-                    .filter((b) => b.location_id === unitForm.location_id)
-                    .map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.nama_blok}
-                      </option>
-                    ))}
+                  {naturalSort(
+                    blocks.filter((b) => b.location_id === unitForm.location_id),
+                    (b) => b.nama_blok || "",
+                  ).map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.nama_blok}
+                    </option>
+                  ))}
                 </select>
               </Field>
             </div>

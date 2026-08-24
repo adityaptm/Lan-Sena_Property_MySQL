@@ -16,9 +16,11 @@ import {
   Briefcase,
   Heart,
   Tag,
+  Eye,
 } from "lucide-react";
 import { AddressSelector } from "@/components/ui/AddressSelector";
 import { FullAddress } from "@/components/ui/FullAddress";
+import { DetailKonsumenModal } from "@/components/penjualan/forms/DetailKonsumenModal";
 
 const INPUT =
   "w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition";
@@ -27,6 +29,7 @@ export default function CustomerPage() {
   const { customers, addCustomer, updateCustomer, deleteCustomer } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedCustomerForDetail, setSelectedCustomerForDetail] = useState<Customer | null>(null);
   const [activeStatusFilter, setActiveStatusFilter] = useState<Customer["status"] | null>(null);
 
   const [formData, setFormData] = useState({
@@ -218,7 +221,22 @@ export default function CustomerPage() {
       },
     },
     { header: "No. WhatsApp / HP", accessorKey: "no_hp" },
-    { header: "Pekerjaan", accessorKey: (r) => r.pekerjaan || "-" },
+    {
+      header: "Pekerjaan / Instansi",
+      accessorKey: (r) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-slate-800">
+            {r.instansi || r.pekerjaan || "-"}
+          </span>
+          {r.instansi && r.pekerjaan && (
+            <span className="text-[11px] text-slate-400">
+              {r.pekerjaan}
+            </span>
+          )}
+        </div>
+      ),
+      sortable: true,
+    },
     {
       header: "Alamat Lengkap",
       accessorKey: (r) => (
@@ -362,6 +380,13 @@ export default function CustomerPage() {
           actions={(row) => (
             <div className="flex items-center justify-end gap-1">
               <button
+                onClick={() => setSelectedCustomerForDetail(row)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition"
+                title="Lihat Detail Lengkap"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
                 onClick={() => openEditModal(row)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition"
                 title="Edit Data"
@@ -391,6 +416,19 @@ export default function CustomerPage() {
           )}
         />
       </div>
+
+      {/* Modal Detail Lengkap Konsumen */}
+      {selectedCustomerForDetail && (
+        <DetailKonsumenModal
+          customer={selectedCustomerForDetail}
+          onClose={() => setSelectedCustomerForDetail(null)}
+          onEdit={() => {
+            const c = selectedCustomerForDetail;
+            setSelectedCustomerForDetail(null);
+            openEditModal(c);
+          }}
+        />
+      )}
 
       <Modal
         isOpen={isModalOpen}

@@ -86,3 +86,16 @@ export function terbilang(angka: number): string {
   return hasil + ' Rupiah';
 }
 
+/**
+ * Urutan alami supaya "2" tampil sebelum "10", "Blok A2" sebelum "Blok A10" (natural sorting).
+ */
+export function naturalSort<T>(arr: T[], getKey: (item: T) => string): T[] {
+  return [...arr].sort((a, b) =>
+    getKey(a).localeCompare(getKey(b), undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
+}
+
+

@@ -36,6 +36,7 @@ import { PindahUnitForm } from "@/components/penjualan/forms/PindahUnitForm";
 import { UpdateMarketerForm } from "@/components/penjualan/forms/UpdateMarketerForm";
 import { UpdateBiayaTambahanForm } from "@/components/penjualan/forms/UpdateBiayaTambahanForm";
 import { UpdateDataKonsumenForm } from "@/components/penjualan/forms/UpdateDataKonsumenForm";
+import { DetailKonsumenModal } from "@/components/penjualan/forms/DetailKonsumenModal";
 import { CetakPersyaratanKprForm } from "@/components/penjualan/forms";
 
 interface SaleDiscount {
@@ -268,6 +269,7 @@ export default function DetailPenjualanPage() {
   const [showPindahUnitModal, setShowPindahUnitModal] = useState(false);
   const [showUpdateMarketerModal, setShowUpdateMarketerModal] = useState(false);
   const [showUpdateKonsumenModal, setShowUpdateKonsumenModal] = useState(false);
+  const [showDetailKonsumenModal, setShowDetailKonsumenModal] = useState(false);
   const [showProgresModal, setShowProgresModal] = useState(false);
   const [showUbahHargaModal, setShowUbahHargaModal] = useState(false);
   const [showAngsuranModal, setShowAngsuranModal] = useState(false);
@@ -563,7 +565,30 @@ export default function DetailPenjualanPage() {
         return;
       }
 
-      const noKwitansi = `INV/INCOME/${new Date(angsuranForm.tanggal).getFullYear()}/${String(new Date(angsuranForm.tanggal).getMonth() + 1).padStart(2, "0")}/${String(payments.length + 1).padStart(4, "0")}`;
+      const dateObj = new Date(angsuranForm.tanggal);
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const prefix = `INV/INCOME/${year}/${month}/`;
+
+      // Ambil seluruh sale_payments dari database untuk memastikan sequence global tidak duplikat
+      const allExistingPayments = await dbRequest({
+        action: "select",
+        table: "sale_payments",
+      });
+
+      let maxSeq = 0;
+      (allExistingPayments || []).forEach((p: any) => {
+        if (p.no_kwitansi && p.no_kwitansi.startsWith(prefix)) {
+          const parts = p.no_kwitansi.split("/");
+          const seqStr = parts[parts.length - 1];
+          const seqNum = parseInt(seqStr, 10);
+          if (!isNaN(seqNum) && seqNum > maxSeq) {
+            maxSeq = seqNum;
+          }
+        }
+      });
+      const urutan = String(maxSeq + 1).padStart(4, "0");
+      const noKwitansi = `${prefix}${urutan}`;
 
       const inserted = await dbRequest({
         action: "insert",
@@ -1125,15 +1150,18 @@ export default function DetailPenjualanPage() {
               </div>
             </div>
             <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 flex items-center gap-4 text-xs font-semibold text-blue-600">
-              <button className="flex items-center gap-1.5 hover:underline">
+              <button
+                onClick={() => setShowUpdateKonsumenModal(true)}
+                className="flex items-center gap-1.5 hover:underline"
+              >
                 <Upload className="w-3.5 h-3.5" /> Upload Dokumen Ktp & Kk
               </button>
-              <Link
-                href="/kontak/customer"
+              <button
+                onClick={() => setShowDetailKonsumenModal(true)}
                 className="flex items-center gap-1.5 hover:underline"
               >
                 <Eye className="w-3.5 h-3.5" /> Detail Konsumen
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -2493,6 +2521,18 @@ export default function DetailPenjualanPage() {
           marketers={marketers}
           onClose={() => setShowUpdateMarketerModal(false)}
           onSuccess={triggerRefresh}
+        />
+      )}
+
+      {/* Modal Detail Konsumen */}
+      {showDetailKonsumenModal && customer && (
+        <DetailKonsumenModal
+          customer={customer}
+          onClose={() => setShowDetailKonsumenModal(false)}
+          onEdit={() => {
+            setShowDetailKonsumenModal(false);
+            setShowUpdateKonsumenModal(true);
+          }}
         />
       )}
 
