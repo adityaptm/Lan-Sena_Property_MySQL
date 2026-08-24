@@ -29,9 +29,9 @@ const KWITANSI_HEIGHT = 396.85;
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 38, 
+    paddingTop: 30, 
     paddingLeft: 35,
-    paddingRight: 85, // Ditambah agar TTD Petugas bergeser ke kiri dan tidak terpotong
+    paddingRight: 65,
     fontSize: 9,
     fontFamily: 'Arial Narrow',
     lineHeight: 1.15,
@@ -137,18 +137,19 @@ const styles = StyleSheet.create({
 
   // --- TTD SECTION ---
   ttdContainer: {
-    marginTop: 6,
-    paddingHorizontal: 0, // Dihilangkan padding horizontal internal agar presisi dengan margin page
+    marginTop: 8,
+    paddingHorizontal: 0,
   },
   tanggalContainer: {
     alignItems: 'center',
-    width: 180, // Dikecilkan sedikit agar muat sempurna di kanan
+    width: 200,
     alignSelf: 'flex-end',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   tanggalText: {
-    fontSize: 8.5,
+    fontSize: 10,
     textAlign: 'center',
+    color: '#000',
   },
   signatureRow: {
     flexDirection: 'row',
@@ -156,20 +157,22 @@ const styles = StyleSheet.create({
   },
   signatureBlockLeft: {
     alignItems: 'center',
-    width: 180,
+    width: 200,
   },
   signatureBlockRight: {
     alignItems: 'center',
-    width: 180, // Dikecilkan dari 200 ke 180 agar tidak keluar dari margin kanan
+    width: 200,
   },
   signatureTitle: {
-    fontSize: 8.5,
-    marginBottom: 40,
+    fontSize: 10,
+    marginBottom: 36,
+    color: '#000',
   },
   signatureName: {
-    fontSize: 8.5,
+    fontSize: 10,
     textAlign: 'center',
     fontFamily: 'Helvetica-Bold',
+    color: '#000',
   },
 });
 
