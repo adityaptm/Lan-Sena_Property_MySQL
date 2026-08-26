@@ -372,6 +372,11 @@ export interface Sale {
   harga_jual_pajak?: number;
   kredit_pengajuan?: number;
   fee_marketer?: number;
+  customer_hp?: string;
+  customer_job?: string;
+  customer_nik?: string;
+  unit_type_nama?: string;
+  subsidy_type_nama?: string;
 }
 
 export interface SaleAdditionalCost {
