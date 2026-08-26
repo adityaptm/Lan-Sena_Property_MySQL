@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   signatureBlockLeft: {
     alignItems: "flex-start",
     width: 250,
-    paddingLeft: 100,
+    paddingLeft: 5,
   },
   signatureBlockRightContainer: {
     alignItems: "center",
@@ -158,6 +158,7 @@ const styles = StyleSheet.create({
   tanggalText: {
     fontSize: 10,
     textAlign: "center",
+    width: "100%",
     color: "#000",
     marginBottom: 4,
   },
@@ -166,10 +167,24 @@ const styles = StyleSheet.create({
     marginBottom: 36,
     color: "#000",
     textAlign: "center",
+    width: "100%",
+  },
+  signatureTitleLeft: {
+    fontSize: 10,
+    marginBottom: 36,
+    color: "#000",
+    textAlign: "left",
   },
   signatureName: {
     fontSize: 10,
     textAlign: "center",
+    fontFamily: "Helvetica-Bold",
+    color: "#000",
+    width: "100%",
+  },
+  signatureNameLeft: {
+    fontSize: 10,
+    textAlign: "left",
     fontFamily: "Helvetica-Bold",
     color: "#000",
   },
@@ -376,8 +391,8 @@ export function KwitansiDocument({
             {/* KIRI: PENYETOR */}
             <View style={styles.signatureBlockLeft}>
               <View style={{ height: 14 }} />
-              <Text style={styles.signatureTitle}>Penyetor,</Text>
-              <Text style={styles.signatureName}>({namaPenyetor})</Text>
+              <Text style={styles.signatureTitleLeft}>Penyetor,</Text>
+              <Text style={styles.signatureNameLeft}>({namaPenyetor})</Text>
             </View>
 
             {/* KANAN: TANGGAL & PETUGAS */}

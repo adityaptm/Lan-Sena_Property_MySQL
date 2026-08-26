@@ -289,6 +289,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
         </div>
         <button
           onClick={async () => {
+            if (!window.confirm('Apakah kamu ingin keluar?')) return;
             await fetch('/api/auth/signout', { method: 'POST' });
             window.location.href = '/login';
           }}

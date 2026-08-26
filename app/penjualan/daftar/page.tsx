@@ -9,7 +9,7 @@ import { Modal } from '@/components/ui/Modal';
 import {
   Plus, Eye, Trash2, Search, Printer, Download, Filter, RefreshCw,
   Clock, TrendingDown, XCircle, CheckCircle2, Wallet, AlertTriangle,
-  ChevronDown, ChevronRight, FileSpreadsheet,
+  ChevronDown, ChevronRight, FileSpreadsheet, X,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -103,11 +103,11 @@ function ProgresBadge({ isLambat, days }: { isLambat: boolean; days: number }) {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function DaftarPenjualanPage() {
-  const { sales, customers, units, blocks, locations, salesSteps, deleteSale } = useData();
+  const { sales, customers, units, blocks, locations, marketers, salesSteps, deleteSale } = useData();
   const router = useRouter();
 
   // ── State Filter ──
-  const [kategoriFilter, setKategoriFilter] = useState<'semua' | 'lambat' | 'reject'>('semua');
+  const [kategoriFilter, setKategoriFilter] = useState<string>('semua');
   const [searchTarget, setSearchTarget] = useState<'konsumen' | 'blok' | 'tipe' | 'semua'>('konsumen');
   const [searchValue, setSearchValue] = useState('');
   const [pageSize, setPageSize] = useState(25);
@@ -123,9 +123,17 @@ export default function DaftarPenjualanPage() {
       const u = units.find((unit) => unit.id === s.unit_id);
       const b = blocks.find((blk) => blk.id === u?.block_id);
       const loc = locations.find((l) => l.id === b?.location_id);
+      const mkt = marketers?.find((m) => m.id === s.marketer_id);
 
-      const locNama = s.location_nama || loc?.nama_lokasi || 'Benteng Mutiara Mas';
-      const blkNama = s.block_nama || b?.nama_blok || '-';
+      const customerNama = cust?.nama || s.customer_nama || '-';
+      const customerHp = cust?.no_hp || s.customer_hp || '-';
+      const customerJob = cust?.instansi || cust?.pekerjaan || s.customer_job || '-';
+      const customerNik = cust?.nik || s.customer_nik || '';
+      const marketerNama = mkt?.nama || s.marketer_nama || '-';
+
+      const locNama = s.location_nama || u?.location_nama || loc?.nama_lokasi || 'Benteng Mutiara Mas';
+      const blkNama = s.block_nama || u?.block_nama || b?.nama_blok || '-';
+      const unitNo = s.unit_no || u?.no_unit || '-';
       const blockKey = `${locNama} - ${blkNama}`;
 
       const stepTerakhir =
@@ -133,7 +141,12 @@ export default function DaftarPenjualanPage() {
           ? u.sales_step_nama
           : s.status || 'BOOKING';
 
-      const tipeUnit = u?.unit_type_nama || (u?.luas_bangunan && u?.luas_tanah ? `${u.luas_bangunan}/${u.luas_tanah}` : '30/60');
+      const tipeUnit =
+        u?.unit_type_nama ||
+        s.unit_type_nama ||
+        (u?.luas_bangunan && u?.luas_tanah ? `${u.luas_bangunan}/${u.luas_tanah}` : '30/60');
+      const subsidyTypeNama = u?.subsidy_type_nama || s.subsidy_type_nama || '';
+
       const workdays = getWorkdaysSince(s.tanggal_booking || s.created_at);
       const days = daysSince(s.tanggal_booking || s.created_at);
       const finalStatus = (s.status || '').toUpperCase();
@@ -157,14 +170,18 @@ export default function DaftarPenjualanPage() {
 
       return {
         ...s,
+        customer_nama: customerNama,
+        customer_hp: customerHp,
+        customer_job: customerJob,
+        customer_nik: customerNik,
+        marketer_nama: marketerNama,
         block_key: blockKey,
         location_nama: locNama,
         block_nama: blkNama,
-        unit_no: s.unit_no || u?.no_unit || '-',
+        unit_no: unitNo,
         tipe_unit: tipeUnit,
+        subsidy_type_nama: subsidyTypeNama,
         step_terakhir: stepTerakhir,
-        customer_hp: cust?.no_hp || '-',
-        customer_job: cust?.pekerjaan || cust?.instansi || '-',
         days_since: days,
         is_lambat: isLambat,
         is_reject: isReject,
@@ -172,42 +189,87 @@ export default function DaftarPenjualanPage() {
         tanggal_step: tanggalStep,
       };
     });
-  }, [sales, customers, units, blocks, locations]);
+  }, [sales, customers, units, blocks, locations, marketers]);
 
   // ── Filtering Logic ──
   const filteredSales = useMemo(() => {
     return enrichedSales.filter((s) => {
-      // 1. Kategori Filter (Semua, Progres Lambat, Reject)
+      // 1. Kategori Filter (Semua, Booking, Pemberkasan, KPR, Akad, Lambat, Reject)
       if (kategoriFilter === 'lambat' && !s.is_lambat) return false;
       if (kategoriFilter === 'reject' && !s.is_reject) return false;
+      if (kategoriFilter === 'booking') {
+        const st = (s.status || '').toUpperCase();
+        if (st !== 'BOOKING' && !s.step_terakhir?.toUpperCase().includes('BOOKING')) return false;
+      }
+      if (kategoriFilter === 'pemberkasan') {
+        const st = (s.step_terakhir || s.status || '').toUpperCase();
+        if (!st.includes('BERKAS') && !st.includes('PEMBERKASAN') && !st.includes('BI CHECKING')) return false;
+      }
+      if (kategoriFilter === 'kpr') {
+        const kpr = (s.kpr_status || '').toUpperCase();
+        const met = (s.metode_bayar || '').toUpperCase();
+        if (!met.includes('KPR') && !kpr) return false;
+      }
+      if (kategoriFilter === 'akad') {
+        const st = (s.status || '').toUpperCase();
+        const step = (s.step_terakhir || '').toUpperCase();
+        if (st !== 'AKAD' && st !== 'LUNAS' && !step.includes('AKAD') && !step.includes('LUNAS')) return false;
+      }
 
       // 2. Search Text berdasarkan Search Target
       if (searchValue.trim()) {
         const q = searchValue.toLowerCase().trim();
+
         if (searchTarget === 'konsumen') {
-          if (!s.customer_nama?.toLowerCase().includes(q) && !s.customer_hp?.toLowerCase().includes(q)) {
-            return false;
-          }
+          const match =
+            (s.customer_nama && s.customer_nama.toLowerCase().includes(q)) ||
+            (s.customer_hp && s.customer_hp.toLowerCase().includes(q)) ||
+            (s.customer_job && s.customer_job.toLowerCase().includes(q)) ||
+            (s.customer_nik && s.customer_nik.toLowerCase().includes(q));
+          if (!match) return false;
         } else if (searchTarget === 'blok') {
           const unitFull = `blok ${s.block_nama} no ${s.unit_no}`.toLowerCase();
-          if (!unitFull.includes(q) && !s.block_nama?.toLowerCase().includes(q) && !s.unit_no?.toLowerCase().includes(q)) {
-            return false;
-          }
+          const unitShort = `${s.block_nama} ${s.unit_no}`.toLowerCase();
+          const unitSlash = `${s.block_nama}/${s.unit_no}`.toLowerCase();
+          const match =
+            unitFull.includes(q) ||
+            unitShort.includes(q) ||
+            unitSlash.includes(q) ||
+            (s.block_nama && s.block_nama.toLowerCase().includes(q)) ||
+            (s.unit_no && String(s.unit_no).toLowerCase().includes(q)) ||
+            (s.location_nama && s.location_nama.toLowerCase().includes(q));
+          if (!match) return false;
         } else if (searchTarget === 'tipe') {
-          if (!s.tipe_unit?.toLowerCase().includes(q) && !s.metode_bayar?.toLowerCase().includes(q)) {
-            return false;
-          }
+          const match =
+            (s.tipe_unit && s.tipe_unit.toLowerCase().includes(q)) ||
+            (s.subsidy_type_nama && s.subsidy_type_nama.toLowerCase().includes(q)) ||
+            (s.metode_bayar && s.metode_bayar.toLowerCase().includes(q)) ||
+            (s.kpr_status && s.kpr_status.toLowerCase().includes(q)) ||
+            (s.status && s.status.toLowerCase().includes(q)) ||
+            (s.step_terakhir && s.step_terakhir.toLowerCase().includes(q));
+          if (!match) return false;
         } else {
           // Semua Field
+          const unitFull = `blok ${s.block_nama} no ${s.unit_no}`.toLowerCase();
+          const unitShort = `${s.block_nama} ${s.unit_no}`.toLowerCase();
           const match =
-            s.customer_nama?.toLowerCase().includes(q) ||
-            s.block_nama?.toLowerCase().includes(q) ||
-            s.unit_no?.toLowerCase().includes(q) ||
-            s.tipe_unit?.toLowerCase().includes(q) ||
-            s.marketer_nama?.toLowerCase().includes(q) ||
-            s.customer_job?.toLowerCase().includes(q) ||
-            s.customer_hp?.toLowerCase().includes(q) ||
-            s.no_penjualan?.toLowerCase().includes(q);
+            (s.customer_nama && s.customer_nama.toLowerCase().includes(q)) ||
+            (s.customer_hp && s.customer_hp.toLowerCase().includes(q)) ||
+            (s.customer_job && s.customer_job.toLowerCase().includes(q)) ||
+            (s.customer_nik && s.customer_nik.toLowerCase().includes(q)) ||
+            (s.block_nama && s.block_nama.toLowerCase().includes(q)) ||
+            (s.unit_no && String(s.unit_no).toLowerCase().includes(q)) ||
+            unitFull.includes(q) ||
+            unitShort.includes(q) ||
+            (s.location_nama && s.location_nama.toLowerCase().includes(q)) ||
+            (s.tipe_unit && s.tipe_unit.toLowerCase().includes(q)) ||
+            (s.subsidy_type_nama && s.subsidy_type_nama.toLowerCase().includes(q)) ||
+            (s.metode_bayar && s.metode_bayar.toLowerCase().includes(q)) ||
+            (s.kpr_status && s.kpr_status.toLowerCase().includes(q)) ||
+            (s.step_terakhir && s.step_terakhir.toLowerCase().includes(q)) ||
+            (s.status && s.status.toLowerCase().includes(q)) ||
+            (s.marketer_nama && s.marketer_nama.toLowerCase().includes(q)) ||
+            (s.no_penjualan && s.no_penjualan.toLowerCase().includes(q));
           if (!match) return false;
         }
       }
@@ -312,14 +374,18 @@ export default function DaftarPenjualanPage() {
             <select
               value={kategoriFilter}
               onChange={(e) => {
-                setKategoriFilter(e.target.value as any);
+                setKategoriFilter(e.target.value);
                 setCurrentPage(1);
               }}
               className="border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs grow sm:grow-0"
             >
               <option value="semua">Semua Penjualan</option>
-              <option value="lambat">Penjualan Progres Lambat</option>
-              <option value="reject">Penjualan KPR Reject</option>
+              <option value="booking">Status Booking</option>
+              <option value="pemberkasan">Status Pemberkasan</option>
+              <option value="kpr">Penjualan KPR</option>
+              <option value="akad">Status Akad / Lunas</option>
+              <option value="lambat">Penjualan Progres Lambat (&gt; 14 Hari)</option>
+              <option value="reject">Penjualan KPR Reject / Batal</option>
             </select>
 
             {/* Dropdown Field Target Search */}
@@ -339,27 +405,41 @@ export default function DaftarPenjualanPage() {
 
             {/* Input Search Box & Tombol Cari */}
             <div className="flex items-center gap-1 w-full sm:w-auto">
-              <input
-                type="text"
-                placeholder={
-                  searchTarget === 'konsumen'
-                    ? 'Cari nama konsumen...'
-                    : searchTarget === 'blok'
-                    ? 'Cari blok / no unit...'
-                    : searchTarget === 'tipe'
-                    ? 'Cari tipe unit...'
-                    : 'Cari kata kunci...'
-                }
-                value={searchValue}
-                onChange={(e) => {
-                  setSearchValue(e.target.value);
-                  setCurrentPage(1);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') setCurrentPage(1);
-                }}
-                className="flex-1 sm:w-64 border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+              <div className="relative flex-1 sm:w-64">
+                <input
+                  type="text"
+                  placeholder={
+                    searchTarget === 'konsumen'
+                      ? 'Cari nama konsumen, no HP, instansi...'
+                      : searchTarget === 'blok'
+                      ? 'Cari blok, no unit, perumahan...'
+                      : searchTarget === 'tipe'
+                      ? 'Cari tipe unit, metode bayar...'
+                      : 'Cari kata kunci apapun...'
+                  }
+                  value={searchValue}
+                  onChange={(e) => {
+                    setSearchValue(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') setCurrentPage(1);
+                  }}
+                  className="w-full border border-slate-300 rounded pl-2.5 pr-7 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                {searchValue && (
+                  <button
+                    onClick={() => {
+                      setSearchValue('');
+                      setCurrentPage(1);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                    title="Hapus pencarian"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
               <button
                 onClick={() => setCurrentPage(1)}
                 className="flex items-center justify-center gap-1 px-3 py-1.5 bg-[#00c0ef] hover:bg-sky-600 text-white font-bold rounded text-xs transition shadow-2xs shrink-0"
@@ -409,7 +489,23 @@ export default function DaftarPenjualanPage() {
               {paginatedSales.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
-                    Tidak ada data penjualan yang cocok dengan filter
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <p>Tidak ada data penjualan yang cocok dengan filter</p>
+                      {(searchValue || kategoriFilter !== 'semua') && (
+                        <button
+                          onClick={() => {
+                            setSearchValue('');
+                            setKategoriFilter('semua');
+                            setSearchTarget('semua');
+                            setCurrentPage(1);
+                          }}
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>Reset Semua Filter</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
