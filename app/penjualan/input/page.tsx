@@ -363,6 +363,7 @@ export default function InputPenjualanPage() {
         bank_nama: finalBankNama,
         harga_kesepakatan: formData.harga_kesepakatan,
         diskon: formData.diskon,
+        potongan: formData.diskon,
         total_harga: totalHarga,
         booking_fee: formData.booking_fee,
         dp_nominal: formData.dp_nominal,

@@ -1462,6 +1462,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     const inserted = await insert("sales", dbData);
+    if (inserted?.id) {
+      const discNominal = Number(saleData.diskon || saleData.potongan || 0);
+      if (discNominal > 0) {
+        try {
+          await insert("sale_discounts", {
+            sale_id: inserted.id,
+            tanggal:
+              saleData.tanggal_booking ||
+              new Date().toISOString().slice(0, 10),
+            nominal: discNominal,
+            keterangan: "Potongan / Diskon Awal Transaksi",
+          });
+        } catch (e) {
+          console.error("Failed to insert initial sale_discount", e);
+        }
+      }
+    }
     const statusMap: Record<string, Unit["status"]> = {
       Lunas: "Lunas",
       Akad: "Akad",

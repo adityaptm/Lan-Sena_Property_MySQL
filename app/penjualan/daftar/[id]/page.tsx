@@ -919,11 +919,12 @@ export default function DetailPenjualanPage() {
     0,
   );
   // Total potongan sekarang dijumlah dari tabel sale_discounts (riwayat),
-  // bukan lagi dari kolom tunggal sales.potongan.
-  const totalPotongan = discounts.reduce(
-    (sum, item) => sum + (item.nominal || 0),
-    0,
-  );
+  // atau fallback ke kolom sales.potongan / sales.diskon jika belum ada baris riwayat.
+  const initialPotongan = Number(sale.potongan || sale.diskon || 0);
+  const totalPotongan =
+    discounts.length > 0
+      ? discounts.reduce((sum, item) => sum + (item.nominal || 0), 0)
+      : initialPotongan;
   const totalHargaFinal =
     (sale.harga_jual_awal || sale.total_harga) -
     totalPotongan +
@@ -1402,10 +1403,14 @@ export default function DetailPenjualanPage() {
                   </span>
                   <span>:</span>
                   <span>
-                    {discounts
-                      .map((d) => d.keterangan)
-                      .filter(Boolean)
-                      .join(", ") || "-"}
+                    {discounts.length > 0
+                      ? discounts
+                          .map((d) => d.keterangan)
+                          .filter(Boolean)
+                          .join(", ") || "-"
+                      : initialPotongan > 0
+                      ? "Potongan Awal Transaksi"
+                      : "-"}
                   </span>
                 </div>
                 <div className="grid grid-cols-[160px_10px_1fr]">
@@ -1749,14 +1754,47 @@ export default function DetailPenjualanPage() {
                       </thead>
                       <tbody>
                         {discounts.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan={4}
-                              className="text-center py-4 text-slate-500"
-                            >
-                              Belum ada potongan.
-                            </td>
-                          </tr>
+                          initialPotongan > 0 ? (
+                            <tr className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-2 text-center">1</td>
+                              <td className="px-4 py-2">
+                                Potongan Awal Transaksi
+                              </td>
+                              <td className="px-4 py-2 text-right font-semibold text-red-600">
+                                - {formatRupiah(initialPotongan)}
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                <button
+                                  onClick={() => {
+                                    setPotonganForm({
+                                      tanggal:
+                                        sale.tanggal_booking ||
+                                        new Date().toISOString().slice(0, 10),
+                                      nominal: formatRibuan(
+                                        String(initialPotongan),
+                                      ),
+                                      keterangan: "Potongan Awal Transaksi",
+                                    });
+                                    setEditingDiscountId(null);
+                                    setShowPotonganModal(true);
+                                  }}
+                                  className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded"
+                                  title="Edit Potongan"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan={4}
+                                className="text-center py-4 text-slate-500"
+                              >
+                                Belum ada potongan.
+                              </td>
+                            </tr>
+                          )
                         ) : (
                           discounts.map((d, i) => (
                             <tr
@@ -1791,7 +1829,7 @@ export default function DetailPenjualanPage() {
                             </tr>
                           ))
                         )}
-                        {discounts.length > 0 && (
+                        {(discounts.length > 0 || initialPotongan > 0) && (
                           <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold">
                             <td colSpan={2} className="px-4 py-3 text-right">
                               TOTAL POTONGAN
