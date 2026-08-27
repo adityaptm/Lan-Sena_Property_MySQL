@@ -272,6 +272,7 @@ export default function DetailPenjualanPage() {
   const [showDetailKonsumenModal, setShowDetailKonsumenModal] = useState(false);
   const [showProgresModal, setShowProgresModal] = useState(false);
   const [showUbahHargaModal, setShowUbahHargaModal] = useState(false);
+  const [showKomitmenModal, setShowKomitmenModal] = useState(false);
   const [showAngsuranModal, setShowAngsuranModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showGantiBankModal, setShowGantiBankModal] = useState(false);
@@ -288,6 +289,7 @@ export default function DetailPenjualanPage() {
     keterangan: "",
   });
   const [hargaPajakForm, setHargaPajakForm] = useState("");
+  const [komitmenForm, setKomitmenForm] = useState("");
   const [angsuranForm, setAngsuranForm] = useState({
     tanggal: new Date().toISOString().slice(0, 10),
     bank_tujuan: "",
@@ -878,6 +880,26 @@ export default function DetailPenjualanPage() {
     }
   };
 
+  const handleSaveKomitmen = async () => {
+    setSaving(true);
+    try {
+      await dbRequest({
+        action: "update",
+        table: "sales",
+        data: { komitmen_pembayaran: komitmenForm },
+        filters: byId(id),
+      });
+
+      alert("Komitmen Pembayaran berhasil diperbarui.");
+      setShowKomitmenModal(false);
+      await triggerRefresh();
+    } catch (err: any) {
+      alert(err?.message || "Gagal mengubah komitmen pembayaran.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     loadExtra();
   }, [loadExtra]);
@@ -1285,25 +1307,30 @@ export default function DetailPenjualanPage() {
                     Jenis Penjualan
                   </span>
                   <span>:</span>
-                  <span className="font-bold text-slate-800 flex items-center gap-2 flex-wrap">
-                    <span>{sale.metode_bayar}</span>
-                    {sale.metode_bayar === "KPR" && (
-                      <span
-                        className={`text-[11px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${
-                          (sale.kpr_status || currentKprStatus) === "REJECTED" ||
-                          (sale.kpr_status || "").toUpperCase().includes("REJECT")
-                            ? "bg-rose-100 text-rose-700 border-rose-300"
-                            : (sale.kpr_status || currentKprStatus) === "ACCEPTED" ||
-                              sale.kpr_status === "SP3K" ||
-                              sale.kpr_status === "Akad"
-                            ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-                            : "bg-amber-100 text-amber-700 border-amber-300"
-                        }`}
-                      >
-                        {sale.kpr_status || currentKprStatus || "WAITING"}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {sale.metode_bayar === "KPR" ? (
+                      (() => {
+                        const s = String(sale.kpr_status || currentKprStatus || "WAITING").toUpperCase();
+                        const isReject = s.includes("REJECT");
+                        const isAccept = s.includes("ACCEPT") || s === "SP3K" || s === "AKAD";
+                        const label = isReject ? "KPR (REJECTED)" : isAccept ? "KPR (ACCEPTED)" : "KPR (WAITING)";
+                        const badgeClass = isReject
+                          ? "bg-rose-100 text-rose-700 border-rose-300"
+                          : isAccept
+                          ? "bg-blue-100 text-blue-700 border-blue-300"
+                          : "bg-amber-100 text-amber-700 border-amber-300";
+                        return (
+                          <span className={`text-[11px] px-2.5 py-0.5 rounded font-bold uppercase tracking-wider border ${badgeClass}`}>
+                            {label}
+                          </span>
+                        );
+                      })()
+                    ) : (
+                      <span className="font-bold text-slate-800">
+                        {sale.metode_bayar}
                       </span>
                     )}
-                  </span>
+                  </div>
                 </div>
                 {sale.metode_bayar === "KPR" && (
                   <>
@@ -1443,9 +1470,20 @@ export default function DetailPenjualanPage() {
                     Komitmen Pembayaran
                   </span>
                   <span>:</span>
-                  <span className="font-medium text-slate-800">
-                    {sale.komitmen_pembayaran || "-"}
-                  </span>
+                  <div className="flex items-start gap-2">
+                    <span className="font-medium text-slate-800 flex-1">
+                      {sale.komitmen_pembayaran || "-"}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setKomitmenForm(sale.komitmen_pembayaran || "");
+                        setShowKomitmenModal(true);
+                      }}
+                      className="text-[10px] text-blue-600 hover:underline shrink-0 font-medium"
+                    >
+                      (Ubah Komitmen)
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-[160px_10px_1fr] pt-2 border-t border-slate-100">
                   <span className="font-semibold text-slate-600">
@@ -2710,6 +2748,49 @@ export default function DetailPenjualanPage() {
                 className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
               >
                 {saving ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ubah Komitmen Pembayaran */}
+      {showKomitmenModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 animate-in fade-in zoom-in duration-150">
+            <h3 className="font-bold text-slate-800 text-lg mb-1">
+              Ubah Komitmen Pembayaran
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Masukkan rincian kesepakatan atau komitmen pembayaran untuk unit ini.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                  Komitmen / Catatan Pembayaran
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Contoh: PEMBELIAN CASH BERTAHAP HARGA 166 JT BELUM TERMASUK BIAYA BALIK NAMA DAN PAJAK"
+                  value={komitmenForm}
+                  onChange={(e) => setKomitmenForm(e.target.value)}
+                  className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button
+                onClick={() => setShowKomitmenModal(false)}
+                className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded font-semibold text-slate-700"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveKomitmen}
+                disabled={saving}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50"
+              >
+                {saving ? "Menyimpan..." : "Simpan Komitmen"}
               </button>
             </div>
           </div>

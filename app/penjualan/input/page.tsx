@@ -187,6 +187,7 @@ export default function InputPenjualanPage() {
     diskon: 0,
     booking_fee: 0,
     dp_nominal: 0,
+    komitmen_pembayaran: "",
     status: "DP" as "Booking" | "DP" | "Akad" | "Lunas",
   });
 
@@ -365,9 +366,10 @@ export default function InputPenjualanPage() {
         total_harga: totalHarga,
         booking_fee: formData.booking_fee,
         dp_nominal: formData.dp_nominal,
+        komitmen_pembayaran: formData.komitmen_pembayaran || undefined,
         status: formData.status,
         kpr_status:
-          formData.metode_bayar === "KPR" ? "Berkas Lengkap" : undefined,
+          formData.metode_bayar === "KPR" ? "WAITING" : undefined,
         tanggal_booking: new Date().toISOString().slice(0, 10),
       });
 
@@ -824,6 +826,27 @@ export default function InputPenjualanPage() {
                   <option value="Lunas">Lunas Cash</option>
                 </select>
               </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Komitmen Pembayaran / Catatan Khusus
+                <span className="text-[10px] text-slate-400 font-normal ml-1">
+                  (opsional, misalnya rincian kesepakatan cash bertahap, pajak, dll.)
+                </span>
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Contoh: PEMBELIAN CASH BERTAHAP HARGA 166 JT BELUM TERMASUK BIAYA BALIK NAMA DAN PAJAK"
+                value={formData.komitmen_pembayaran}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    komitmen_pembayaran: e.target.value,
+                  })
+                }
+                className={INPUT}
+              />
             </div>
           </SectionCard>
 
