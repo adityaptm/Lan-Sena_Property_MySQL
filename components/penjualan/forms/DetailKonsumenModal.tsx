@@ -15,12 +15,14 @@ import {
   Edit3,
   ExternalLink,
   CreditCard,
+  Upload,
 } from "lucide-react";
 
 interface Props {
   customer: Customer;
   onClose: () => void;
   onEdit: () => void;
+  onUploadDokumen?: () => void;
 }
 
 function toWaNumber(rawPhone: string) {
@@ -30,7 +32,12 @@ function toWaNumber(rawPhone: string) {
   return `62${digits}`;
 }
 
-export function DetailKonsumenModal({ customer, onClose, onEdit }: Props) {
+export function DetailKonsumenModal({
+  customer,
+  onClose,
+  onEdit,
+  onUploadDokumen,
+}: Props) {
   const isMenikah =
     customer.status_pernikahan === "Sudah Menikah" ||
     !!customer.nama_pasangan;
@@ -239,9 +246,23 @@ export function DetailKonsumenModal({ customer, onClose, onEdit }: Props) {
 
           {/* Section 5: Rekening KPR & Berkas */}
           <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/50 space-y-3">
-            <div className="flex items-center gap-2 text-teal-700 font-bold border-b border-slate-200 pb-2 text-xs uppercase tracking-wider">
-              <CreditCard className="w-4 h-4" />
-              <span>Rekening KPR & Berkas Dokumen</span>
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <div className="flex items-center gap-2 text-teal-700 font-bold text-xs uppercase tracking-wider">
+                <CreditCard className="w-4 h-4" />
+                <span>Rekening KPR & Berkas Dokumen</span>
+              </div>
+              {onUploadDokumen && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onUploadDokumen();
+                  }}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                >
+                  <Upload className="w-3.5 h-3.5" /> Upload Berkas
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5">
               <div>

@@ -37,6 +37,7 @@ import { UpdateMarketerForm } from "@/components/penjualan/forms/UpdateMarketerF
 import { UpdateBiayaTambahanForm } from "@/components/penjualan/forms/UpdateBiayaTambahanForm";
 import { UpdateDataKonsumenForm } from "@/components/penjualan/forms/UpdateDataKonsumenForm";
 import { DetailKonsumenModal } from "@/components/penjualan/forms/DetailKonsumenModal";
+import { UploadDokumenKonsumenModal } from "@/components/penjualan/forms/UploadDokumenKonsumenModal";
 import { CetakPersyaratanKprForm } from "@/components/penjualan/forms";
 
 interface SaleDiscount {
@@ -270,6 +271,7 @@ export default function DetailPenjualanPage() {
   const [showUpdateMarketerModal, setShowUpdateMarketerModal] = useState(false);
   const [showUpdateKonsumenModal, setShowUpdateKonsumenModal] = useState(false);
   const [showDetailKonsumenModal, setShowDetailKonsumenModal] = useState(false);
+  const [showUploadDokumenModal, setShowUploadDokumenModal] = useState(false);
   const [showProgresModal, setShowProgresModal] = useState(false);
   const [showUbahHargaModal, setShowUbahHargaModal] = useState(false);
   const [showKomitmenModal, setShowKomitmenModal] = useState(false);
@@ -1174,7 +1176,7 @@ export default function DetailPenjualanPage() {
             </div>
             <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 flex items-center gap-4 text-xs font-semibold text-blue-600">
               <button
-                onClick={() => setShowUpdateKonsumenModal(true)}
+                onClick={() => setShowUploadDokumenModal(true)}
                 className="flex items-center gap-1.5 hover:underline"
               >
                 <Upload className="w-3.5 h-3.5" /> Upload Dokumen Ktp & Kk
@@ -2609,6 +2611,19 @@ export default function DetailPenjualanPage() {
             setShowDetailKonsumenModal(false);
             setShowUpdateKonsumenModal(true);
           }}
+          onUploadDokumen={() => {
+            setShowDetailKonsumenModal(false);
+            setShowUploadDokumenModal(true);
+          }}
+        />
+      )}
+
+      {/* Modal Upload Dokumen KTP & KK */}
+      {showUploadDokumenModal && customer && (
+        <UploadDokumenKonsumenModal
+          customer={customer}
+          onClose={() => setShowUploadDokumenModal(false)}
+          onSuccess={triggerRefresh}
         />
       )}
 
