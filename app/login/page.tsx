@@ -40,8 +40,7 @@ export default function LoginPage() {
       if (!res.ok) {
         setErrorMsg(data.error || 'Email atau password salah.');
       } else {
-        await refresh();
-        window.location.href = '/';
+        window.location.replace('/');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Terjadi kesalahan sistem');

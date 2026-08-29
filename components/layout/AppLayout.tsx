@@ -17,7 +17,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     if (loading) return;
 
     if (!currentUser && pathname !== '/login') {
-      router.replace('/login');
+      window.location.replace('/login');
       return;
     }
 
