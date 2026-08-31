@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Cek keberadaan cookie sesi lansena_session
@@ -24,7 +24,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Jalankan middleware di semua route kecuali asset statis, gambar, dan _next
+     * Jalankan proxy di semua route kecuali asset statis, gambar, dan _next
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2)$).*)',
   ],
