@@ -108,7 +108,7 @@ export default function DaftarPenjualanPage() {
 
   // ── State Filter ──
   const [kategoriFilter, setKategoriFilter] = useState<string>('semua');
-  const [searchTarget, setSearchTarget] = useState<'konsumen' | 'blok' | 'tipe' | 'semua'>('konsumen');
+  const [searchTarget, setSearchTarget] = useState<'semua' | 'konsumen' | 'blok' | 'tipe' | 'marketer'>('semua');
   const [searchValue, setSearchValue] = useState('');
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
@@ -194,89 +194,105 @@ export default function DaftarPenjualanPage() {
   // ── Filtering Logic ──
   const filteredSales = useMemo(() => {
     return enrichedSales.filter((s) => {
-      // 1. Kategori Filter (Semua, Booking, Pemberkasan, KPR, Akad, Lambat, Reject)
-      if (kategoriFilter === 'lambat' && !s.is_lambat) return false;
-      if (kategoriFilter === 'reject' && !s.is_reject) return false;
-      if (kategoriFilter === 'booking') {
-        const st = (s.status || '').toUpperCase();
-        if (st !== 'BOOKING' && !s.step_terakhir?.toUpperCase().includes('BOOKING')) return false;
-      }
-      if (kategoriFilter === 'pemberkasan') {
-        const st = (s.step_terakhir || s.status || '').toUpperCase();
-        if (!st.includes('BERKAS') && !st.includes('PEMBERKASAN') && !st.includes('BI CHECKING')) return false;
-      }
-      if (kategoriFilter === 'kpr') {
+      // 1. Kategori Filter
+      if (kategoriFilter === 'lambat') {
+        if (!s.is_lambat) return false;
+      } else if (kategoriFilter === 'reject') {
         const kpr = (s.kpr_status || '').toUpperCase();
-        const met = (s.metode_bayar || '').toUpperCase();
-        if (!met.includes('KPR') && !kpr) return false;
-      }
-      if (kategoriFilter === 'akad') {
+        const st = (s.status || '').toUpperCase();
+        if (!s.is_reject && !kpr.includes('REJECT') && st !== 'BATAL') return false;
+      } else if (kategoriFilter === 'booking') {
         const st = (s.status || '').toUpperCase();
         const step = (s.step_terakhir || '').toUpperCase();
-        if (st !== 'AKAD' && st !== 'LUNAS' && !step.includes('AKAD') && !step.includes('LUNAS')) return false;
+        if (st !== 'BOOKING' && !step.includes('BOOKING')) return false;
+      } else if (kategoriFilter === 'dp') {
+        const st = (s.status || '').toUpperCase();
+        const step = (s.step_terakhir || '').toUpperCase();
+        if (st !== 'DP' && !step.includes('DP')) return false;
+      } else if (kategoriFilter === 'pemberkasan') {
+        const text = `${s.step_terakhir || ''} ${s.status || ''} ${s.kpr_status || ''}`.toUpperCase();
+        if (!text.includes('BERKAS') && !text.includes('PEMBERKASAN') && !text.includes('BI CHECKING') && !text.includes('SLIK')) return false;
+      } else if (kategoriFilter === 'kpr') {
+        const met = (s.metode_bayar || '').toUpperCase();
+        const kpr = (s.kpr_status || '').toUpperCase();
+        if (!met.includes('KPR') && !kpr) return false;
+      } else if (kategoriFilter === 'cash') {
+        const met = (s.metode_bayar || '').toUpperCase();
+        if (!met.includes('CASH')) return false;
+      } else if (kategoriFilter === 'akad') {
+        const st = (s.status || '').toUpperCase();
+        const step = (s.step_terakhir || '').toUpperCase();
+        const kpr = (s.kpr_status || '').toUpperCase();
+        if (st !== 'AKAD' && !step.includes('AKAD') && kpr !== 'AKAD') return false;
+      } else if (kategoriFilter === 'lunas') {
+        const st = (s.status || '').toUpperCase();
+        const step = (s.step_terakhir || '').toUpperCase();
+        if (st !== 'LUNAS' && !step.includes('LUNAS')) return false;
       }
+      // 'semua' passes through
 
       // 2. Search Text berdasarkan Search Target
       if (searchValue.trim()) {
         const q = searchValue.toLowerCase().trim();
 
+        const cust = customers.find((c) => c.id === s.customer_id);
+        const matchCustomer =
+          (s.customer_nama && s.customer_nama.toLowerCase().includes(q)) ||
+          (cust?.nama && cust.nama.toLowerCase().includes(q)) ||
+          (s.customer_hp && s.customer_hp.toLowerCase().includes(q)) ||
+          (cust?.no_hp && cust.no_hp.toLowerCase().includes(q)) ||
+          (s.customer_job && s.customer_job.toLowerCase().includes(q)) ||
+          (cust?.instansi && cust.instansi.toLowerCase().includes(q)) ||
+          (cust?.pekerjaan && cust.pekerjaan.toLowerCase().includes(q)) ||
+          (s.customer_nik && s.customer_nik.toLowerCase().includes(q)) ||
+          (cust?.nik && cust.nik.toLowerCase().includes(q)) ||
+          (cust?.email && cust.email.toLowerCase().includes(q));
+
+        const unitFull = `blok ${s.block_nama} no ${s.unit_no}`.toLowerCase();
+        const unitShort = `${s.block_nama} ${s.unit_no}`.toLowerCase();
+        const unitSlash = `${s.block_nama}/${s.unit_no}`.toLowerCase();
+        const matchBlok =
+          unitFull.includes(q) ||
+          unitShort.includes(q) ||
+          unitSlash.includes(q) ||
+          (s.block_nama && s.block_nama.toLowerCase().includes(q)) ||
+          (s.unit_no && String(s.unit_no).toLowerCase().includes(q)) ||
+          (s.location_nama && s.location_nama.toLowerCase().includes(q));
+
+        const matchTipe =
+          (s.tipe_unit && s.tipe_unit.toLowerCase().includes(q)) ||
+          (s.subsidy_type_nama && s.subsidy_type_nama.toLowerCase().includes(q)) ||
+          (s.metode_bayar && s.metode_bayar.toLowerCase().includes(q)) ||
+          (s.kpr_status && s.kpr_status.toLowerCase().includes(q)) ||
+          (s.status && s.status.toLowerCase().includes(q)) ||
+          (s.step_terakhir && s.step_terakhir.toLowerCase().includes(q));
+
+        const matchMarketer =
+          (s.marketer_nama && s.marketer_nama.toLowerCase().includes(q));
+
+        const matchGeneral =
+          (s.no_penjualan && s.no_penjualan.toLowerCase().includes(q)) ||
+          String(s.total_harga || '').includes(q);
+
         if (searchTarget === 'konsumen') {
-          const match =
-            (s.customer_nama && s.customer_nama.toLowerCase().includes(q)) ||
-            (s.customer_hp && s.customer_hp.toLowerCase().includes(q)) ||
-            (s.customer_job && s.customer_job.toLowerCase().includes(q)) ||
-            (s.customer_nik && s.customer_nik.toLowerCase().includes(q));
-          if (!match) return false;
+          if (!matchCustomer) return false;
         } else if (searchTarget === 'blok') {
-          const unitFull = `blok ${s.block_nama} no ${s.unit_no}`.toLowerCase();
-          const unitShort = `${s.block_nama} ${s.unit_no}`.toLowerCase();
-          const unitSlash = `${s.block_nama}/${s.unit_no}`.toLowerCase();
-          const match =
-            unitFull.includes(q) ||
-            unitShort.includes(q) ||
-            unitSlash.includes(q) ||
-            (s.block_nama && s.block_nama.toLowerCase().includes(q)) ||
-            (s.unit_no && String(s.unit_no).toLowerCase().includes(q)) ||
-            (s.location_nama && s.location_nama.toLowerCase().includes(q));
-          if (!match) return false;
+          if (!matchBlok) return false;
         } else if (searchTarget === 'tipe') {
-          const match =
-            (s.tipe_unit && s.tipe_unit.toLowerCase().includes(q)) ||
-            (s.subsidy_type_nama && s.subsidy_type_nama.toLowerCase().includes(q)) ||
-            (s.metode_bayar && s.metode_bayar.toLowerCase().includes(q)) ||
-            (s.kpr_status && s.kpr_status.toLowerCase().includes(q)) ||
-            (s.status && s.status.toLowerCase().includes(q)) ||
-            (s.step_terakhir && s.step_terakhir.toLowerCase().includes(q));
-          if (!match) return false;
+          if (!matchTipe) return false;
+        } else if (searchTarget === 'marketer') {
+          if (!matchMarketer) return false;
         } else {
-          // Semua Field
-          const unitFull = `blok ${s.block_nama} no ${s.unit_no}`.toLowerCase();
-          const unitShort = `${s.block_nama} ${s.unit_no}`.toLowerCase();
-          const match =
-            (s.customer_nama && s.customer_nama.toLowerCase().includes(q)) ||
-            (s.customer_hp && s.customer_hp.toLowerCase().includes(q)) ||
-            (s.customer_job && s.customer_job.toLowerCase().includes(q)) ||
-            (s.customer_nik && s.customer_nik.toLowerCase().includes(q)) ||
-            (s.block_nama && s.block_nama.toLowerCase().includes(q)) ||
-            (s.unit_no && String(s.unit_no).toLowerCase().includes(q)) ||
-            unitFull.includes(q) ||
-            unitShort.includes(q) ||
-            (s.location_nama && s.location_nama.toLowerCase().includes(q)) ||
-            (s.tipe_unit && s.tipe_unit.toLowerCase().includes(q)) ||
-            (s.subsidy_type_nama && s.subsidy_type_nama.toLowerCase().includes(q)) ||
-            (s.metode_bayar && s.metode_bayar.toLowerCase().includes(q)) ||
-            (s.kpr_status && s.kpr_status.toLowerCase().includes(q)) ||
-            (s.step_terakhir && s.step_terakhir.toLowerCase().includes(q)) ||
-            (s.status && s.status.toLowerCase().includes(q)) ||
-            (s.marketer_nama && s.marketer_nama.toLowerCase().includes(q)) ||
-            (s.no_penjualan && s.no_penjualan.toLowerCase().includes(q));
-          if (!match) return false;
+          // 'semua' - cocok jika salah satu field cocok
+          if (!matchCustomer && !matchBlok && !matchTipe && !matchMarketer && !matchGeneral) {
+            return false;
+          }
         }
       }
 
       return true;
     });
-  }, [enrichedSales, kategoriFilter, searchTarget, searchValue]);
+  }, [enrichedSales, customers, kategoriFilter, searchTarget, searchValue]);
 
   // ── Pagination ──
   const totalPages = Math.ceil(filteredSales.length / pageSize) || 1;
@@ -380,12 +396,15 @@ export default function DaftarPenjualanPage() {
               className="border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs grow sm:grow-0"
             >
               <option value="semua">Semua Penjualan</option>
-              <option value="booking">Status Booking</option>
-              <option value="pemberkasan">Status Pemberkasan</option>
               <option value="kpr">Penjualan KPR</option>
-              <option value="akad">Status Akad / Lunas</option>
-              <option value="lambat">Penjualan Progres Lambat (&gt; 14 Hari)</option>
-              <option value="reject">Penjualan KPR Reject / Batal</option>
+              <option value="cash">Penjualan Cash (Keras / Bertahap)</option>
+              <option value="booking">Status Booking</option>
+              <option value="dp">Status Terbayar DP</option>
+              <option value="pemberkasan">Status Pemberkasan Bank</option>
+              <option value="akad">Status Sudah Akad</option>
+              <option value="lunas">Status Lunas</option>
+              <option value="lambat">Progres Lambat (&gt; 14 Hari)</option>
+              <option value="reject">KPR Reject / Batal</option>
             </select>
 
             {/* Dropdown Field Target Search */}
@@ -397,10 +416,11 @@ export default function DaftarPenjualanPage() {
               }}
               className="border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs grow sm:grow-0"
             >
-              <option value="konsumen">Nama Konsumen</option>
-              <option value="blok">Nama Blok / Unit</option>
-              <option value="tipe">Type Penjualan</option>
-              <option value="semua">Semua Field</option>
+              <option value="semua">Semua Kolom (Otomatis)</option>
+              <option value="konsumen">Nama Konsumen / Kontak</option>
+              <option value="blok">Nama Blok / No Unit / Lokasi</option>
+              <option value="tipe">Tipe Unit / Metode Bayar</option>
+              <option value="marketer">Nama Marketer</option>
             </select>
 
             {/* Input Search Box & Tombol Cari */}

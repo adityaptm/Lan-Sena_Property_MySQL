@@ -182,20 +182,51 @@ export default function UnitRumahPage() {
       return;
     }
 
-    // Cek duplikasi No Unit dalam Blok yang sama.
-    // Selaras dengan UNIQUE KEY (block_id, no_unit) di database —
-    // ini validasi lapis pertama di client, DB tetap jadi pengaman terakhir.
-    const isDuplicate = units.some(
-      (u) =>
-        u.block_id === unitForm.block_id &&
-        u.no_unit.trim().toLowerCase() ===
-          unitForm.no_unit.trim().toLowerCase() &&
-        u.id !== editingUnitId, // abaikan unit yang sedang diedit sendiri
+    // Cek duplikasi No Unit HANYA dalam Blok yang sama
+    const targetBlock = blocks.find(
+      (b) =>
+        b.id === unitForm.block_id ||
+        (unitForm.block_nama &&
+          b.nama_blok?.toLowerCase() === unitForm.block_nama.toLowerCase()),
     );
+    const targetBlockId = unitForm.block_id || targetBlock?.id || "";
+    const targetBlockNama = (
+      unitForm.block_nama ||
+      targetBlock?.nama_blok ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+    const targetNoUnit = unitForm.no_unit.trim().toLowerCase();
+
+    const isDuplicate = units.some((u) => {
+      if (u.id === editingUnitId) return false;
+
+      const uNo = (u.no_unit || "").trim().toLowerCase();
+      if (uNo !== targetNoUnit) return false;
+
+      const uBlock = blocks.find(
+        (b) =>
+          b.id === u.block_id ||
+          (u.block_nama &&
+            b.nama_blok?.toLowerCase() === u.block_nama.toLowerCase()),
+      );
+      const uBlockId = u.block_id || uBlock?.id || "";
+      const uBlockNama = (u.block_nama || uBlock?.nama_blok || "")
+        .trim()
+        .toLowerCase();
+
+      // Cek apakah benar-benar di blok yang sama (via ID atau via Nama Blok)
+      const isSameBlock =
+        (targetBlockId && uBlockId && targetBlockId === uBlockId) ||
+        (targetBlockNama && uBlockNama && targetBlockNama === uBlockNama);
+
+      return Boolean(isSameBlock);
+    });
 
     if (isDuplicate) {
       alert(
-        `Unit "${unitForm.no_unit}" di blok ini sudah terdaftar. Gunakan nomor unit lain.`,
+        `Unit "${unitForm.no_unit}" di Blok ${unitForm.block_nama || "ini"} sudah terdaftar. Gunakan nomor unit lain untuk blok ini.`,
       );
       return;
     }
