@@ -35,10 +35,16 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       
-      const data = await res.json();
+      let data: any = {};
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try {
+          data = await res.json();
+        } catch {}
+      }
       
       if (!res.ok) {
-        setErrorMsg(data.error || 'Email atau password salah.');
+        setErrorMsg(data?.error || 'Email atau kata sandi salah. Silakan periksa kembali.');
       } else {
         window.location.replace('/');
       }

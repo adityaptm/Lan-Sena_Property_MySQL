@@ -145,15 +145,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
+    paddingHorizontal: 20,
   },
   signatureBlockLeft: {
-    alignItems: "flex-start",
-    width: 250,
-    paddingLeft: 5,
+    alignItems: "center",
+    width: 220,
   },
   signatureBlockRightContainer: {
     alignItems: "center",
-    width: 250,
+    width: 220,
   },
   tanggalText: {
     fontSize: 10,
@@ -173,7 +173,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginBottom: 36,
     color: "#000",
-    textAlign: "left",
+    textAlign: "center",
+    width: "100%",
   },
   signatureName: {
     fontSize: 10,
@@ -184,9 +185,10 @@ const styles = StyleSheet.create({
   },
   signatureNameLeft: {
     fontSize: 10,
-    textAlign: "left",
+    textAlign: "center",
     fontFamily: "Helvetica-Bold",
     color: "#000",
+    width: "100%",
   },
 });
 

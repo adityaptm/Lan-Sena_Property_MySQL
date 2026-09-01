@@ -10,6 +10,8 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   decimalNumbers: true,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
 });
 
 export async function query<T = any>(

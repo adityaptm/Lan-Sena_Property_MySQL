@@ -1990,35 +1990,142 @@ export default function DetailPenjualanPage() {
               </div>
             ) : activeTab === "info_kpr" ? (
               <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-sm mb-6">
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="font-semibold text-slate-600">Bank</span>
-                    <span>:</span>
-                    <span className="font-bold text-slate-800">
-                      {bank?.nama_bank || sale.bank_nama || "-"}
-                    </span>
+                {/* Informasi KPR Section */}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 mb-6 shadow-sm">
+                  <h4 className="font-bold text-slate-800 text-base mb-4 border-b border-slate-200 pb-2 flex items-center gap-2">
+                    <Landmark className="w-4 h-4 text-teal-600" />
+                    <span>Informasi KPR</span>
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-[140px_10px_1fr]">
+                        <span className="font-semibold text-slate-600">Bank</span>
+                        <span>:</span>
+                        <span className="font-bold text-slate-800">
+                          {bank?.nama_bank || sale.bank_nama || "-"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-[140px_10px_1fr]">
+                        <span className="font-semibold text-slate-600">
+                          Kredit Pengajuan
+                        </span>
+                        <span>:</span>
+                        <span className="font-bold text-slate-800">
+                          {formatRupiah(sale.kredit_pengajuan || unit?.maksimal_kredit || 0)}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-[140px_10px_1fr]">
+                        <span className="font-semibold text-slate-600">Status</span>
+                        <span>:</span>
+                        <span
+                          className={`inline-block w-fit px-2.5 py-0.5 rounded border text-xs font-bold ${statusBadgeClass(
+                            sale.kpr_status === "REJECTED" ? "REJECTED" : currentKprStatus,
+                          )}`}
+                        >
+                          {sale.kpr_status === "REJECTED" ? "REJECTED" : currentKprStatus}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-[140px_10px_1fr]">
+                        <span className="font-semibold text-slate-600">
+                          Tgl Keluar Hasil
+                        </span>
+                        <span>:</span>
+                        <span className="font-semibold text-slate-800">
+                          {kprSubmissions[0]?.tanggal
+                            ? new Date(kprSubmissions[0].tanggal).toLocaleDateString("id-ID", {
+                                weekday: "long",
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-[140px_10px_1fr]">
+                        <span className="font-semibold text-slate-600">
+                          Keterangan
+                        </span>
+                        <span>:</span>
+                        <span className="text-slate-800 font-medium">
+                          {kprSubmissions[0]?.keterangan || "-"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="font-semibold text-slate-600">
-                      Kredit Pengajuan
-                    </span>
-                    <span>:</span>
-                    <span className="font-bold text-slate-800">
-                      {formatRupiah(
-                        sale.kredit_pengajuan || unit?.maksimal_kredit || 0,
-                      )}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[130px_10px_1fr]">
-                    <span className="font-semibold text-slate-600">Status</span>
-                    <span>:</span>
-                    <span
-                      className={`inline-block w-fit px-2.5 py-0.5 rounded border text-xs font-bold ${statusBadgeClass(
-                        sale.kpr_status === "REJECTED" ? "REJECTED" : currentKprStatus,
-                      )}`}
-                    >
-                      {sale.kpr_status === "REJECTED" ? "REJECTED" : currentKprStatus}
-                    </span>
+
+                  {/* Summary Table Rincian KPR */}
+                  <div className="mt-5 pt-4 border-t border-slate-200 overflow-x-auto">
+                    <table className="w-full text-sm border border-slate-200 rounded-lg overflow-hidden bg-white">
+                      <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left">Komponen KPR</th>
+                          <th className="px-4 py-2.5 text-right">Nominal</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        <tr>
+                          <td className="px-4 py-2 text-slate-600 font-medium">Biaya Tambahan</td>
+                          <td className="px-4 py-2 text-right font-semibold text-slate-800">
+                            {formatRupiah(
+                              kprSubmissions.reduce((sum, k) => sum + (k.biaya_tambahan || 0), 0) ||
+                                totalBiayaTambahan
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 text-slate-600 font-medium">Kredit Pengajuan</td>
+                          <td className="px-4 py-2 text-right font-semibold text-slate-800">
+                            {formatRupiah(sale.kredit_pengajuan || unit?.maksimal_kredit || 0)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 text-slate-600 font-medium">Kredit ACC</td>
+                          <td className="px-4 py-2 text-right font-semibold text-teal-700">
+                            {formatRupiah(kreditKprAcc)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 text-slate-600 font-medium">Kredit ACC Terbayar</td>
+                          <td className="px-4 py-2 text-right font-semibold text-emerald-600">
+                            {formatRupiah(
+                              payments
+                                .filter(
+                                  (p) =>
+                                    (p.diterima_dari || "").toLowerCase().includes("bank") ||
+                                    (p.deskripsi || "").toLowerCase().includes("kpr") ||
+                                    (p.deskripsi || "").toLowerCase().includes("pencairan") ||
+                                    (p.bank_tujuan || "").toLowerCase().includes("kpr")
+                                )
+                                .reduce((sum, p) => sum + (p.nominal || 0), 0)
+                            )}
+                          </td>
+                        </tr>
+                        <tr className="bg-slate-50 font-bold">
+                          <td className="px-4 py-2.5 text-slate-800">Sisa ACC</td>
+                          <td className="px-4 py-2.5 text-right text-blue-700">
+                            {formatRupiah(
+                              Math.max(
+                                0,
+                                kreditKprAcc -
+                                  payments
+                                    .filter(
+                                      (p) =>
+                                        (p.diterima_dari || "").toLowerCase().includes("bank") ||
+                                        (p.deskripsi || "").toLowerCase().includes("kpr") ||
+                                        (p.deskripsi || "").toLowerCase().includes("pencairan") ||
+                                        (p.bank_tujuan || "").toLowerCase().includes("kpr")
+                                    )
+                                    .reduce((sum, p) => sum + (p.nominal || 0), 0)
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
