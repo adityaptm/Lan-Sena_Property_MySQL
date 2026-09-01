@@ -141,6 +141,19 @@ const FINANCE_READ_TABLES = new Set<string>([
   'kelurahan',
 ]);
 
+export function normalizeRole(role?: string): UserRole | string {
+  if (!role) return '';
+  const r = role.trim().toLowerCase();
+  if (r === 'super admin' || r === 'superadmin') return 'Super Admin';
+  if (r === 'programmer') return 'Programmer';
+  if (r === 'admin') return 'Admin';
+  if (r === 'marketing') return 'Marketing';
+  if (r === 'finance') return 'Finance';
+  if (r === 'gudang') return 'Gudang';
+  if (r === 'viewer') return 'Viewer';
+  return role.trim();
+}
+
 /**
  * Main permission checker function (Single source of truth)
  */
@@ -150,21 +163,22 @@ export function hasPermission(
   action: ActionType
 ): boolean {
   if (!role) return false;
+  const normalized = normalizeRole(role);
 
   // 0. Tabel regional (wilayah) boleh dibaca oleh semua role yang login
   const REGIONAL_TABLES = ['provinsi', 'kabupaten_kota', 'kecamatan', 'kelurahan'];
   if (action === 'select' && REGIONAL_TABLES.includes(table)) return true;
 
   // 1. Super Admin & Programmer: full access everywhere
-  if (role === 'Super Admin' || role === 'Programmer') return true;
+  if (normalized === 'Super Admin' || normalized === 'Programmer') return true;
 
   // 2. Admin: full access to operational tables (user restrictions handled separately in canModifyUser)
-  if (role === 'Admin') {
+  if (normalized === 'Admin') {
     return true;
   }
 
   // 3. Marketing: Read-only di modul penjualan/prospek/booking + Pengecualian CRUD di sale_payments & sale_additional_costs
-  if (role === 'Marketing') {
+  if (normalized === 'Marketing') {
     if (action === 'select') {
       return (
         MARKETING_READ_TABLES.has(table) ||
@@ -180,7 +194,7 @@ export function hasPermission(
   }
 
   // 4. Finance: Read-only di modul Keuangan & Laporan
-  if (role === 'Finance') {
+  if (normalized === 'Finance') {
     if (action === 'select') {
       return FINANCE_READ_TABLES.has(table);
     }
@@ -188,7 +202,7 @@ export function hasPermission(
   }
 
   // 5. Gudang: Opsi A — Full CRUD pada modul Gudang, Read-Only pada referensi dasar/dashboard
-  if (role === 'Gudang') {
+  if (normalized === 'Gudang') {
     if (GUDANG_TABLES.has(table)) {
       return true;
     }
@@ -203,7 +217,7 @@ export function hasPermission(
   }
 
   // 6. Viewer: Read-Only HANYA pada tabel ringkasan dashboard
-  if (role === 'Viewer') {
+  if (normalized === 'Viewer') {
     if (action === 'select') {
       return DASHBOARD_SUMMARY_TABLES.has(table);
     }
@@ -225,21 +239,25 @@ export function canModifyUser(
     return { allowed: false, reason: 'Pengguna belum terautentikasi.' };
   }
 
-  if (actingUserRole === 'Super Admin' || actingUserRole === 'Programmer') {
+  const actRole = normalizeRole(actingUserRole);
+  const tgtRole = normalizeRole(targetUserRole);
+  const newRole = normalizeRole(newDataRole);
+
+  if (actRole === 'Super Admin' || actRole === 'Programmer') {
     return { allowed: true };
   }
 
-  if (actingUserRole === 'Admin') {
-    if (targetUserRole === 'Super Admin') {
-      return { allowed: false, reason: 'Akses ditolak: Admin tidak dapat mengedit atau menghapus akun Super Admin.' };
+  if (actRole === 'Admin') {
+    if (tgtRole === 'Super Admin' || tgtRole === 'Programmer') {
+      return { allowed: false, reason: 'Akses ditolak: Admin tidak dapat mengedit atau menghapus akun Super Admin / Programmer.' };
     }
-    if (newDataRole === 'Super Admin') {
-      return { allowed: false, reason: 'Akses ditolak: Admin tidak dapat membuat atau me-assign role Super Admin.' };
+    if (newRole === 'Super Admin' || newRole === 'Programmer') {
+      return { allowed: false, reason: 'Akses ditolak: Admin tidak dapat membuat atau me-assign role Super Admin / Programmer.' };
     }
     return { allowed: true };
   }
 
-  return { allowed: false, reason: 'Akses ditolak: Hanya Super Admin dan Admin yang memiliki izin kelola pengguna.' };
+  return { allowed: false, reason: 'Akses ditolak: Hanya Super Admin, Programmer, dan Admin yang memiliki izin kelola pengguna.' };
 }
 
 /**
@@ -247,25 +265,26 @@ export function canModifyUser(
  */
 export function canAccessModule(role: string | undefined, moduleName: ModuleName): boolean {
   if (!role) return false;
-  if (role === 'Super Admin' || role === 'Admin' || role === 'Programmer') return true;
+  const normalized = normalizeRole(role);
+  if (normalized === 'Super Admin' || normalized === 'Programmer' || normalized === 'Admin') return true;
 
   switch (moduleName) {
     case 'Kontak':
-      return role === 'Marketing' || role === 'Finance';
+      return normalized === 'Marketing' || normalized === 'Finance';
     case 'Unit Rumah':
-      return role === 'Marketing' || role === 'Finance';
+      return normalized === 'Marketing' || normalized === 'Finance';
     case 'Marketing':
-      return role === 'Marketing';
+      return normalized === 'Marketing';
     case 'Gudang':
-      return role === 'Gudang';
+      return normalized === 'Gudang';
     case 'Keuangan':
-      return role === 'Finance';
+      return normalized === 'Finance';
     case 'Penjualan':
-      return role === 'Marketing' || role === 'Finance';
+      return normalized === 'Marketing' || normalized === 'Finance';
     case 'Laporan':
-      return role === 'Marketing' || role === 'Finance' || role === 'Gudang';
+      return normalized === 'Marketing' || normalized === 'Finance' || normalized === 'Gudang';
     case 'Pengguna':
-      return false; // Hanya Super Admin & Admin
+      return normalized === 'Super Admin' || normalized === 'Programmer' || normalized === 'Admin';
     default:
       return false;
   }

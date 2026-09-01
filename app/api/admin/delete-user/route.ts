@@ -10,9 +10,10 @@ export async function DELETE(req: NextRequest) {
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const caller = decryptToken(token);
-    if (!caller || caller.role !== 'Super Admin') {
+    const role = caller?.role?.trim()?.toLowerCase();
+    if (!caller || (role !== 'super admin' && role !== 'programmer')) {
       return NextResponse.json(
-        { error: 'Forbidden: Hanya Super Admin yang dapat menghapus akun pengguna.' },
+        { error: 'Forbidden: Hanya Super Admin dan Programmer yang dapat menghapus akun pengguna.' },
         { status: 403 }
       );
     }

@@ -12,10 +12,12 @@ export async function POST(req: NextRequest) {
     const caller = decryptToken(token);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const callerRole = caller.role;
-    if (callerRole !== 'Super Admin' && callerRole !== 'Admin') {
+    const callerRole = caller.role?.trim();
+    const isSuperOrProgrammer = callerRole?.toLowerCase() === 'super admin' || callerRole?.toLowerCase() === 'programmer';
+
+    if (!isSuperOrProgrammer && callerRole?.toLowerCase() !== 'admin') {
       return NextResponse.json(
-        { error: 'Forbidden: Hanya Super Admin atau Admin yang dapat mengubah data akun pengguna.' },
+        { error: 'Forbidden: Hanya Super Admin, Programmer, atau Admin yang dapat mengubah data akun pengguna.' },
         { status: 403 }
       );
     }

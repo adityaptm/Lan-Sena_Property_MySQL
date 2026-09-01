@@ -22,8 +22,7 @@ import {
   Menu,
 } from 'lucide-react';
 import { useData } from '@/lib/data-context';
-import type { UserRole } from '@/types';
-import { canAccessModule, ModuleName } from '@/lib/permissions';
+import { canAccessModule, ModuleName, normalizeRole } from '@/lib/permissions';
 
 interface NavGroup {
   title: ModuleName;
@@ -111,7 +110,7 @@ const NAV_MENU: NavGroup[] = [
     icon: UserCheck,
     items: [
       { label: 'Manajemen User', href: '/pengguna' },
-      { label: 'Kotak Sampah (Trash)', href: '/pengaturan/trash', roles: ['Super Admin'] },
+      { label: 'Kotak Sampah (Trash)', href: '/pengaturan/trash', roles: ['Super Admin', 'Programmer'] },
     ],
   },
 ];
@@ -258,8 +257,12 @@ export function Sidebar({
               {isOpen && (
                 <div className="mt-1 space-y-0.5">
                   {group.items.map((item) => {
-                    if (item.roles && (!currentUser?.role || !item.roles.includes(currentUser.role as UserRole))) {
-                      return null;
+                    if (item.roles) {
+                      const userR = normalizeRole(currentUser?.role);
+                      const isSuper = userR === 'Super Admin' || userR === 'Programmer';
+                      if (!isSuper && !item.roles.map(r => normalizeRole(r)).includes(userR as any)) {
+                        return null;
+                      }
                     }
                     const active = isLinkActive(item.href);
                     return (

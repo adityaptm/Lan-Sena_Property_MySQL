@@ -13,11 +13,12 @@ export async function POST(req: NextRequest) {
     const caller = decryptToken(token);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const callerRole = caller.role;
+    const callerRole = caller.role?.trim();
+    const isSuperOrProgrammer = callerRole?.toLowerCase() === 'super admin' || callerRole?.toLowerCase() === 'programmer';
 
-    if (callerRole !== 'Super Admin' && callerRole !== 'Admin') {
+    if (!isSuperOrProgrammer && callerRole?.toLowerCase() !== 'admin') {
       return NextResponse.json(
-        { error: 'Forbidden: Hanya Super Admin atau Admin yang dapat membuat akun pengguna.' },
+        { error: 'Forbidden: Hanya Super Admin, Programmer, atau Admin yang dapat membuat akun pengguna.' },
         { status: 403 }
       );
     }
