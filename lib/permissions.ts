@@ -1,4 +1,4 @@
-export type UserRole = 'Super Admin' | 'Admin' | 'Marketing' | 'Finance' | 'Gudang' | 'Viewer';
+export type UserRole = 'Super Admin' | 'Admin' | 'Programmer' | 'Marketing' | 'Finance' | 'Gudang' | 'Viewer';
 export type ActionType = 'select' | 'insert' | 'update' | 'delete';
 
 // Modul mapping untuk UI & Navigation
@@ -155,8 +155,8 @@ export function hasPermission(
   const REGIONAL_TABLES = ['provinsi', 'kabupaten_kota', 'kecamatan', 'kelurahan'];
   if (action === 'select' && REGIONAL_TABLES.includes(table)) return true;
 
-  // 1. Super Admin: full access everywhere
-  if (role === 'Super Admin') return true;
+  // 1. Super Admin & Programmer: full access everywhere
+  if (role === 'Super Admin' || role === 'Programmer') return true;
 
   // 2. Admin: full access to operational tables (user restrictions handled separately in canModifyUser)
   if (role === 'Admin') {
@@ -225,7 +225,7 @@ export function canModifyUser(
     return { allowed: false, reason: 'Pengguna belum terautentikasi.' };
   }
 
-  if (actingUserRole === 'Super Admin') {
+  if (actingUserRole === 'Super Admin' || actingUserRole === 'Programmer') {
     return { allowed: true };
   }
 
@@ -247,7 +247,7 @@ export function canModifyUser(
  */
 export function canAccessModule(role: string | undefined, moduleName: ModuleName): boolean {
   if (!role) return false;
-  if (role === 'Super Admin' || role === 'Admin') return true;
+  if (role === 'Super Admin' || role === 'Admin' || role === 'Programmer') return true;
 
   switch (moduleName) {
     case 'Kontak':

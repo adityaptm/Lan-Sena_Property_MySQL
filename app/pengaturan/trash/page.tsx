@@ -29,7 +29,7 @@ export default function TrashPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const isSuperAdmin = currentUser?.role === 'Super Admin';
+  const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.role === 'Programmer';
 
   const handleRestoreConfirm = async () => {
     if (!selectedItem) return;

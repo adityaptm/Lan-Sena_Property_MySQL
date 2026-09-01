@@ -5,10 +5,11 @@ import { Menu, Bell, AlertTriangle, CheckCircle, Search, LogOut } from 'lucide-r
 import { useData } from '@/lib/data-context';
 
 interface HeaderProps {
-  onMobileMenuToggle: () => void;
+  onToggleSidebar: () => void;
+  isSidebarOpen?: boolean;
 }
 
-export function Header({ onMobileMenuToggle }: HeaderProps) {
+export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
   const { items, disbursementRequests, currentUser } = useData();
 
   const handleLogout = async () => {
@@ -30,8 +31,9 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
     <header className="sticky top-0 z-20 h-16 bg-white border-b border-slate-200 px-4 lg:px-8 flex items-center justify-between">
       <div className="flex items-center gap-4">
         <button
-          onClick={onMobileMenuToggle}
-          className="lg:hidden p-2 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          onClick={onToggleSidebar}
+          className="p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          title={isSidebarOpen ? "Tutup Sidebar" : "Buka Sidebar"}
         >
           <Menu className="w-5 h-5" />
         </button>

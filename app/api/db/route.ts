@@ -48,10 +48,10 @@ async function verifyPermission(
     throw new Error("Request action tidak valid");
   }
 
-  // restore_trash punya pengecekan izin sendiri (hanya Super Admin), tidak
+  // restore_trash punya pengecekan izin sendiri (hanya Super Admin / Programmer), tidak
   // beroperasi pada satu tabel tunggal jadi lewati pengecekan generic di bawah.
   if (action.action === "restore_trash") {
-    if (session.role !== "Super Admin") {
+    if (session.role !== "Super Admin" && session.role !== "Programmer") {
       throw new Error(
         "Akses ditolak: hanya Super Admin yang dapat memulihkan data dari trash.",
       );

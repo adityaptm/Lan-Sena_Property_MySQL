@@ -11,7 +11,7 @@ import type { Column } from '@/components/ui/DataTable';
 import type { UserProfile } from '@/types';
 
 // Role yang bisa dipilih oleh masing-masing level akses
-const ALL_ROLES = ['Super Admin', 'Admin', 'Marketing', 'Finance', 'Gudang', 'Viewer'];
+const ALL_ROLES = ['Super Admin', 'Programmer', 'Admin', 'Marketing', 'Finance', 'Gudang', 'Viewer'];
 const ADMIN_ROLES = ['Admin', 'Marketing', 'Finance', 'Gudang', 'Viewer']; // Admin tidak bisa assign Super Admin
 
 export default function PenggunaPage() {
@@ -28,9 +28,9 @@ export default function PenggunaPage() {
   // Add user form
   const [form, setForm] = useState({ nama: '', email: '', password: '', role: 'Viewer' });
 
-  const isSuperAdmin = currentUser?.role === 'Super Admin';
+  const isSuperAdmin = currentUser?.role === 'Super Admin' || currentUser?.role === 'Programmer';
   const isAdmin = currentUser?.role === 'Admin';
-  // Baik Super Admin maupun Admin bisa mengelola user
+  // Baik Super Admin, Programmer maupun Admin bisa mengelola user
   const canManage = isSuperAdmin || isAdmin;
 
   // Role list berdasarkan role caller
@@ -126,6 +126,7 @@ export default function PenggunaPage() {
 
   const roleBadge = (role: string) => {
     if (role === 'Super Admin') return <Badge variant="sky">{role}</Badge>;
+    if (role === 'Programmer') return <Badge variant="sky">{role}</Badge>;
     if (role === 'Admin') return <Badge variant="teal">{role}</Badge>;
     if (role === 'Marketing') return <Badge variant="emerald">{role}</Badge>;
     if (role === 'Finance') return <Badge variant="amber">{role}</Badge>;
@@ -137,6 +138,7 @@ export default function PenggunaPage() {
   const canActOn = (row: UserProfile) => {
     if (row.id === currentUser?.id) return false; // tidak bisa ubah diri sendiri
     if (isAdmin && row.role === 'Super Admin') return false; // Admin tidak bisa ubah Super Admin
+    if (isAdmin && row.role === 'Programmer') return false; // Admin tidak bisa ubah Programmer
     return true;
   };
 

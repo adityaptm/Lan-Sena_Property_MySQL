@@ -119,9 +119,16 @@ const NAV_MENU: NavGroup[] = [
 interface SidebarProps {
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
+  desktopOpen?: boolean;
+  setDesktopOpen?: (open: boolean) => void;
 }
 
-export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
+export function Sidebar({
+  mobileOpen,
+  setMobileOpen,
+  desktopOpen = true,
+  setDesktopOpen,
+}: SidebarProps) {
   const pathname = usePathname();
   const { currentUser } = useData();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
@@ -169,8 +176,12 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
           </div>
         </Link>
         <button
-          onClick={() => setMobileOpen(false)}
-          className="lg:hidden p-1 rounded-lg text-slate-400 hover:text-slate-200"
+          onClick={() => {
+            setMobileOpen(false);
+            if (setDesktopOpen) setDesktopOpen(false);
+          }}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition cursor-pointer"
+          title="Tutup Sidebar"
         >
           <X className="w-5 h-5" />
         </button>
@@ -305,7 +316,11 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block fixed inset-y-0 left-0 z-30">
+      <aside
+        className={`hidden lg:block fixed inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out ${
+          desktopOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         {sidebarContent}
       </aside>
 
@@ -313,10 +328,12 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="relative z-10">{sidebarContent}</div>
+          <div className="relative z-10 animate-in slide-in-from-left duration-200">
+            {sidebarContent}
+          </div>
         </div>
       )}
     </>

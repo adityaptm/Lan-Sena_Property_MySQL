@@ -9,9 +9,10 @@ import { Modal } from '@/components/ui/Modal';
 import {
   Plus, Eye, Trash2, Search, Printer, Download, Filter, RefreshCw,
   Clock, TrendingDown, XCircle, CheckCircle2, Wallet, AlertTriangle,
-  ChevronDown, ChevronRight, FileSpreadsheet, X,
+  ChevronDown, ChevronRight, FileSpreadsheet, X, Edit3,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { EditPenjualanModal } from '@/components/penjualan/forms/EditPenjualanModal';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,10 @@ export default function DaftarPenjualanPage() {
 
   // Expanded row detail
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+
+  // Edit Sale modal state
+  const [editingSale, setEditingSale] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // ── Enriched Data ──
   const enrichedSales = useMemo(() => {
@@ -627,11 +632,14 @@ export default function DaftarPenjualanPage() {
                               <Printer className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => handleExportSingleRowExcel(r)}
-                              className="p-1.5 bg-[#f39c12] hover:bg-amber-600 text-white rounded transition shadow-2xs"
-                              title="Export Excel"
+                              onClick={() => {
+                                setEditingSale(r);
+                                setShowEditModal(true);
+                              }}
+                              className="p-1.5 bg-[#f39c12] hover:bg-amber-600 text-white rounded transition shadow-2xs cursor-pointer"
+                              title="Edit Penjualan"
                             >
-                              <FileSpreadsheet className="w-3.5 h-3.5" />
+                              <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDelete(r.id)}
@@ -730,6 +738,18 @@ export default function DaftarPenjualanPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Penjualan Modal */}
+      {showEditModal && editingSale && (
+        <EditPenjualanModal
+          sale={editingSale}
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingSale(null);
+          }}
+        />
+      )}
     </AppLayout>
   );
 }

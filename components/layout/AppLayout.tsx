@@ -9,9 +9,34 @@ import { canAccessModule, ModuleName } from '@/lib/permissions';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(true);
   const { currentUser, loading } = useData();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Load saved sidebar state
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('lansena_sidebar_open');
+      if (saved !== null) {
+        setDesktopOpen(saved === 'true');
+      }
+    } catch {}
+  }, []);
+
+  const handleToggleSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setMobileOpen((prev) => !prev);
+    } else {
+      setDesktopOpen((prev) => {
+        const next = !prev;
+        try {
+          localStorage.setItem('lansena_sidebar_open', String(next));
+        } catch {}
+        return next;
+      });
+    }
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -61,11 +86,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-      <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+    <div className="min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F5F6F8]">
+      <Sidebar
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+        desktopOpen={desktopOpen}
+        setDesktopOpen={setDesktopOpen}
+      />
 
-      <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
-        <Header onMobileMenuToggle={() => setMobileOpen(true)} />
+      <div
+        className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ease-in-out ${
+          desktopOpen ? 'lg:pl-64' : 'lg:pl-0'
+        }`}
+      >
+        <Header
+          onToggleSidebar={handleToggleSidebar}
+          isSidebarOpen={desktopOpen}
+        />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
           {children}
         </main>
