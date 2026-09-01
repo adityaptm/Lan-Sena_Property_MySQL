@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function PrintSpprClient({ id }: Props) {
-  const { sales, customers, units, loading } = useData();
+  const { sales, customers, units, saleDiscounts, saleAdditionalCosts, loading } = useData();
 
   const [pdfUrl, setPdfUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -20,6 +20,8 @@ export default function PrintSpprClient({ id }: Props) {
   // (misal customerId, id_customer, dst)
   const customer = customers.find((c) => c.id === sale?.customer_id);
   const unit = units.find((u) => u.id === sale?.unit_id);
+  const discounts = (saleDiscounts || []).filter((d) => d.sale_id === id);
+  const additionalCosts = (saleAdditionalCosts || []).filter((c) => c.sale_id === id);
 
   useEffect(() => {
     if (!sale || !customer || !unit) return;
@@ -58,6 +60,8 @@ export default function PrintSpprClient({ id }: Props) {
             sale={sale}
             customer={customerWithAddress}
             unit={unit}
+            discounts={discounts}
+            additionalCosts={additionalCosts}
             baseUrl={window.location.origin}
             logoSrc={logoSrc}
           />

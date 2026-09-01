@@ -169,27 +169,59 @@ const styles = StyleSheet.create({
   // --- Signatures ---
   signatureContainer: {
     flexDirection: 'row',
-    marginTop: 10,
+    marginTop: 15,
     justifyContent: 'space-between',
-    paddingLeft: 15,
-    paddingRight: 15,
+    paddingLeft: 10,
+    paddingRight: 10,
   },
-  signatureBlock: {
+  signatureBlockLeft: {
     alignItems: 'center',
-    width: 200,
+    width: 220,
   },
-  signatureDate: {
-    marginBottom: 5,
+  signatureBlockRight: {
+    alignItems: 'center',
+    width: 220,
+  },
+  tanggalText: {
+    fontSize: 9,
+    marginBottom: 4,
+    textAlign: 'center',
+    width: '100%',
+  },
+  signatureTitle: {
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    textAlign: 'center',
+    width: '100%',
   },
   signatureSpace: {
     height: 45,
   },
+  signatureName: {
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    textDecoration: 'underline',
+    textAlign: 'center',
+    width: '100%',
+  },
 });
 
-export const SpprDocument = ({ sale, customer, unit, baseUrl, logoSrc }: any) => {
+export const SpprDocument = ({
+  sale,
+  customer,
+  unit,
+  discounts = [],
+  additionalCosts = [],
+  baseUrl,
+  logoSrc,
+}: any) => {
   const resolvedLogo = logoSrc || LOGO_BASE64;
 
-  const tanggalCetak = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
+  const tanggalCetak = new Date().toLocaleDateString('id-ID', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 
   // Generate nomor surat: XXXX/KodeLokasi/SPPR/Bulan/Tahun
   const tanggalRef = sale.tanggal_booking ? new Date(sale.tanggal_booking) : new Date();
@@ -207,11 +239,35 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl, logoSrc }: any) =>
 
   const noSurat = `${urutan}/${kodeLokasi}/SPPR/${bulan}/${tahun}`;
   const isKPR = sale.metode_bayar === 'KPR';
-  const dpNominal = Number(sale.dp_nominal) || Number(unit?.uang_muka) || 0;
-  const bookingFee = Number(sale.booking_fee) || Number(unit?.booking_fee) || 0;
-  const uangMuka = dpNominal + bookingFee;
-  // kprAmount = maksimal_kredit dari master unit (bukan total_harga - uangMuka)
-  const kprAmount = isKPR ? (Number(unit?.maksimal_kredit) || Number(sale.kredit_pengajuan) || (Number(sale.total_harga || 0) - uangMuka)) : 0;
+
+  // Perhitungan Diskon / Potongan & Biaya Tambahan
+  const initialPotongan = Number(sale?.potongan || sale?.diskon || 0);
+  const totalPotongan =
+    discounts && discounts.length > 0
+      ? discounts.reduce((sum: number, item: any) => sum + (item.nominal || 0), 0)
+      : initialPotongan;
+  const totalBiayaTambahan =
+    additionalCosts && additionalCosts.length > 0
+      ? additionalCosts.reduce((sum: number, item: any) => sum + (item.nominal || 0), 0)
+      : 0;
+
+  const hargaAwal =
+    Number(sale?.harga_kesepakatan || sale?.harga_jual_awal || sale?.total_harga || unit?.harga || 0);
+  const jumlahKewajiban = Math.max(0, hargaAwal - totalPotongan + totalBiayaTambahan);
+
+  const dpNominal = Number(sale?.dp_nominal) || Number(unit?.uang_muka) || 0;
+  const bookingFee = Number(sale?.booking_fee) || Number(unit?.booking_fee) || 0;
+  const rawUangMuka = dpNominal + bookingFee;
+
+  // kprAmount = maksimal_kredit dari master unit (atau kredit_pengajuan)
+  const kprAmount = isKPR
+    ? Number(unit?.maksimal_kredit) || Number(sale.kredit_pengajuan) || Math.max(0, jumlahKewajiban - rawUangMuka)
+    : 0;
+
+  // Uang muka berkurang sesuai potongan
+  const uangMukaFinal = isKPR && kprAmount > 0
+    ? Math.max(0, jumlahKewajiban - kprAmount)
+    : Math.max(0, rawUangMuka - totalPotongan);
 
   return (
     <Document>
@@ -264,7 +320,7 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl, logoSrc }: any) =>
           <View style={styles.row}><Text style={styles.labelCell}>Nomor Unit</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.no_unit || '-'}</Text></View>
           <View style={styles.row}><Text style={styles.labelCell}>Luas Tanah</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{unit?.luas_tanah ? `${unit.luas_tanah} m²` : '-'}</Text></View>
           <View style={styles.row}><Text style={styles.labelCell}>Tanah Lebih / Harga</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}></Text></View>
-          <View style={styles.row}><Text style={styles.labelCell}>Jumlah Kewajiban / Uang Muka</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{formatRupiah(sale?.total_harga || 0)} / {formatRupiah(uangMuka)}</Text></View>
+          <View style={styles.row}><Text style={styles.labelCell}>Jumlah Kewajiban / Uang Muka</Text><Text style={styles.colonCell}>:</Text><Text style={styles.valueCellBold}>{formatRupiah(jumlahKewajiban)} / {formatRupiah(uangMukaFinal)}</Text></View>
         </View>
 
         <Text style={styles.paragraph}>
@@ -310,15 +366,22 @@ export const SpprDocument = ({ sale, customer, unit, baseUrl, logoSrc }: any) =>
 
         {/* TANDA TANGAN */}
         <View style={styles.signatureContainer}>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureDate}> </Text>
+          {/* KIRI: PEMBELI */}
+          <View style={styles.signatureBlockLeft}>
+            <View style={{ height: 13 }} />
+            <Text style={styles.signatureTitle}>Yang Menyatakan / Pembeli,</Text>
             <View style={styles.signatureSpace} />
-            <Text>Yang Menyatakan / Pembeli,</Text>
+            <Text style={styles.signatureName}>
+              ({customer?.nama || '.....................................'})
+            </Text>
           </View>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureDate}>Purwakarta, {tanggalCetak}</Text>
+
+          {/* KANAN: TANGGAL & PENJUAL */}
+          <View style={styles.signatureBlockRight}>
+            <Text style={styles.tanggalText}>Purwakarta, {tanggalCetak}</Text>
+            <Text style={styles.signatureTitle}>Penjual,</Text>
             <View style={styles.signatureSpace} />
-            <Text>Penjual,</Text>
+            <Text style={styles.signatureName}>( PT. LAN SENA JAYA )</Text>
           </View>
         </View>
       </Page>

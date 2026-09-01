@@ -682,6 +682,19 @@ export default function DetailPenjualanPage() {
         });
       }
 
+      // 1b. Masukkan biaya tambahan ke tabel sale_additional_costs agar otomatis dijumlahkan ke tagihan
+      if (biayaTambahanValue > 0) {
+        await dbRequest({
+          action: "insert",
+          table: "sale_additional_costs",
+          data: {
+            sale_id: id,
+            keterangan: `Biaya Tambahan KPR (${approvalForm.status}${approvalForm.keterangan ? ` - ${approvalForm.keterangan}` : ""})`,
+            nominal: biayaTambahanValue,
+          },
+        });
+      }
+
       // 2. Sinkronkan ke sales + catat Step Penjualan HANYA kalau statusnya final
       if (approvalForm.status === "ACCEPTED") {
         await dbRequest({
