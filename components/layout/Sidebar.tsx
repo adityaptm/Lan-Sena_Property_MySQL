@@ -22,6 +22,7 @@ import {
   Menu,
 } from 'lucide-react';
 import { useData } from '@/lib/data-context';
+import type { UserRole } from '@/types';
 import { canAccessModule, ModuleName, normalizeRole } from '@/lib/permissions';
 
 interface NavGroup {
