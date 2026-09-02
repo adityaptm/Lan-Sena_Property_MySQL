@@ -355,7 +355,9 @@ export function KwitansiDocument({
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>Keterangan</Text>
             <Text style={styles.colon}>:</Text>
-            <Text style={[styles.valueCol, styles.valueBold]}>
+          </View>
+          <View style={{ paddingLeft: 132, marginBottom: 2, marginTop: -0.5 }}>
+            <Text style={[styles.valueBold, { fontSize: 9 }]}>
               {deskripsi.toUpperCase()}
             </Text>
           </View>
