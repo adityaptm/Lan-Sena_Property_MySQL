@@ -146,15 +146,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    paddingHorizontal: 20,
+    paddingHorizontal: 45, // Menggeser posisi ttd kiri dan kanan lebih masuk ke tengah
   },
   signatureBlockLeft: {
     alignItems: "center",
-    width: 220,
+    width: 180,
   },
   signatureBlockRightContainer: {
     alignItems: "center",
-    width: 220,
+    width: 180,
   },
   tanggalText: {
     fontSize: 10,
@@ -258,7 +258,7 @@ export function KwitansiDocument({
   const noKwitansi = payment?.no_kwitansi || "-";
   const nominal = Number(payment?.nominal) || 0;
 
-  // LOGIKA PEMISAHAN KALIMAT KETERANGAN
+  // PEMISAHAN KALIMAT KETERANGAN
   const rawDeskripsi = (payment?.deskripsi || "-").toUpperCase();
   const formattedDeskripsi = rawDeskripsi.replace(/\s*\(/g, "\n(");
 
@@ -357,7 +357,6 @@ export function KwitansiDocument({
             </Text>
           </View>
 
-          {/* KETERANGAN DENGAN FORMATTED DESKRIPSI */}
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>Keterangan</Text>
             <Text style={styles.colon}>:</Text>
