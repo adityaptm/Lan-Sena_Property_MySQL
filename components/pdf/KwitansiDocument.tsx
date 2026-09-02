@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
   page: {
     paddingTop: 15,
     paddingLeft: 15,
-    paddingRight: 35, // Disesuaikan agar area cetak di kanan lebih lega
+    paddingRight: 25,
     fontSize: 9,
     fontFamily: "Arial Narrow",
     lineHeight: 1.15,
@@ -111,17 +111,18 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   labelCol: {
-    width: 120,
+    width: 100,
     color: "#222",
   },
   colon: {
-    width: 12,
+    width: 10,
     color: "#222",
     fontFamily: "Helvetica-Bold",
   },
   valueCol: {
     flex: 1,
     color: "#000",
+    flexWrap: "wrap",
   },
   valueBold: {
     fontFamily: "Helvetica-Bold",
@@ -256,7 +257,11 @@ export function KwitansiDocument({
 
   const noKwitansi = payment?.no_kwitansi || "-";
   const nominal = Number(payment?.nominal) || 0;
-  const deskripsi = payment?.deskripsi || "-";
+
+  // LOGIKA PEMISAHAN KALIMAT KETERANGAN
+  const rawDeskripsi = (payment?.deskripsi || "-").toUpperCase();
+  const formattedDeskripsi = rawDeskripsi.replace(/\s*\(/g, "\n(");
+
   const tanggal = payment?.tanggal || "";
 
   const namaKonsumen = (
@@ -352,11 +357,12 @@ export function KwitansiDocument({
             </Text>
           </View>
 
+          {/* KETERANGAN DENGAN FORMATTED DESKRIPSI */}
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>Keterangan</Text>
             <Text style={styles.colon}>:</Text>
             <Text style={[styles.valueCol, styles.valueBold]}>
-              {deskripsi.toUpperCase()}
+              {formattedDeskripsi}
             </Text>
           </View>
 
