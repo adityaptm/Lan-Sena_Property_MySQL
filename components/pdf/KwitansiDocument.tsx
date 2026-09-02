@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
   page: {
     paddingTop: 15,
     paddingLeft: 15,
-    paddingRight: 65,
+    paddingRight: 35, // Disesuaikan agar area cetak di kanan lebih lega
     fontSize: 9,
     fontFamily: "Arial Narrow",
     lineHeight: 1.15,
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   fieldRow: {
     flexDirection: "row",
-    marginBottom: 0.5,
+    marginBottom: 2,
     alignItems: "flex-start",
   },
   labelCol: {
@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
   },
   sectionTitleRow: {
-    marginTop: 1,
-    marginBottom: 1,
+    marginTop: 3,
+    marginBottom: 2,
   },
   sectionTitle: {
     fontFamily: "Helvetica-Bold",
@@ -355,9 +355,7 @@ export function KwitansiDocument({
           <View style={styles.fieldRow}>
             <Text style={styles.labelCol}>Keterangan</Text>
             <Text style={styles.colon}>:</Text>
-          </View>
-          <View style={{ paddingLeft: 132, marginBottom: 2, marginTop: -0.5 }}>
-            <Text style={[styles.valueBold, { fontSize: 9 }]}>
+            <Text style={[styles.valueCol, styles.valueBold]}>
               {deskripsi.toUpperCase()}
             </Text>
           </View>
