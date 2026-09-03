@@ -281,6 +281,7 @@ interface DataContextType {
     saleId: string,
     newUnitId: string,
     newUnitNo: string,
+    alasan?: string,
   ) => Promise<void>;
 
   // Angsuran / Pembayaran Konsumen
@@ -1493,7 +1494,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateSale = async (id: string, s: Partial<Sale>) => {
-    await update("sales", id, s);
+    // Bersihkan field virtual / derived yang tidak ada di kolom tabel MySQL `sales`
+    const {
+      customer_nama,
+      customer_hp,
+      customer_job,
+      customer_nik,
+      unit_no,
+      block_nama,
+      location_nama,
+      marketer_nama,
+      bank_nama,
+      unit_type_nama,
+      subsidy_type_nama,
+      ...dbPayload
+    } = s as any;
+
+    await update("sales", id, dbPayload);
     const existing = sales.find((sale) => sale.id === id);
     const targetUnitId = s.unit_id || existing?.unit_id;
     if (targetUnitId && s.status) {
@@ -1537,12 +1554,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     saleId: string,
     newUnitId: string,
     newUnitNo: string,
+    alasan?: string,
   ) => {
     const sale = sales.find((s) => s.id === saleId);
     if (sale?.unit_id)
       await update("units", sale.unit_id, { status: "Tersedia" });
     await update("units", newUnitId, { status: sale?.status || "Booking" });
-    await update("sales", saleId, { unit_id: newUnitId });
+    const updateData: any = { unit_id: newUnitId };
+    if (alasan !== undefined) updateData.alasan_pindah = alasan;
+    await update("sales", saleId, updateData);
   };
 
   // --- Angsuran / Pembayaran Konsumen ---

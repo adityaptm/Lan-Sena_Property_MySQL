@@ -378,6 +378,7 @@ export interface Sale {
   customer_nik?: string;
   unit_type_nama?: string;
   subsidy_type_nama?: string;
+  alasan_pindah?: string;
 }
 
 export interface SaleAdditionalCost {

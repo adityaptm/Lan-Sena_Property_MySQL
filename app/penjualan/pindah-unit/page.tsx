@@ -24,8 +24,8 @@ export default function PindahUnitPage() {
     e.preventDefault();
     if (!saleId || !newUnitId || !selectedNewUnit) return;
 
-    relocateUnit(saleId, newUnitId, selectedNewUnit.no_unit);
-    router.push('/penjualan/daftar');
+    relocateUnit(saleId, newUnitId, selectedNewUnit.no_unit, alasan);
+    router.push(`/penjualan/daftar/${saleId}`);
   };
 
   return (

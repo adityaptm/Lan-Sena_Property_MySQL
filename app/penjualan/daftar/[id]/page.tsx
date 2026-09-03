@@ -1254,6 +1254,17 @@ export default function DetailPenjualanPage() {
                   <span>:</span>
                   <span>{unit?.nop || "-"}</span>
                 </div>
+                {sale?.alasan_pindah && (
+                  <div className="grid grid-cols-[130px_10px_1fr] items-center">
+                    <span className="font-semibold text-slate-600">
+                      Alasan Pindah
+                    </span>
+                    <span>:</span>
+                    <span className="font-bold text-white bg-blue-600 px-2 py-0.5 rounded text-xs inline-block w-fit uppercase tracking-wide shadow-xs">
+                      {sale.alasan_pindah}
+                    </span>
+                  </div>
+                )}
                 <div className="grid grid-cols-[130px_10px_1fr] pt-2 border-t border-slate-100">
                   <span className="font-semibold text-slate-600">
                     Maksimal Kredit

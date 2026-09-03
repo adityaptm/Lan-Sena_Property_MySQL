@@ -33,6 +33,9 @@ export function PindahUnitForm({ sale, currentUnit, locations, blocks, units, on
   const [selectedUnitId, setSelectedUnitId] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const defaultAlasan = currentUnit ? `DARI ${currentUnit.block_nama || ''} NO. ${currentUnit.no_unit || ''}`.trim() : '';
+  const [alasanPindah, setAlasanPindah] = useState(sale.alasan_pindah || defaultAlasan);
+
   const filteredBlocks = naturalSort(
     blocks.filter((b) => b.location_id === lokasiId),
     (b) => b.nama_blok || "",
@@ -68,17 +71,21 @@ export function PindahUnitForm({ sale, currentUnit, locations, blocks, units, on
         data: { status: newUnitStatus },
       });
       
-      // 3. Update sale unit_id
+      // 3. Update sale unit_id & alasan_pindah
+      const updateSaleData: any = { unit_id: selectedUnitId };
+      if (alasanPindah.trim()) {
+        updateSaleData.alasan_pindah = alasanPindah.trim().toUpperCase();
+      }
       await dbRequest({
         action: 'update',
         table: 'sales',
         filters: [{ type: 'eq', column: 'id', value: sale.id }],
-        data: { unit_id: selectedUnitId },
+        data: updateSaleData,
       });
       
       // 4. Catat histori
       const newUnit = units.find(u => u.id === selectedUnitId);
-      const keterangan = `Pindah dari ${currentUnit.location_nama} Blok ${currentUnit.block_nama} No ${currentUnit.no_unit} ke ${newUnit?.location_nama} Blok ${newUnit?.block_nama} No ${newUnit?.no_unit}`;
+      const keterangan = `${alasanPindah.trim() ? `[${alasanPindah.trim().toUpperCase()}] ` : ''}Pindah dari ${currentUnit.location_nama} Blok ${currentUnit.block_nama} No ${currentUnit.no_unit} ke ${newUnit?.location_nama} Blok ${newUnit?.block_nama} No ${newUnit?.no_unit}`;
       
       await dbRequest({
         action: 'insert',
@@ -156,12 +163,28 @@ export function PindahUnitForm({ sale, currentUnit, locations, blocks, units, on
                 ))}
               </div>
             )}
+
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Alasan Pindah Blok / Unit (Keterangan)
+              </label>
+              <input
+                type="text"
+                value={alasanPindah}
+                onChange={(e) => setAlasanPindah(e.target.value)}
+                placeholder="Contoh: DARI Q5 NO. 12A"
+                className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 uppercase font-medium"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                Keterangan ini akan ditampilkan pada rincian unit di detail penjualan (Contoh: DARI Q5 NO. 12A).
+              </p>
+            </div>
           </div>
         )}
 
         <div className="flex gap-2 mt-5 justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-sm bg-red-100 hover:bg-red-200 text-red-600 rounded font-semibold">Batal</button>
-          <button onClick={handleSave} disabled={saving || !selectedUnitId} className="px-4 py-2 text-sm bg-emerald-500 hover:bg-emerald-600 text-white rounded font-semibold disabled:opacity-50">{saving ? 'Menyimpan...' : 'Simpan & Konfirmasi'}</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm bg-red-100 hover:bg-red-200 text-red-600 rounded font-semibold cursor-pointer">Batal</button>
+          <button onClick={handleSave} disabled={saving || !selectedUnitId} className="px-4 py-2 text-sm bg-emerald-500 hover:bg-emerald-600 text-white rounded font-semibold disabled:opacity-50 cursor-pointer">{saving ? 'Menyimpan...' : 'Simpan & Konfirmasi'}</button>
         </div>
       </div>
     </div>

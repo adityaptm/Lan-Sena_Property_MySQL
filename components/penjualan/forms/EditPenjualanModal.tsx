@@ -65,6 +65,7 @@ export function EditPenjualanModal({
   const [dpNominal, setDpNominal] = useState<number>(0);
   const [kreditPengajuan, setKreditPengajuan] = useState<number>(0);
   const [komitmenPembayaran, setKomitmenPembayaran] = useState("");
+  const [alasanPindah, setAlasanPindah] = useState("");
 
   // Initialize form when sale changes
   useEffect(() => {
@@ -92,6 +93,7 @@ export function EditPenjualanModal({
     setDpNominal(Number(sale.dp_nominal || 0));
     setKreditPengajuan(Number(sale.kredit_pengajuan || 0));
     setKomitmenPembayaran(sale.komitmen_pembayaran || "");
+    setAlasanPindah(sale.alasan_pindah || "");
     setErrorMsg("");
   }, [sale]);
 
@@ -113,30 +115,15 @@ export function EditPenjualanModal({
     setErrorMsg("");
 
     try {
-      const selectedCust = customers.find((c) => c.id === customerId);
-      const selectedMkt = marketers?.find((m) => m.id === marketerId);
-      const selectedBnk = banks?.find((b) => b.id === bankId);
-
+      // HANYA kirim kolom yang benar-benar ada di tabel MySQL `sales`
+      // Kolom virtual seperti customer_hp, customer_nama, unit_no, dll TIDAK boleh dikirim ke `sales`
       const updatePayload: Partial<Sale> = {
         customer_id: customerId || sale.customer_id,
-        customer_nama: selectedCust?.nama || sale.customer_nama,
-        customer_hp: selectedCust?.no_hp || sale.customer_hp,
-        customer_job:
-          selectedCust?.instansi ||
-          selectedCust?.pekerjaan ||
-          sale.customer_job,
-        customer_nik: selectedCust?.nik || sale.customer_nik,
         unit_id: unitId || sale.unit_id,
-        unit_no: selectedUnit?.no_unit || sale.unit_no,
-        block_nama: selectedUnit?.block_nama || sale.block_nama,
-        location_nama: selectedUnit?.location_nama || sale.location_nama,
         marketer_id: marketerId || undefined,
-        marketer_nama: selectedMkt?.nama || undefined,
         fee_marketer: feeMarketer,
         metode_bayar: metodeBayar,
         bank_id: metodeBayar === "KPR" ? bankId || undefined : undefined,
-        bank_nama:
-          metodeBayar === "KPR" ? selectedBnk?.nama_bank || undefined : undefined,
         kpr_status: metodeBayar === "KPR" ? kprStatus : undefined,
         status: status,
         tanggal_booking: tanggalBooking,
@@ -150,6 +137,7 @@ export function EditPenjualanModal({
         kredit_pengajuan:
           metodeBayar === "KPR" ? kreditPengajuan : undefined,
         komitmen_pembayaran: komitmenPembayaran || undefined,
+        alasan_pindah: alasanPindah.trim() || undefined,
       };
 
       await updateSale(sale.id, updatePayload);
@@ -322,6 +310,22 @@ export function EditPenjualanModal({
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-semibold text-slate-600 mb-1">
+                  Alasan Pindah Blok / Unit (Opsional)
+                </label>
+                <input
+                  type="text"
+                  value={alasanPindah}
+                  onChange={(e) => setAlasanPindah(e.target.value)}
+                  placeholder="Contoh: DARI Q5 NO. 12A"
+                  className="w-full border border-slate-300 rounded px-2.5 py-1.5 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium text-xs uppercase"
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Isi jika transaksi ini merupakan hasil pindah unit/blok (akan ditampilkan di box Unit pada detail penjualan).
+                </p>
               </div>
             </div>
           </div>
