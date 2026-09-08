@@ -1,12 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { formatTanggalIndonesia, formatRupiah } from '@/lib/format';
-import { ChevronLeft, Edit, Printer, X, CheckCircle, FileText, ExternalLink, Loader2 } from 'lucide-react';
+import { formatTanggalIndonesia } from '@/lib/format';
+import { ChevronLeft, Edit, Printer, X, FileText, Check, Eye, Layers } from 'lucide-react';
 import { UpdateDataKonsumenForm } from '@/components/penjualan/forms/UpdateDataKonsumenForm';
+import {
+  BankPackageType,
+  BANK_PACKAGES_CONFIG,
+  DocumentItemDef,
+  BankKprDocData
+} from '@/components/penjualan/lampiran/BankKprDocumentViews';
 
 interface Props {
   id?: string;
@@ -18,38 +24,14 @@ interface Props {
   tgl_pks?: string;
 }
 
-const LIST_LAMPIRAN = [
-  { no: 1, title: 'SURAT PERNYATAAN PENYERAHAN DATA' },
-  { no: 2, title: 'SURAT PERNYATAAN PENGHUNINAN RUMAH UMUM BERSUBSIDI' },
-  { no: 3, title: 'SURAT KUASA PENDEBATAN DANA' },
-  { no: 4, title: 'BERITA ACARA SERAH TERIMA RUMAH SEJAHTERA TAPAK' },
-  { no: 5, title: 'SURAT PERNYATAAN PENYERAHAN SPT PPH' },
-  { no: 6, title: 'SURAT PERNYATAAN PERSETUJUAN PENYALURAN KPR BERSUBSIDI TANPA MENGGUNAKAN SBUM' },
-  { no: 7, title: 'SURAT PERSYARATAN KELOMPOK SASARAN' },
-  { no: 8, title: 'SURAT PERMOHONAN SUBSIDI BANTUAN UANG MUKA (SBUM)' },
-  { no: 9, title: 'SURAT PENGAKUAN KEKURANGAN BAYAR UANG MUKA' },
-  { no: 10, title: 'SURAT KETERANGAN PEMINDAHBUKUAN DANA SBUM' },
-  { no: 11, title: 'SURAT PERNYATAAN PENYELESAIAN PRASARANA, SARANA & UTILITAS PERUMAHAN' },
-  { no: 12, title: 'SURAT KUASA 1' },
-  { no: 13, title: 'SURAT PERNYATAAN PRASARANA, SARANA & UTILITAS PERUMAHAN' },
-  { no: 14, title: 'SURAT PERNYATAAN PEMOHON KPR BERSUBSIDI BTN (Format Internal Bank)' },
-  { no: 15, title: 'SURAT PERNYATAAN PEMOHON KPR BERSUBSIDI BTN (Format Kementrian PUPR)' },
-  { no: 16, title: 'SURAT PERNYATAAN CALON DEBITUR KPR BERSUBSIDI BTN' },
-  { no: 17, title: 'SURAT KUASA 2' },
-  { no: 18, title: 'SURAT KETERANGAN PEMINDAHBUKUAN DANA SBUM' },
-  { no: 19, title: 'SURAT PERNYATAAN TIDAK MEMILIKI RUMAH' },
-  { no: 20, title: 'SURAT PERNYATAAN TIDAK BEKERJA' },
-  { no: 21, title: 'KETETAPAN WAKTU UNTUK VERIFIKASI' },
-];
-
-export default function PrintKprClient({ id, lampiran5, pejabat, jabatan_pejabat, cabang_pks, no_pks, tgl_pks }: Props) {
+export default function PrintKprClient({ id }: Props) {
   const router = useRouter();
   const { sales, customers, units, blocks, locations, banks, refresh } = useData();
 
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedLampiran, setSelectedLampiran] = useState<number | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string>('');
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<BankPackageType>('btn_update');
+  const [viewMode, setViewMode] = useState<'all' | 'list'>('all');
+  const [singleDocPreview, setSingleDocPreview] = useState<DocumentItemDef | null>(null);
 
   const sale = sales.find((s) => s.id === id);
   const customer = customers.find((c) => c.id === sale?.customer_id);
@@ -58,57 +40,45 @@ export default function PrintKprClient({ id, lampiran5, pejabat, jabatan_pejabat
   const location = locations.find((l) => l.id === block?.location_id);
   const bank = banks.find((b) => b.id === sale?.bank_id);
 
-  // Generate PDF ketika lampiran dipilih (persis seperti format SPPR)
+  // Auto-detect package based on bank name if available
   useEffect(() => {
-    if (!selectedLampiran || !customer) {
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-        setPdfUrl('');
-      }
-      return;
-    }
-
-    let isCancelled = false;
-
-    async function generateLampiranPdf() {
-      setIsGeneratingPdf(true);
-      try {
-        const { pdf } = await import('@react-pdf/renderer');
-        const { LampiranKprPdf } = await import('@/components/pdf/LampiranKprPdf');
-
-        const blob = await pdf(
-          <LampiranKprPdf
-            no={selectedLampiran!}
-            sale={sale}
-            customer={customer}
-            bank={bank}
-            unit={unit}
-            block={block}
-            location={location}
-          />
-        ).toBlob();
-
-        if (!isCancelled) {
-          if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-          const url = URL.createObjectURL(blob);
-          setPdfUrl(url);
-        }
-      } catch (err) {
-        console.error('Error generating Lampiran PDF:', err);
-      } finally {
-        if (!isCancelled) {
-          setIsGeneratingPdf(false);
-        }
+    if (bank?.nama_bank) {
+      const bName = bank.nama_bank.toLowerCase();
+      if (bName.includes('bjb')) {
+        setSelectedPackage('bjb_update');
+      } else if (bName.includes('bri')) {
+        setSelectedPackage('bri_update');
+      } else if (bName.includes('btn')) {
+        setSelectedPackage('btn_update');
       }
     }
+  }, [bank]);
 
-    generateLampiranPdf();
+  const docData: BankKprDocData = useMemo(() => ({
+    sale,
+    customer: customer!,
+    bank,
+    unit,
+    block,
+    location
+  }), [sale, customer, bank, unit, block, location]);
 
-    return () => {
-      isCancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLampiran, customer, unit, sale]);
+  const activeConfig = BANK_PACKAGES_CONFIG[selectedPackage];
+
+  const handlePrintAll = () => {
+    setViewMode('all');
+    setSingleDocPreview(null);
+    setTimeout(() => {
+      window.print();
+    }, 250);
+  };
+
+  const handlePrintSingle = (doc: DocumentItemDef) => {
+    setSingleDocPreview(doc);
+    setTimeout(() => {
+      window.print();
+    }, 250);
+  };
 
   if (!id || !sale || !customer) {
     return (
@@ -130,162 +100,307 @@ export default function PrintKprClient({ id, lampiran5, pejabat, jabatan_pejabat
     );
   }
 
-  const selectedLampiranItem = LIST_LAMPIRAN.find((l) => l.no === selectedLampiran);
-
   return (
     <AppLayout>
-      <div className="space-y-4 max-w-7xl mx-auto pb-12">
+      {/* ── Print CSS styles ── */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm 15mm;
+          }
+          body {
+            background: white !important;
+            color: black !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .no-print, header, nav, aside, .app-sidebar, .app-header, button {
+            display: none !important;
+          }
+          .print-container {
+            display: block !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .kpr-page {
+            page-break-after: always !important;
+            break-after: page !important;
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            width: 100% !important;
+            min-height: 270mm !important;
+            max-height: 297mm !important;
+            overflow: hidden !important;
+          }
+        }
+      `}} />
+
+      <div className="space-y-4 max-w-7xl mx-auto pb-16 no-print">
         {/* ── Breadcrumb Navigation ── */}
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <div className="flex items-center gap-2 text-slate-600">
+            <button
+              onClick={() => router.push(`/penjualan/daftar/${id}`)}
+              className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium transition cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Daftar Customer</span>
+            </button>
+            <span>/</span>
+            <span className="font-semibold text-slate-800">Cetak Dokumen Persyaratan KPR</span>
+          </div>
+
           <button
-            onClick={() => router.push(`/penjualan/daftar/${id}`)}
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium transition"
+            onClick={() => setShowEditModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-semibold shadow-xs transition cursor-pointer"
           >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Daftar Customer</span>
+            <Edit className="w-3.5 h-3.5" />
+            <span>Ubah Data Customer</span>
           </button>
-          <span>/</span>
-          <span className="font-semibold text-slate-800">Print Persyaratan KPR</span>
         </div>
 
-        {/* ── Card 1: Data Customer ── */}
+        {/* ── Card 1: Data Customer Ringkas ── */}
         <div className="bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 bg-white">
-            <h2 className="text-sm font-bold text-slate-800">Data Customer</h2>
+          <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Informasi Transaksi & Debitur</h2>
+            <span className="text-xs text-slate-500 font-medium">
+              Unit: <strong className="text-slate-800">{block?.nama_blok || 'S22'} NO. {unit?.no_unit || '09'}</strong> ({location?.nama_lokasi || 'Benteng Mutiara Mas'})
+            </span>
+          </div>
+
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-700">
+            <div>
+              <table className="w-full">
+                <tbody>
+                  <tr className="border-b border-slate-100"><td className="py-1 text-slate-500 w-36 font-medium">Nama Pemohon</td><td className="py-1 font-bold text-slate-800 uppercase">{customer.nama}</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-1 text-slate-500 font-medium">NIK</td><td className="py-1 font-mono font-medium">{customer.nik || '-'}</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-1 text-slate-500 font-medium">Tempat/Tgl Lahir</td><td className="py-1 uppercase">{customer.tempat_lahir || '-'}, {customer.tanggal_lahir ? formatTanggalIndonesia(customer.tanggal_lahir) : '-'}</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-1 text-slate-500 font-medium">Pekerjaan</td><td className="py-1 uppercase">{customer.pekerjaan || '-'}</td></tr>
+                  <tr><td className="py-1 text-slate-500 font-medium">No. Telepon</td><td className="py-1">{customer.no_hp || '-'}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <table className="w-full">
+                <tbody>
+                  <tr className="border-b border-slate-100"><td className="py-1 text-slate-500 w-36 font-medium">Nama Pasangan</td><td className="py-1 font-bold text-slate-800 uppercase">{customer.nama_pasangan || '-'}</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-1 text-slate-500 font-medium">NIK Pasangan</td><td className="py-1 font-mono font-medium">{(customer as any)?.nik_pasangan || '-'}</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-1 text-slate-500 font-medium">Tempat/Tgl Lahir</td><td className="py-1 uppercase">{(customer as any)?.tempat_lahir_pasangan || '-'}, {(customer as any)?.tanggal_lahir_pasangan ? formatTanggalIndonesia((customer as any).tanggal_lahir_pasangan) : '-'}</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-1 text-slate-500 font-medium">Pekerjaan Pasangan</td><td className="py-1 uppercase">{(customer as any)?.pekerjaan_pasangan || 'MENGURUS RUMAH TANGGA'}</td></tr>
+                  <tr><td className="py-1 text-slate-500 font-medium">Bank Akad</td><td className="py-1 font-semibold text-blue-700">{bank?.nama_bank || 'Bank BTN'}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Card 2: Pilihan Paket Bank & Aksi Cetak Semua ── */}
+        <div className="bg-white border border-slate-200 rounded-lg shadow-2xs p-4 sm:p-5">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-indigo-600" />
+                <span>Pilih Format Paket Dokumen Bank</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Pilih salah satu bank di bawah ini untuk menampilkan dan mencetak semua berkas persyaratan sekaligus.
+              </p>
+            </div>
+
+            {/* Tombol Cetak Semua */}
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              <button
+                onClick={handlePrintAll}
+                className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm shadow-md hover:shadow-lg transition cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Cetak Semua Dokumen ({activeConfig.docs.length} Halaman)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 4 Pilihan Paket Bank (Tabs) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
+            {(Object.keys(BANK_PACKAGES_CONFIG) as BankPackageType[]).map((pkgKey) => {
+              const cfg = BANK_PACKAGES_CONFIG[pkgKey];
+              const isSelected = selectedPackage === pkgKey;
+              return (
+                <button
+                  key={pkgKey}
+                  onClick={() => {
+                    setSelectedPackage(pkgKey);
+                    setSingleDocPreview(null);
+                  }}
+                  className={`flex flex-col items-start p-3 rounded-lg border text-left transition cursor-pointer ${
+                    isSelected
+                      ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-500/20 shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${cfg.color}`} />
+                      {cfg.title}
+                    </span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                  </div>
+                  <span className="text-[11px] text-slate-500 line-clamp-1">{cfg.subtitle}</span>
+                  <span className="text-[10px] font-semibold text-slate-400 mt-2">
+                    {cfg.docs.length} Dokumen Lampiran
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 font-medium">Mode Tampilan:</span>
+              <div className="inline-flex rounded-md shadow-2xs border border-slate-200 p-0.5 bg-slate-50">
+                <button
+                  onClick={() => { setViewMode('all'); setSingleDocPreview(null); }}
+                  className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                    viewMode === 'all' && !singleDocPreview ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Semua Halaman ({activeConfig.docs.length})
+                </button>
+                <button
+                  onClick={() => { setViewMode('list'); setSingleDocPreview(null); }}
+                  className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                    viewMode === 'list' && !singleDocPreview ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Daftar Tabel
+                </button>
+              </div>
+            </div>
+
+            <span className="text-slate-400 text-[11px] hidden sm:inline">
+              *Setiap dokumen otomatis dipisah pas 1 lembar A4 saat dicetak (Ctrl + P)
+            </span>
+          </div>
+        </div>
+
+        {/* ── Mode 1: Daftar Tabel Dokumen ── */}
+        {viewMode === 'list' && !singleDocPreview && (
+          <div className="bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
+            <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-700 uppercase">
+                Daftar Dokumen Paket: <span className="text-indigo-700">{activeConfig.title}</span>
+              </h3>
+              <button
+                onClick={handlePrintAll}
+                className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Cetak Semua</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 border-b border-slate-200">
+                    <th className="py-2.5 px-4 w-12 text-center font-bold">No</th>
+                    <th className="py-2.5 px-4 w-36 font-bold">Kode</th>
+                    <th className="py-2.5 px-4 font-bold">Nama Dokumen</th>
+                    <th className="py-2.5 px-4 w-44 text-center font-bold">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {activeConfig.docs.map((doc, idx) => (
+                    <tr key={doc.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-2.5 px-4 text-center font-bold text-slate-500">{idx + 1}</td>
+                      <td className="py-2.5 px-4 font-mono font-semibold text-indigo-700">{doc.code}</td>
+                      <td className="py-2.5 px-4 font-medium text-slate-800">{doc.title}</td>
+                      <td className="py-2.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => setSingleDocPreview(doc)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-semibold text-[11px] transition cursor-pointer"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Lihat</span>
+                          </button>
+                          <button
+                            onClick={() => handlePrintSingle(doc)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-semibold text-[11px] transition shadow-2xs cursor-pointer"
+                          >
+                            <Printer className="w-3 h-3" />
+                            <span>Cetak</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── AREA CETAK / PRATINJAU DOKUMEN ── */}
+      {/* Jika dalam mode Single Doc Preview */}
+      {singleDocPreview && (
+        <div className="max-w-5xl mx-auto pb-16">
+          <div className="bg-slate-800 text-white p-3 rounded-lg flex items-center justify-between mb-4 no-print shadow-md">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSingleDocPreview(null)}
+                className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-semibold cursor-pointer"
+              >
+                ← Kembali ke Semua Dokumen
+              </button>
+              <span className="text-xs text-slate-300">Menampilkan 1 Dokumen: <strong>{singleDocPreview.title}</strong></span>
+            </div>
             <button
-              onClick={() => setShowEditModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#007bff] hover:bg-blue-700 text-white rounded text-xs font-semibold shadow-xs transition"
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs font-bold shadow-xs cursor-pointer"
             >
-              <Edit className="w-3.5 h-3.5" />
-              <span>Ubah Data Customer</span>
+              <Printer className="w-3.5 h-3.5" />
+              <span>Cetak Halaman Ini</span>
             </button>
           </div>
 
-          <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-8 text-xs text-slate-700">
-            {/* Kolom Kiri: Data Konsumen */}
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Data Konsumen</h3>
-              <table className="w-full border-collapse">
-                <tbody>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 w-44 font-medium">Nama</td>
-                    <td className="py-2.5 font-bold text-slate-800 uppercase">{customer.nama}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 font-medium">Tempat/Tgl Lahir</td>
-                    <td className="py-2.5 uppercase font-medium">
-                      {customer.tempat_lahir ? `${customer.tempat_lahir}, ` : ''}
-                      {customer.tanggal_lahir ? formatTanggalIndonesia(customer.tanggal_lahir) : '-'}
-                    </td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 font-medium">No Telpon</td>
-                    <td className="py-2.5 font-medium">{customer.no_hp || '-'}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 align-top font-medium">Alamat KTP</td>
-                    <td className="py-2.5 align-top font-medium uppercase">{customer.alamat_ktp || customer.alamat || '-'}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 align-top font-medium">Alamat Domisili/Kantor</td>
-                    <td className="py-2.5 align-top font-medium uppercase">{customer.alamat_domisili || '-'}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 font-medium">Pekerjaan</td>
-                    <td className="py-2.5 uppercase font-medium">{customer.pekerjaan || '-'}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 font-medium">Institusi</td>
-                    <td className="py-2.5 uppercase font-medium">{customer.instansi || '-'}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 text-slate-500 font-medium">Penghasilan per Bulan</td>
-                    <td className="py-2.5 font-semibold text-emerald-700">
-                      {customer.pendapatan_per_bulan
-                        ? isNaN(Number(customer.pendapatan_per_bulan))
-                          ? customer.pendapatan_per_bulan
-                          : `Rp ${formatRupiah(Number(customer.pendapatan_per_bulan))}`
-                        : '0'}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Kolom Kanan: Data Pasangan Konsumen */}
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Data Pasangan Konsumen</h3>
-              <table className="w-full border-collapse">
-                <tbody>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 w-44 font-medium">Nama</td>
-                    <td className="py-2.5 font-bold text-slate-800 uppercase">{customer.nama_pasangan || '-'}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 font-medium">NIK</td>
-                    <td className="py-2.5 font-medium">{customer.nik_pasangan || '-'}</td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 font-medium">Tempat/Tgl Lahir</td>
-                    <td className="py-2.5 uppercase font-medium">
-                      {customer.tempat_lahir_pasangan ? `${customer.tempat_lahir_pasangan}, ` : ''}
-                      {customer.tanggal_lahir_pasangan ? formatTanggalIndonesia(customer.tanggal_lahir_pasangan) : '-'}
-                    </td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-2.5 text-slate-500 align-top font-medium">Alamat Domisili/Kantor</td>
-                    <td className="py-2.5 align-top font-medium uppercase">
-                      {customer.alamat_domisili_pasangan || customer.alamat_domisili || customer.alamat_ktp || '-'}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 text-slate-500 font-medium">Pekerjaan</td>
-                    <td className="py-2.5 uppercase font-medium">{customer.pekerjaan_pasangan || '-'}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div className="print-container">
+            <singleDocPreview.component data={docData} />
           </div>
         </div>
+      )}
 
-        {/* ── Card 2: Print Lampiran ── */}
-        <div className="bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-200 bg-white">
-            <h2 className="text-sm font-bold text-slate-800">Print Lampiran</h2>
+      {/* Jika dalam mode Semua Halaman (All Pages View) */}
+      {viewMode === 'all' && !singleDocPreview && (
+        <div className="print-container space-y-6">
+          <div className="text-center py-2 bg-indigo-50 border border-indigo-200 rounded-md text-xs text-indigo-900 font-semibold mb-6 max-w-4xl mx-auto no-print">
+            Menampilkan seluruh dokumen paket <strong>{activeConfig.title}</strong> ({activeConfig.docs.length} halaman). Klik tombol <span className="underline font-bold">Cetak Semua Dokumen</span> di atas untuk langsung mencetak atau simpan sebagai PDF.
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse">
-              <thead>
-                <tr className="bg-[#00a896] text-white">
-                  <th className="py-3 px-4 w-28 font-bold text-left">No Lampiran</th>
-                  <th className="py-3 px-4 font-bold text-left">Keterangan</th>
-                  <th className="py-3 px-4 w-28 font-bold text-center">Cetak</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {LIST_LAMPIRAN.map((item) => (
-                  <tr key={item.no} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-2.5 px-4 font-semibold text-slate-600">{item.no}.</td>
-                    <td className="py-2.5 px-4 font-semibold text-slate-800">{item.title}</td>
-                    <td className="py-2.5 px-4 text-center">
-                      <button
-                        onClick={() => setSelectedLampiran(item.no)}
-                        className="inline-flex items-center justify-center gap-1 px-3 py-1 bg-[#6f42c1] hover:bg-purple-800 text-white rounded text-[11px] font-semibold transition shadow-xs cursor-pointer"
-                      >
-                        <Printer className="w-3 h-3" />
-                        <span>Print</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {activeConfig.docs.map((docItem, index) => {
+            const DocComponent = docItem.component;
+            return (
+              <div key={docItem.id} className="relative">
+                <div className="no-print text-center text-xs font-bold text-slate-500 mb-1">
+                  — Halaman {index + 1} dari {activeConfig.docs.length}: {docItem.title} —
+                </div>
+                <DocComponent
+                  data={docData}
+                  pageNum={index + 1}
+                  totalPages={activeConfig.docs.length}
+                />
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
 
-      {/* ── Modal Edit Data Konsumen ── */}
+      {/* ── Modal Ubah Data Konsumen ── */}
       {showEditModal && customer && (
         <UpdateDataKonsumenForm
           customer={customer}
@@ -295,77 +410,6 @@ export default function PrintKprClient({ id, lampiran5, pejabat, jabatan_pejabat
             setShowEditModal(false);
           }}
         />
-      )}
-
-      {/* ── Modal Pratinjau PDF Persis Seperti Format SPPR (Ukuran A4 1 Halaman) ── */}
-      {selectedLampiran !== null && selectedLampiranItem && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden border border-slate-200">
-            {/* Modal Header */}
-            <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-8 h-8 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center font-bold text-xs shrink-0">
-                  {selectedLampiran}
-                </span>
-                <div className="truncate">
-                  <h3 className="font-bold text-slate-800 text-sm truncate">
-                    {selectedLampiranItem.title}
-                  </h3>
-                  <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    Ukuran A4 Standar SPPR — Tepat 1 Halaman Utuh
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {pdfUrl && (
-                  <button
-                    onClick={() => window.open(pdfUrl, '_blank')}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-semibold transition"
-                    title="Buka PDF di Tab Baru"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Buka Tab Baru</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setSelectedLampiran(null);
-                    if (pdfUrl) {
-                      URL.revokeObjectURL(pdfUrl);
-                      setPdfUrl('');
-                    }
-                  }}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition"
-                  title="Tutup"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body: PDF Viewer Iframe Persis seperti SPPR */}
-            <div className="flex-1 bg-slate-100 relative">
-              {isGeneratingPdf ? (
-                <div className="w-full h-full flex flex-col gap-3 items-center justify-center bg-slate-50">
-                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-                  <p className="text-slate-600 font-medium text-sm">Menyiapkan Dokumen PDF A4...</p>
-                </div>
-              ) : pdfUrl ? (
-                <iframe
-                  src={pdfUrl}
-                  className="w-full h-full border-0"
-                  title={selectedLampiranItem.title}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-slate-50">
-                  <p className="text-red-500 font-medium text-sm">Gagal menghasilkan dokumen PDF.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       )}
     </AppLayout>
   );
