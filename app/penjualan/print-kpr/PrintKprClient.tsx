@@ -104,16 +104,18 @@ export default function PrintKprClient({ id }: Props) {
     <AppLayout>
       {/* ── Print CSS styles ── */}
       <style dangerouslySetInnerHTML={{ __html: `
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
         @media print {
-          @page {
-            size: A4 portrait;
-            margin: 10mm 15mm;
-          }
-          body {
-            background: white !important;
-            color: black !important;
+          html, body {
             margin: 0 !important;
             padding: 0 !important;
+            background: white !important;
+            color: black !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .no-print, header, nav, aside, .app-sidebar, .app-header, button {
             display: none !important;
@@ -130,10 +132,11 @@ export default function PrintKprClient({ id }: Props) {
             box-shadow: none !important;
             border: none !important;
             margin: 0 auto !important;
-            padding: 0 !important;
-            width: 100% !important;
-            min-height: 270mm !important;
+            padding: 12mm 15mm !important;
+            width: 210mm !important;
+            height: 297mm !important;
             max-height: 297mm !important;
+            box-sizing: border-box !important;
             overflow: hidden !important;
           }
         }
