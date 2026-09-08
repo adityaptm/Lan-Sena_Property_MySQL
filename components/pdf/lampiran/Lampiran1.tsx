@@ -214,7 +214,7 @@ export const Lampiran1 = ({ customer, tanggalCetak }: Props) => {
         <View style={styles.signatureBox}>
           <Text>Yang Membuat Pernyataan,</Text>
           <View style={styles.signatureSpace}>
-            <Text style={styles.materaiText}>Materai 6000</Text>
+            <Text style={styles.materaiText}>Materai 10000</Text>
           </View>
           <Text style={styles.signatureName}>({customer.nama || '...........................'})</Text>
         </View>
