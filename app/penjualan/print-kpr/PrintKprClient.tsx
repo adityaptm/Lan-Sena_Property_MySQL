@@ -10,6 +10,12 @@ import { UpdateDataKonsumenForm } from '@/components/penjualan/forms/UpdateDataK
 
 interface Props {
   id?: string;
+  lampiran5?: string;
+  pejabat?: string;
+  jabatan_pejabat?: string;
+  cabang_pks?: string;
+  no_pks?: string;
+  tgl_pks?: string;
 }
 
 const LIST_LAMPIRAN = [
@@ -36,7 +42,7 @@ const LIST_LAMPIRAN = [
   { no: 21, title: 'KETETAPAN WAKTU UNTUK VERIFIKASI' },
 ];
 
-export default function PrintKprClient({ id }: Props) {
+export default function PrintKprClient({ id, lampiran5, pejabat, jabatan_pejabat, cabang_pks, no_pks, tgl_pks }: Props) {
   const router = useRouter();
   const { sales, customers, units, blocks, locations, banks, refresh } = useData();
 
