@@ -1024,7 +1024,7 @@ export default function DetailPenjualanPage() {
                 <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-md shadow-xl z-20 py-1">
                   <button
                     onClick={() => {
-                      setShowPersyaratanModal(true);
+                      window.open(`/penjualan/print-kpr?id=${id}`, '_blank');
                       setShowActionMenu(false);
                     }}
                     className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-xs sm:text-sm text-slate-700"
