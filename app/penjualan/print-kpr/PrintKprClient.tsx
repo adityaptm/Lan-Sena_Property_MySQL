@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useData } from '@/lib/data-context';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { formatTanggalIndonesia } from '@/lib/format';
-import { ChevronLeft, Edit, Printer, X, FileText, Check, Eye, Layers } from 'lucide-react';
+import { ChevronLeft, Edit, Printer, X, FileText, Check, Eye, Layers, AlertCircle } from 'lucide-react';
 import { UpdateDataKonsumenForm } from '@/components/penjualan/forms/UpdateDataKonsumenForm';
 import {
   BankPackageType,
@@ -32,6 +32,7 @@ export default function PrintKprClient({ id }: Props) {
   const [selectedPackage, setSelectedPackage] = useState<BankPackageType>('btn_update');
   const [viewMode, setViewMode] = useState<'all' | 'list'>('all');
   const [singleDocPreview, setSingleDocPreview] = useState<DocumentItemDef | null>(null);
+  const hasUserSelectedRef = useRef<boolean>(false);
 
   const sale = sales.find((s) => s.id === id);
   const customer = customers.find((c) => c.id === sale?.customer_id);
@@ -40,8 +41,9 @@ export default function PrintKprClient({ id }: Props) {
   const location = locations.find((l) => l.id === block?.location_id);
   const bank = banks.find((b) => b.id === sale?.bank_id);
 
-  // Auto-detect package based on bank name if available
+  // Auto-detect package based on bank name ONLY ON INITIAL LOAD if user hasn't chosen manually
   useEffect(() => {
+    if (hasUserSelectedRef.current) return;
     if (bank?.nama_bank) {
       const bName = bank.nama_bank.toLowerCase();
       if (bName.includes('bjb')) {
@@ -53,6 +55,12 @@ export default function PrintKprClient({ id }: Props) {
       }
     }
   }, [bank]);
+
+  const handleSelectPackage = (pkgKey: BankPackageType) => {
+    hasUserSelectedRef.current = true;
+    setSelectedPackage(pkgKey);
+    setSingleDocPreview(null);
+  };
 
   const docData: BankKprDocData = useMemo(() => ({
     sale,
@@ -234,10 +242,7 @@ export default function PrintKprClient({ id }: Props) {
               return (
                 <button
                   key={pkgKey}
-                  onClick={() => {
-                    setSelectedPackage(pkgKey);
-                    setSingleDocPreview(null);
-                  }}
+                  onClick={() => handleSelectPackage(pkgKey)}
                   className={`flex flex-col items-start p-3 rounded-lg border text-left transition cursor-pointer ${
                     isSelected
                       ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-500/20 shadow-xs'
@@ -258,6 +263,19 @@ export default function PrintKprClient({ id }: Props) {
                 </button>
               );
             })}
+          </div>
+
+          {/* Active Package Confirmation Banner */}
+          <div className="mt-3 p-2.5 bg-indigo-50 border border-indigo-100 rounded-md flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-indigo-900">Paket Aktif:</span>
+              <span className="font-bold uppercase px-2 py-0.5 rounded bg-indigo-600 text-white text-[11px]">
+                {activeConfig.title}
+              </span>
+              <span className="text-slate-600">
+                — Hanya <strong>{activeConfig.docs.length} dokumen</strong> milik <strong>{activeConfig.title}</strong> yang akan dicetak. Dokumen bank lain tidak akan ikut terdorong.
+              </span>
+            </div>
           </div>
 
           {/* View Mode Toggle */}
