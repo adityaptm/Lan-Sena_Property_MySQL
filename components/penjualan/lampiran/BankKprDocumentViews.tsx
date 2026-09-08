@@ -105,10 +105,10 @@ function getCommons(data: BankKprDocData) {
   };
 }
 
-// Wrapper for an A4 Page with exact page-break styling
+// Wrapper for an A4 Page with exact page-break styling and readable 10pt base font
 export const PageWrapper: React.FC<{ children: React.ReactNode; pageNum?: number }> = ({ children }) => {
   return (
-    <div className="kpr-page bg-white mx-auto shadow-md print:shadow-none border border-slate-200 print:border-none p-8 print:p-0 my-4 print:my-0 w-[210mm] min-h-[297mm] text-[8.5pt] leading-[1.3] text-black font-sans box-border relative flex flex-col justify-between">
+    <div className="kpr-page bg-white mx-auto shadow-md print:shadow-none border border-slate-200 print:border-none p-10 print:p-0 my-4 print:my-0 w-[210mm] min-h-[297mm] text-[10pt] leading-[1.4] text-black font-sans box-border relative flex flex-col justify-between">
       <div>{children}</div>
     </div>
   );
@@ -124,43 +124,43 @@ export const DocBAST: React.FC<{ data: BankKprDocData; formatCode?: string }> = 
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-4">
-        <p className="text-xs uppercase">{formatCode}</p>
-        <p className="text-sm underline mt-1">BERITA ACARA SERAH TERIMA</p>
-        <p className="text-sm underline">RUMAH UMUM TAPAK</p>
+        <p className="text-xs uppercase tracking-wider">{formatCode}</p>
+        <p className="text-base underline mt-0.5">BERITA ACARA SERAH TERIMA</p>
+        <p className="text-base underline">RUMAH UMUM TAPAK</p>
       </div>
 
       <p className="text-justify mb-2">Nomor : _____</p>
-      <p className="text-justify mb-2">
+      <p className="text-justify mb-2 leading-relaxed">
         Berdasarkan PPJB/AJB*) ........ No ........ Tanggal ........ telah dilakukan serah terima pada tanggal .................... dari :
         <br />
         <span className="font-semibold">{c.pengembang}</span>, selanjutnya disebut <span className="font-semibold">"Pihak Pertama"</span>;
       </p>
 
       <p className="font-semibold mb-1">Kepada pembeli :</p>
-      <table className="w-full mb-3">
+      <table className="w-full mb-3 text-[10pt]">
         <tbody>
-          <tr><td className="w-6 py-0.5">1</td><td className="w-48">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-6 py-0.5">1</td><td className="w-52">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">2</td><td>NIK</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5 align-top">3</td><td className="align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
           <tr><td className="py-0.5">4</td><td>No. Telp/ HP</td><td>:</td><td>{c.noHpPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="mb-2 italic">Selanjutnya disebut "Pihak Kedua"</p>
+      <p className="mb-2 italic text-[9pt]">Selanjutnya disebut "Pihak Kedua"</p>
 
       <p className="font-semibold mb-1">Atas 1 (satu) unit Rumah Umum Tapak pada lokasi sebagai berikut :</p>
-      <table className="w-full mb-3">
+      <table className="w-full mb-3 text-[10pt]">
         <tbody>
-          <tr><td className="w-6 py-0.5">1</td><td className="w-48">Nama Perumahan</td><td className="w-3">:</td><td className="font-semibold">{c.namaPerumahan}</td></tr>
+          <tr><td className="w-6 py-0.5">1</td><td className="w-52">Nama Perumahan</td><td className="w-3">:</td><td className="font-semibold">{c.namaPerumahan}</td></tr>
           <tr><td className="py-0.5">2</td><td>No. Rumah / Blok</td><td>:</td><td className="font-semibold">{c.blokUnit}</td></tr>
           <tr><td className="py-0.5">3</td><td>Luas Tanah dan Lantai Rumah</td><td>:</td><td>{c.luasGabung}</td></tr>
           <tr><td className="py-0.5">4</td><td>Alamat</td><td>:</td><td>{c.alamatLokasi}</td></tr>
           <tr><td className="py-0.5">5</td><td>Kota/ Kabupaten/ Provinsi</td><td>:</td><td>Purwakarta - Jawa Barat</td></tr>
         </tbody>
       </table>
-      <p className="mb-2 italic">selanjutnya disebut "Objek Serah Terima"</p>
+      <p className="mb-2 italic text-[9pt]">selanjutnya disebut "Objek Serah Terima"</p>
 
       <p className="mb-1 font-semibold">Objek Serah Terima dengan kondisi laik fungsi dan dilengkapi dengan :</p>
-      <ol className="list-decimal pl-5 space-y-0.5 mb-3">
+      <ol className="list-decimal pl-5 space-y-0.5 mb-3 leading-relaxed">
         <li>Jaringan air bersih sudah berfungsi;</li>
         <li>Jaringan listrik sudah berfungsi;</li>
         <li>Jalan lingkungan sudah selesai dan berfungsi;</li>
@@ -179,16 +179,16 @@ export const DocBAST: React.FC<{ data: BankKprDocData; formatCode?: string }> = 
           <p className="font-semibold">{c.pengembang}</p>
           <div className="h-16" />
           <p className="font-bold underline">({c.direktur})</p>
-          <p className="text-[7.5pt] text-slate-600">Tanda tangan dan Nama Pengembang</p>
+          <p className="text-[8.5pt] text-slate-600">Tanda tangan dan Nama Pengembang</p>
         </div>
         <div>
           <p className="font-semibold">PIHAK KEDUA,</p>
           <div className="h-16 mt-4" />
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7.5pt] text-slate-600">Tanda tangan dan nama lengkap</p>
+          <p className="text-[8.5pt] text-slate-600">Tanda tangan dan nama lengkap</p>
         </div>
       </div>
-      <p className="text-[7pt] italic text-slate-500 mt-4">*) Pilih salah Satu</p>
+      <p className="text-[8.5pt] italic text-slate-500 mt-4">*) Pilih salah Satu</p>
     </PageWrapper>
   );
 };
@@ -199,14 +199,14 @@ export const DocPernyataanPenghasilan: React.FC<{ data: BankKprDocData }> = ({ d
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-6">
-        <p className="text-sm underline uppercase">SURAT PERNYATAAN PENGHASILAN</p>
+        <p className="text-base underline uppercase">SURAT PERNYATAAN PENGHASILAN</p>
       </div>
 
       <p className="mb-3">Yang bertandatangan di bawah ini :</p>
 
-      <table className="w-full mb-4">
+      <table className="w-full mb-4 text-[10pt]">
         <tbody>
-          <tr><td className="w-44 py-1">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-1">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-1">Tempat/tgl lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-1">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-1">No. KTP/Passport</td><td>:</td><td>{c.nikPemohon}</td></tr>
@@ -214,11 +214,11 @@ export const DocPernyataanPenghasilan: React.FC<{ data: BankKprDocData }> = ({ d
         </tbody>
       </table>
 
-      <p className="text-justify mb-3">
+      <p className="text-justify mb-4 leading-relaxed">
         Menyatakan dengan sesungguhnya bahwa sampai saat surat pernyataan ini ditandatangani, saya menyatakan bahwa jumlah gaji/upah pokok saya adalah sebesar <span className="font-semibold">Rp. .................... (...........................................................................)</span> per bulan.
       </p>
 
-      <p className="text-justify mb-8">
+      <p className="text-justify mb-8 leading-relaxed">
         Demikian surat pernyataan ini saya buat dengan sebenarnya tanpa paksaan dari pihak manapun dan apabila di kemudian hari pernyataan saya ini tidak benar, saya bersedia mengembalikan seluruh subsidi yang saya terima.
       </p>
 
@@ -232,18 +232,18 @@ export const DocPernyataanPenghasilan: React.FC<{ data: BankKprDocData }> = ({ d
           <p className="font-semibold">Pimpinan Perusahaan/Instansi</p>
           <div className="h-20" />
           <p className="font-bold underline">( .................................................. )</p>
-          <p className="text-[7.5pt] text-slate-600">Nama lengkap & jabatan</p>
+          <p className="text-[8.5pt] text-slate-600">Nama lengkap & jabatan</p>
         </div>
         <div>
           <p>Yang membuat pernyataan,</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400 my-1">
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400 my-1">
             <span className="border border-dashed border-slate-400 px-2 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7.5pt] text-slate-600">Nama Lengkap</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap</p>
         </div>
       </div>
-      <p className="text-[7pt] italic text-slate-500 mt-6">*diberikan cap perusahaan/instansi</p>
+      <p className="text-[8pt] italic text-slate-500 mt-6">*diberikan cap perusahaan/instansi</p>
     </PageWrapper>
   );
 };
@@ -254,14 +254,14 @@ export const DocTidakMemilikiRumah: React.FC<{ data: BankKprDocData }> = ({ data
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-6">
-        <p className="text-sm underline uppercase">SURAT PERNYATAAN TIDAK MEMILIKI RUMAH</p>
+        <p className="text-base underline uppercase">SURAT PERNYATAAN TIDAK MEMILIKI RUMAH</p>
       </div>
 
       <p className="mb-3">Yang bertandatangan di bawah ini :</p>
 
-      <table className="w-full mb-4">
+      <table className="w-full mb-4 text-[10pt]">
         <tbody>
-          <tr><td className="w-44 py-1">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-1">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-1">Tempat/Tgl lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-1">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-1">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
@@ -269,11 +269,11 @@ export const DocTidakMemilikiRumah: React.FC<{ data: BankKprDocData }> = ({ data
         </tbody>
       </table>
 
-      <p className="text-justify mb-3">
+      <p className="text-justify mb-3 leading-relaxed">
         menyatakan bahwa sampai dengan surat pernyataan ini dibuat tidak memiliki hak kepemilikan atas rumah.
       </p>
 
-      <p className="text-justify mb-8">
+      <p className="text-justify mb-8 leading-relaxed">
         Demikian surat pernyataan ini saya buat dengan sebenarnya tanpa paksaan dari pihak manapun dan apabila di kemudian hari pernyataan saya ini tidak benar, saya bersedia mengembalikan Fasilitas Likuiditas Pembiayaan Perumahan yang saya terima.
       </p>
 
@@ -287,18 +287,18 @@ export const DocTidakMemilikiRumah: React.FC<{ data: BankKprDocData }> = ({ data
           <p className="font-semibold">Kepala Desa/Lurah/Pimpinan Perusahaan/Instansi</p>
           <div className="h-20" />
           <p className="font-bold underline">( .................................................. )</p>
-          <p className="text-[7.5pt] text-slate-600">Nama lengkap dan Jabatan</p>
+          <p className="text-[8.5pt] text-slate-600">Nama lengkap dan Jabatan</p>
         </div>
         <div>
           <p>Yang membuat pernyataan,</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400 my-1">
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400 my-1">
             <span className="border border-dashed border-slate-400 px-2 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7.5pt] text-slate-600">Nama Lengkap</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap</p>
         </div>
       </div>
-      <p className="text-[7pt] italic text-slate-500 mt-6">*diberikan cap kelurahan/perusahaan/instansi</p>
+      <p className="text-[8pt] italic text-slate-500 mt-6">*diberikan cap kelurahan/perusahaan/instansi</p>
     </PageWrapper>
   );
 };
@@ -308,17 +308,17 @@ export const DocTidakBekerjaPasangan: React.FC<{ data: BankKprDocData }> = ({ da
   const c = getCommons(data);
   return (
     <PageWrapper>
-      <div className="text-xs italic text-slate-500 mb-2">[ Minta KOP SURAT DESA ]</div>
+      <div className="text-[9pt] italic text-slate-500 mb-2">[ Minta KOP SURAT DESA ]</div>
       <div className="text-center font-bold mb-6">
-        <p className="text-sm underline uppercase">SURAT PERNYATAAN TIDAK MEMILIKI PEKERJAAN</p>
-        <p className="text-xs uppercase">(TIDAK BEKERJA / TIDAK MEMPUNYAI PEKERJAAN)</p>
+        <p className="text-base underline uppercase">SURAT PERNYATAAN TIDAK MEMILIKI PEKERJAAN</p>
+        <p className="text-xs uppercase text-slate-700">(TIDAK BEKERJA / TIDAK MEMPUNYAI PEKERJAAN)</p>
       </div>
 
       <p className="mb-3">Yang bertanda-tangan di bawah ini :</p>
 
-      <table className="w-full mb-4">
+      <table className="w-full mb-4 text-[10pt]">
         <tbody>
-          <tr><td className="w-44 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
+          <tr><td className="w-48 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
           <tr><td className="py-1">No KTP</td><td>:</td><td>{c.nikPasangan || '...................................................'}</td></tr>
           <tr><td className="py-1">Tempat/ Tgl lahir</td><td>:</td><td>{c.tempatLahirPasangan || '........'}, {c.tglLahirPasangan || '........'}</td></tr>
           <tr><td className="py-1">Pekerjaan</td><td>:</td><td>{c.pekerjaanPasangan}</td></tr>
@@ -326,11 +326,11 @@ export const DocTidakBekerjaPasangan: React.FC<{ data: BankKprDocData }> = ({ da
         </tbody>
       </table>
 
-      <p className="text-justify mb-3">
+      <p className="text-justify mb-3 leading-relaxed">
         Dengan ini menyatakan bahwa selama ini <span className="font-semibold">tidak mempunyai pekerjaan / tidak bekerja.</span>
       </p>
 
-      <p className="text-justify mb-8">
+      <p className="text-justify mb-8 leading-relaxed">
         Demikian Surat Pernyataan ini kami buat dengan sebenar-benarnya tanpa paksaan dari pihak manapun dan apabila dikemudian hari pernyataan saya tidak benar, saya bersedia mengembalikan seluruh subsidi yang saya terima.
       </p>
 
@@ -344,15 +344,15 @@ export const DocTidakBekerjaPasangan: React.FC<{ data: BankKprDocData }> = ({ da
           <p className="font-semibold">Kepala Kelurahan / Desa .........................</p>
           <div className="h-20" />
           <p className="font-bold underline">( .................................................. )</p>
-          <p className="text-[7.5pt] text-slate-600">Nama Lengkap & Stempel</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap & Stempel</p>
         </div>
         <div>
           <p>Yang membuat pernyataan,</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400 my-1">
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400 my-1">
             <span className="border border-dashed border-slate-400 px-2 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPasangan || '...................................................'})</p>
-          <p className="text-[7.5pt] text-slate-600">Nama Lengkap Pasangan</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap Pasangan</p>
         </div>
       </div>
     </PageWrapper>
@@ -365,12 +365,12 @@ export const DocBlokUnitDibiayai: React.FC<{ data: BankKprDocData }> = ({ data }
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-4">
-        <p className="text-sm underline uppercase">LAMPIRAN BLOK UNIT YANG DI BIAYAI</p>
+        <p className="text-base underline uppercase">LAMPIRAN BLOK UNIT YANG DI BIAYAI</p>
       </div>
 
-      <table className="w-full mb-4 text-[8.5pt]">
+      <table className="w-full mb-4 text-[10pt]">
         <tbody>
-          <tr><td className="w-52 py-0.5">NAMA PERUMAHAN</td><td className="w-3">:</td><td className="font-semibold">{c.namaPerumahan}</td></tr>
+          <tr><td className="w-56 py-0.5">NAMA PERUMAHAN</td><td className="w-3">:</td><td className="font-semibold">{c.namaPerumahan}</td></tr>
           <tr><td className="py-0.5">PENGEMBANG</td><td>:</td><td className="font-semibold">{c.pengembang}</td></tr>
           <tr><td className="py-0.5">KELURAHAN/DESA</td><td>:</td><td>BENTENG</td></tr>
           <tr><td className="py-0.5">KECAMATAN</td><td>:</td><td>CAMPAKA</td></tr>
@@ -380,39 +380,39 @@ export const DocBlokUnitDibiayai: React.FC<{ data: BankKprDocData }> = ({ data }
         </tbody>
       </table>
 
-      <table className="w-full border-collapse border border-black text-center text-[8pt] mb-8">
+      <table className="w-full border-collapse border border-black text-center text-[9.5pt] mb-8">
         <thead>
           <tr className="bg-slate-100 font-bold">
-            <th className="border border-black p-1.5 w-12">NO</th>
-            <th className="border border-black p-1.5">BLOK/KAVLING</th>
-            <th className="border border-black p-1.5">LUAS BANGUNAN</th>
-            <th className="border border-black p-1.5">LUAS TANAH</th>
+            <th className="border border-black p-2 w-14">NO</th>
+            <th className="border border-black p-2">BLOK/KAVLING</th>
+            <th className="border border-black p-2">LUAS BANGUNAN</th>
+            <th className="border border-black p-2">LUAS TANAH</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className="border border-black p-1.5 font-bold">1</td>
-            <td className="border border-black p-1.5 font-semibold text-left pl-4">{c.blokUnit}</td>
-            <td className="border border-black p-1.5">{c.luasBangunan}</td>
-            <td className="border border-black p-1.5">{c.luasTanah}</td>
+            <td className="border border-black p-2 font-bold">1</td>
+            <td className="border border-black p-2 font-semibold text-left pl-4">{c.blokUnit}</td>
+            <td className="border border-black p-2">{c.luasBangunan}</td>
+            <td className="border border-black p-2">{c.luasTanah}</td>
           </tr>
           {[2, 3, 4, 5, 6, 7].map((num) => (
             <tr key={num}>
-              <td className="border border-black p-2 text-slate-400">{num}</td>
-              <td className="border border-black p-2"></td>
-              <td className="border border-black p-2"></td>
-              <td className="border border-black p-2"></td>
+              <td className="border border-black p-2.5 text-slate-400">{num}</td>
+              <td className="border border-black p-2.5"></td>
+              <td className="border border-black p-2.5"></td>
+              <td className="border border-black p-2.5"></td>
             </tr>
           ))}
         </tbody>
       </table>
 
       <div className="flex justify-end mt-12 pr-8">
-        <div className="text-center w-64">
+        <div className="text-center w-72">
           <p className="font-semibold">CAP DEVELOPER & TTD</p>
           <div className="h-24" />
           <p className="font-bold underline">{c.direktur}</p>
-          <p className="text-[8pt] text-slate-600">{c.pengembang}</p>
+          <p className="text-[9pt] text-slate-600">{c.pengembang}</p>
         </div>
       </div>
     </PageWrapper>
@@ -428,39 +428,39 @@ export const DocBjbFormatG: React.FC<{ data: BankKprDocData }> = ({ data }) => {
   const c = getCommons(data);
   return (
     <PageWrapper>
-      <div className="text-center font-bold mb-3">
-        <p className="text-xs uppercase">FORMAT G</p>
+      <div className="text-center font-bold mb-2">
+        <p className="text-xs uppercase tracking-wider">FORMAT G</p>
         <p className="text-sm underline">SURAT PERNYATAAN PEMOHON KPR SEJAHTERA</p>
       </div>
 
-      <p className="mb-1 text-[8pt]">Yang bertandatangan di bawah ini :</p>
+      <p className="mb-1 text-[9.5pt]">Yang bertandatangan di bawah ini :</p>
 
       {/* 1. Pemohon */}
-      <table className="w-full mb-1 text-[8pt]">
+      <table className="w-full mb-1 text-[9pt]">
         <tbody>
-          <tr><td className="w-4 font-bold align-top">1</td><td className="w-36 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-4 font-bold align-top">1</td><td className="w-40 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td></td><td className="py-0.5">Tempat/ Tgl Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td></td><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td></td><td className="py-0.5">No. KTP/ NIK</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td></td><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7.5pt] pl-4 -mt-1 mb-2 font-medium">Selaku Pemohon</p>
+      <p className="italic text-[8.5pt] pl-4 -mt-1 mb-1.5 font-medium">Selaku Pemohon</p>
 
       {/* 2. Pasangan */}
-      <table className="w-full mb-1 text-[8pt]">
+      <table className="w-full mb-1 text-[9pt]">
         <tbody>
-          <tr><td className="w-4 font-bold align-top">2</td><td className="w-36 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
+          <tr><td className="w-4 font-bold align-top">2</td><td className="w-40 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
           <tr><td></td><td className="py-0.5">Tempat/ Tgl Lahir</td><td>:</td><td>{c.tempatLahirPasangan || '........'}, {c.tglLahirPasangan || '........'}</td></tr>
           <tr><td></td><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPasangan}</td></tr>
           <tr><td></td><td className="py-0.5">No. KTP/ NIK</td><td>:</td><td>{c.nikPasangan || '...................................................'}</td></tr>
           <tr><td></td><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPasangan || c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7.5pt] pl-4 -mt-1 mb-2 font-medium">Selaku suami/ istri *) Pemohon</p>
+      <p className="italic text-[8.5pt] pl-4 -mt-1 mb-1.5 font-medium">Selaku suami/ istri *) Pemohon</p>
 
-      <p className="font-semibold text-[8pt] mb-1">Menyatakan dengan sesungguhnya bahwa :</p>
-      <div className="space-y-1 text-justify text-[7.5pt] leading-snug pl-2">
+      <p className="font-semibold text-[9pt] mb-1">Menyatakan dengan sesungguhnya bahwa :</p>
+      <div className="space-y-0.5 text-justify text-[8.5pt] leading-tight pl-2">
         <p>1. Saya memiliki gaji/upah pokok/penghasilan bersih/upah rata-rata*) per bulan sebesar <span className="font-semibold">{c.gajiPemohon}</span></p>
         <p>2. Saya dan (istri/suami*)) tidak memiliki hak kepemilikan atas rumah pada saat pengajuan pembiayaan KPR Bersubsidi.</p>
         <p>3. Saya dan (istri/suami*)) belum pernah menerima subsidi atau bantuan pembiayaan perumahan dari pemerintah terkait kredit/pembiayaan kepemilikan rumah dan pembangunan Rumah Swadaya.</p>
@@ -471,39 +471,39 @@ export const DocBjbFormatG: React.FC<{ data: BankKprDocData }> = ({ data }) => {
         <p>8. Apabila di kemudian hari pernyataan saya ini tidak benar dan/atau tidak saya penuhi, saya bersedia mengembalikan seluruh dana kemudahan dan/atau bantuan pembiayaan perumahan yang telah diperoleh melalui bank penyalur Dana FLPP dan bersedia dikenakan sanksi sesuai dengan ketentuan peraturan perundang-undangan.</p>
       </div>
 
-      <p className="text-justify text-[7.5pt] mt-2 mb-1">
+      <p className="text-justify text-[8.5pt] mt-1.5 mb-1">
         Demikian Surat Pernyataan ini saya buat dengan sebenar-benarnya tanpa paksaan dari pihak manapun.
       </p>
 
-      <div className="text-right text-[7.5pt] mb-1">
+      <div className="text-right text-[8.5pt] mb-1">
         <p>Purwakarta, .................................... {c.currentYear}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-center text-[7.5pt]">
+      <div className="grid grid-cols-2 gap-2 text-center text-[8.5pt]">
         <div>
           <p>Menyetujui,</p>
-          <div className="h-12" />
+          <div className="h-10" />
           <p className="font-bold underline">({c.namaPasangan || '...................................................'}*))</p>
-          <p className="text-[7pt] text-slate-500">Nama Suami/Istri Pemohon</p>
+          <p className="text-[8pt] text-slate-500">Nama Suami/Istri Pemohon</p>
         </div>
         <div>
           <p>Yang Membuat Pernyataan,</p>
-          <div className="h-12 flex items-center justify-center text-[6.5pt] text-slate-400">
+          <div className="h-10 flex items-center justify-center text-[7.5pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-1 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7pt] text-slate-500">Nama Pemohon</p>
+          <p className="text-[8pt] text-slate-500">Nama Pemohon</p>
         </div>
       </div>
 
-      <div className="text-center text-[7.5pt] mt-2">
+      <div className="text-center text-[8.5pt] mt-1">
         <p>Mengetahui,</p>
         <p>(Pimpinan Instansi Tempat Bekerja/Kepala Desa/Lurah*))</p>
-        <div className="h-10" />
+        <div className="h-8" />
         <p className="font-bold underline">( ................................................................ )</p>
-        <p className="text-[7pt] text-slate-600">Nama lengkap dan stempel</p>
+        <p className="text-[8pt] text-slate-600">Nama lengkap dan stempel</p>
       </div>
-      <p className="text-[6.5pt] italic text-slate-500">*) Pilih Salah Satu</p>
+      <p className="text-[7.5pt] italic text-slate-500">*) Pilih Salah Satu</p>
     </PageWrapper>
   );
 };
@@ -513,22 +513,22 @@ export const DocBjbFormQ: React.FC<{ data: BankKprDocData }> = ({ data }) => {
   const c = getCommons(data);
   return (
     <PageWrapper>
-      <div className="text-right text-[8pt] mb-2 font-medium">
+      <div className="text-right text-[9pt] mb-2 font-medium">
         Bandung, .................................... {c.currentYear}
       </div>
-      <div className="font-bold text-[8.5pt] mb-3">
+      <div className="font-bold text-[9.5pt] mb-3">
         <p className="text-xs">FORM Q - KANTOR CABANG</p>
-        <p className="underline text-sm mt-0.5">SURAT PERMOHONAN PEMBAYARAN SBUM</p>
+        <p className="underline text-base mt-0.5">SURAT PERMOHONAN PEMBAYARAN SBUM</p>
       </div>
 
-      <table className="w-full mb-3 text-[8pt]">
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-24">Nomor</td><td className="w-3">:</td><td>............................................................</td></tr>
+          <tr><td className="w-28">Nomor</td><td className="w-3">:</td><td>............................................................</td></tr>
           <tr><td>Lampiran</td><td>:</td><td>1 (Satu) Berkas</td></tr>
         </tbody>
       </table>
 
-      <div className="mb-3 text-[8pt]">
+      <div className="mb-3 text-[9.5pt]">
         <p className="font-semibold">Kepada Yth.</p>
         <p className="font-semibold">Pemimpin Divisi KPR & KKB</p>
         <p>Kantor Pusat bank bjb</p>
@@ -536,58 +536,58 @@ export const DocBjbFormQ: React.FC<{ data: BankKprDocData }> = ({ data }) => {
         <p>Bandung 400111</p>
       </div>
 
-      <p className="text-[8pt] mb-2">
+      <p className="text-[9.5pt] mb-2">
         <span className="font-semibold">Perihal :</span> Permintaan Pembayaran Subsidi Bantuan Uang Muka Perumahan Tanggal Akad ................ sd ................ Bulan ................ Tahun {c.currentYear}.
       </p>
 
-      <p className="text-justify text-[8pt] mb-2">
+      <p className="text-justify text-[9.5pt] mb-2 leading-relaxed">
         Bersama ini kami mengajukan permintaan pembayaran subsidi bantuan uang muka perumahan untuk periode penerbitan/ penandatanganan Perjanjian Kredit dan/ atau akad bjb KPR Sejahtera FLPP dari pemohon sejak tanggal ____________ sampai dengan tanggal __________, dengan rincian sebagai berikut :
       </p>
 
-      <p className="font-semibold text-[8pt] mb-1">Jumlah subsidi bunga kredit perumahan :</p>
-      <table className="w-full border-collapse border border-black text-center text-[7.5pt] mb-3">
+      <p className="font-semibold text-[9.5pt] mb-1">Jumlah subsidi bunga kredit perumahan :</p>
+      <table className="w-full border-collapse border border-black text-center text-[9pt] mb-3">
         <thead>
           <tr className="bg-slate-100 font-bold">
-            <th className="border border-black p-1" rowSpan={2}>No</th>
-            <th className="border border-black p-1" rowSpan={2}>Jenis KPR</th>
-            <th className="border border-black p-1" colSpan={2}>Total KPR</th>
-            <th className="border border-black p-1" colSpan={2}>Total SBUM Diminta</th>
+            <th className="border border-black p-1.5" rowSpan={2}>No</th>
+            <th className="border border-black p-1.5" rowSpan={2}>Jenis KPR</th>
+            <th className="border border-black p-1.5" colSpan={2}>Total KPR</th>
+            <th className="border border-black p-1.5" colSpan={2}>Total SBUM Diminta</th>
           </tr>
           <tr className="bg-slate-100 font-bold">
-            <th className="border border-black p-1">(unit)</th>
-            <th className="border border-black p-1">(Rp.)</th>
-            <th className="border border-black p-1">(unit)</th>
-            <th className="border border-black p-1">(Rp.)</th>
+            <th className="border border-black p-1.5">(unit)</th>
+            <th className="border border-black p-1.5">(Rp.)</th>
+            <th className="border border-black p-1.5">(unit)</th>
+            <th className="border border-black p-1.5">(Rp.)</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className="border border-black p-1">1</td>
-            <td className="border border-black p-1 text-left font-medium pl-2">KPR SSB Tapak</td>
-            <td className="border border-black p-1">-</td>
-            <td className="border border-black p-1">-</td>
-            <td className="border border-black p-1">-</td>
-            <td className="border border-black p-1">-</td>
+            <td className="border border-black p-1.5">1</td>
+            <td className="border border-black p-1.5 text-left font-medium pl-2">KPR SSB Tapak</td>
+            <td className="border border-black p-1.5">-</td>
+            <td className="border border-black p-1.5">-</td>
+            <td className="border border-black p-1.5">-</td>
+            <td className="border border-black p-1.5">-</td>
           </tr>
           <tr>
-            <td className="border border-black p-1">2</td>
-            <td className="border border-black p-1 text-left font-medium pl-2">KPR Sejahtera Tapak</td>
-            <td className="border border-black p-1">1</td>
-            <td className="border border-black p-1">{c.hargaJual}</td>
-            <td className="border border-black p-1">1</td>
-            <td className="border border-black p-1">{c.sbumStr}</td>
+            <td className="border border-black p-1.5">2</td>
+            <td className="border border-black p-1.5 text-left font-medium pl-2">KPR Sejahtera Tapak</td>
+            <td className="border border-black p-1.5">1</td>
+            <td className="border border-black p-1.5">{c.hargaJual}</td>
+            <td className="border border-black p-1.5">1</td>
+            <td className="border border-black p-1.5">{c.sbumStr}</td>
           </tr>
           <tr className="font-bold bg-slate-50">
-            <td className="border border-black p-1" colSpan={2}>Total</td>
-            <td className="border border-black p-1">1</td>
-            <td className="border border-black p-1">{c.hargaJual}</td>
-            <td className="border border-black p-1">1</td>
-            <td className="border border-black p-1">{c.sbumStr}</td>
+            <td className="border border-black p-1.5" colSpan={2}>Total</td>
+            <td className="border border-black p-1.5">1</td>
+            <td className="border border-black p-1.5">{c.hargaJual}</td>
+            <td className="border border-black p-1.5">1</td>
+            <td className="border border-black p-1.5">{c.sbumStr}</td>
           </tr>
         </tbody>
       </table>
 
-      <div className="text-[8pt] mb-4">
+      <div className="text-[9.5pt] mb-4">
         <p className="font-semibold">Lampiran terdiri dari :</p>
         <ol className="list-decimal pl-5 space-y-0.5">
           <li>Surat Pernyataan Verifikasi;</li>
@@ -596,16 +596,16 @@ export const DocBjbFormQ: React.FC<{ data: BankKprDocData }> = ({ data }) => {
         </ol>
       </div>
 
-      <p className="text-[8pt] mb-4">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
+      <p className="text-[9.5pt] mb-4">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
 
-      <div className="mt-4 text-[8pt]">
+      <div className="mt-4 text-[9.5pt]">
         <p className="font-semibold">PT. BANK PEMBANGUNAN DAERAH JAWA BARAT DAN BANTEN, Tbk.</p>
         <p>Kantor Cabang Purwakarta</p>
         <div className="h-16" />
         <p className="font-bold underline">( ................................................................ )</p>
       </div>
 
-      <div className="mt-6 text-[7pt] text-slate-600">
+      <div className="mt-6 text-[8pt] text-slate-600">
         <p className="font-semibold">Tembusan Kepada Yth.</p>
         <p>1. Sekretaris Jendral Kementerian Pekerjaan Umum dan Perumahan Rakyat</p>
         <p>2. Direktur Jenderal Pembiayaan Perumahan</p>
@@ -621,22 +621,22 @@ export const DocBjbLampiran7: React.FC<{ data: BankKprDocData }> = ({ data }) =>
     <PageWrapper>
       <div className="text-center font-bold mb-6">
         <p className="text-xs uppercase">LAMPIRAN 7</p>
-        <p className="text-sm underline uppercase mt-1">SURAT PERNYATAAN KESEDIAAN PEMBAYARAN KEKURANGAN UANG MUKA</p>
-        <p className="text-xs uppercase">(JIKA SBUM TIDAK DIBAYARKAN OLEH SATKER KEMENPUPERA)</p>
+        <p className="text-base underline uppercase mt-1">SURAT PERNYATAAN KESEDIAAN PEMBAYARAN KEKURANGAN UANG MUKA</p>
+        <p className="text-xs uppercase text-slate-700">(JIKA SBUM TIDAK DIBAYARKAN OLEH SATKER KEMENPUPERA)</p>
       </div>
 
       <p className="mb-3">Dengan ini saya yang bertanda tangan dibawah ini :</p>
 
-      <table className="w-full mb-4">
+      <table className="w-full mb-4 text-[10pt]">
         <tbody>
-          <tr><td className="w-44 py-1">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-1">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-1 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
           <tr><td className="py-1">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-1">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
         </tbody>
       </table>
 
-      <p className="mb-4 text-justify">
+      <p className="mb-4 text-justify leading-relaxed">
         Debitur atas Fasilitas : <span className="font-semibold">bjb KPR Sejahtera FLPP</span> dengan Nomor Perjanjian Kredit : ____________________ tanggal ______________
       </p>
 
@@ -647,11 +647,11 @@ export const DocBjbLampiran7: React.FC<{ data: BankKprDocData }> = ({ data }) =>
       <div className="flex justify-end mt-12 pr-12 text-center">
         <div>
           <p>Purwakarta, .................................... {c.currentYear}</p>
-          <div className="h-20 flex items-center justify-center text-[7pt] text-slate-400 my-2">
+          <div className="h-20 flex items-center justify-center text-[8pt] text-slate-400 my-2">
             <span className="border border-dashed border-slate-400 px-2 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7.5pt] text-slate-600">Nama Debitur</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Debitur</p>
         </div>
       </div>
     </PageWrapper>
@@ -666,71 +666,71 @@ export const DocBjbLampiran6: React.FC<{ data: BankKprDocData }> = ({ data }) =>
       <div className="text-center font-bold mb-3">
         <p className="text-xs uppercase">LAMPIRAN 6</p>
         <p className="text-sm underline uppercase">SURAT KUASA PENDEBETAN SBUM</p>
-        <p className="text-xs uppercase">Pemindahbukuan Pembayaran Kepada Pengembang</p>
+        <p className="text-xs uppercase text-slate-700">Pemindahbukuan Pembayaran Kepada Pengembang</p>
       </div>
 
-      <p className="text-[8pt] mb-1">Yang bertanda tangan dibawah ini :</p>
-      <table className="w-full mb-2 text-[8pt]">
+      <p className="text-[9.5pt] mb-1">Yang bertanda tangan dibawah ini :</p>
+      <table className="w-full mb-2 text-[9pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-44 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
           <tr><td className="py-0.5">Nomor KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-0.5">Debitur atas Fasilitas</td><td>:</td><td>bjb KPR Sejahtera FLPP</td></tr>
         </tbody>
       </table>
-      <p className="text-[8pt] font-semibold mb-2">(Selanjutnya disebut PEMBERI KUASA)</p>
+      <p className="text-[9pt] font-semibold mb-2">(Selanjutnya disebut PEMBERI KUASA)</p>
 
-      <p className="text-[8pt] mb-1">PEMBERI KUASA adalah pemegang rekening Tabungan pada PT. Bank Pembangunan Daerah Jawa Barat dan Banten, Tbk. Sebagai berikut :</p>
-      <table className="w-full mb-2 text-[8pt]">
+      <p className="text-[9pt] mb-1">PEMBERI KUASA adalah pemegang rekening Tabungan pada PT. Bank Pembangunan Daerah Jawa Barat dan Banten, Tbk. Sebagai berikut :</p>
+      <table className="w-full mb-2 text-[9pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5">Nomor Rekening</td><td className="w-3">:</td><td>_____________________________________________________</td></tr>
+          <tr><td className="w-44 py-0.5">Nomor Rekening</td><td className="w-3">:</td><td>_____________________________________________________</td></tr>
           <tr><td className="py-0.5">Atas Nama</td><td>:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">Kantor Cabang</td><td>:</td><td>Purwakarta</td></tr>
         </tbody>
       </table>
-      <p className="text-[8pt] font-semibold mb-2">(Selanjutnya disebut REKENING PEMBERI KUASA)</p>
+      <p className="text-[9pt] font-semibold mb-2">(Selanjutnya disebut REKENING PEMBERI KUASA)</p>
 
-      <p className="text-justify text-[7.5pt] mb-2 leading-relaxed">
+      <p className="text-justify text-[8.5pt] mb-2 leading-relaxed">
         Sehubung dengan Fasilitas bjb KPR Sejahtera FLPP yang diterima PEMBERI KUASA dari PT. Bank Pembangunan Daerah Jawa dan Banten, Tbk. Sesuai Perjanjian Kredit bjb KPR Sejahtera FLPP Nomor ________ tanggal ____________ , dengan ini memberi kuasa dengan hak substitusi kepada :
         <br />
         <span className="font-semibold">PT. Bank Pembangunan Daerah Jawa Barat dan Banten, Tbk.</span> Kantor Cabang Purwakarta (selanjutnya disebut <span className="font-semibold">PENERIMA KUASA</span>)
       </p>
 
-      <p className="font-bold text-center text-[8pt] my-1">KHUSUS</p>
-      <p className="text-justify text-[7.5pt] mb-2 leading-relaxed">
+      <p className="font-bold text-center text-[9pt] my-1">KHUSUS</p>
+      <p className="text-justify text-[8.5pt] mb-2 leading-relaxed">
         Untuk memindahbukukan dana dari REKENING PEMBERI KUASA sebagai pembayaran sebagian Uang Muka (SBUM dari Pemerintah) sejumlah <span className="font-bold">Rp. 4.000.000,- (empat juta rupiah)</span>, sesuai dengan Perjanjian Kredit Nomor __________ tanggal _________ , surat kuasa ini berlaku terhitung sejak tanggal yang tercantum pada surat kuasa ini.
       </p>
-      <p className="text-justify text-[7.5pt] mb-2 leading-relaxed">
+      <p className="text-justify text-[8.5pt] mb-2 leading-relaxed">
         Surat Kuasa ini tidak dapat dicabut kembali dan tidak akan berakhir karena sebab-sebab yang ditentukan oleh pasal 1813, 1814 Kitab Undang-Undang Hukum Perdata Indonesia, ataupun dalam hal terjadinya perubahan pada nomor rekening dari REKENING PEMBERI KUASA, kecuali ada pencabutan tertulis dari PEMBERI KUASA (dalam hal SBUM tidak dibayarkan).
       </p>
 
-      <div className="text-right text-[7.5pt] mb-2">
+      <div className="text-right text-[8.5pt] mb-2">
         <p>Purwakarta, .................................... {c.currentYear}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-center text-[7.5pt]">
+      <div className="grid grid-cols-2 gap-2 text-center text-[8.5pt]">
         <div>
           <p className="font-semibold">PENERIMA KUASA,</p>
           <p>PT. Bank Pembangunan Daerah Jawa Barat dan Banten, Tbk.</p>
           <div className="h-14" />
           <p className="font-bold underline">( ................................................................ )</p>
-          <p className="text-[7pt] text-slate-600">Nama & Jabatan</p>
+          <p className="text-[8pt] text-slate-600">Nama & Jabatan</p>
         </div>
         <div>
           <p className="font-semibold">PEMBERI KUASA,</p>
-          <div className="h-14 flex items-center justify-center text-[6.5pt] text-slate-400">
+          <div className="h-14 flex items-center justify-center text-[7.5pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-1 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
         </div>
       </div>
 
-      <div className="text-center text-[7.5pt] mt-2">
+      <div className="text-center text-[8.5pt] mt-2">
         <p className="font-semibold">MENGETAHUI DAN MENYETUJUI</p>
         <div className="h-10" />
         <p className="font-bold underline">({c.namaPasangan || '...................................................'})</p>
-        <p className="text-[7pt] text-slate-600">Nama Suami/Istri Pemohon</p>
+        <p className="text-[8pt] text-slate-600">Nama Suami/Istri Pemohon</p>
       </div>
     </PageWrapper>
   );
@@ -743,13 +743,13 @@ export const DocBjbLampiran3: React.FC<{ data: BankKprDocData }> = ({ data }) =>
     <PageWrapper>
       <div className="text-center font-bold mb-4">
         <p className="text-xs uppercase">LAMPIRAN 3</p>
-        <p className="text-sm underline uppercase mt-1">SURAT PENGAKUAN KEKURANGAN BAYAR UANG MUKA</p>
+        <p className="text-base underline uppercase mt-1">SURAT PENGAKUAN KEKURANGAN BAYAR UANG MUKA</p>
       </div>
 
-      <p className="mb-2 text-[8pt]">Yang bertanda tangan dibawah ini :</p>
-      <table className="w-full mb-3 text-[8pt]">
+      <p className="mb-2 text-[9.5pt]">Yang bertanda tangan dibawah ini :</p>
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-44 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat/ Tgl Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
@@ -757,13 +757,13 @@ export const DocBjbLampiran3: React.FC<{ data: BankKprDocData }> = ({ data }) =>
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-3 leading-relaxed">
+      <p className="text-justify text-[9.5pt] mb-3 leading-relaxed">
         Dengan ini menyatakan bahwa saya telah melakukan pembayaran uang muka sebesar <span className="font-semibold">{c.dpDibayar} (dua juta rupiah)</span> dan masih memiliki kekurangan bayar uang muka sebesar <span className="font-semibold">{c.sbumStr} (empat juta rupiah)</span> untuk pembelian rumah sejahtera tapak kepada:
       </p>
 
-      <table className="w-full mb-3 text-[8pt]">
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-52 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
+          <tr><td className="w-56 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
           <tr><td className="py-0.5">Alamat Rumah Yang Dibeli</td><td>:</td><td>{c.namaPerumahan} Blok {c.blokUnit}</td></tr>
           <tr><td className="py-0.5">Harga Jual Rumah</td><td>:</td><td className="font-semibold">{c.hargaJual}</td></tr>
           <tr><td className="py-0.5">Besaran Uang Muka</td><td>:</td><td>{c.dpTotal}</td></tr>
@@ -771,29 +771,29 @@ export const DocBjbLampiran3: React.FC<{ data: BankKprDocData }> = ({ data }) =>
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-4 leading-relaxed">
+      <p className="text-justify text-[9.5pt] mb-4 leading-relaxed">
         Jika permohonan subsidi bantuan uang muka perumahan saya tidak disetujui, maka saya bersedia untuk membayar kekurangan uang muka pembelian rumah sejahtera tapak menggunakan dana sendiri.
       </p>
 
-      <p className="text-[8pt] mb-4">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
+      <p className="text-[9.5pt] mb-4">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
 
-      <div className="text-right text-[8pt] mb-2">
+      <div className="text-right text-[9.5pt] mb-2">
         <p>Purwakarta, .................................... {c.currentYear}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-center text-[8pt] mt-4">
+      <div className="grid grid-cols-2 gap-4 text-center text-[9.5pt] mt-4">
         <div>
           <p className="font-semibold">Menyetujui</p>
-          <p className="text-[7.5pt] text-slate-600">(Jabatan yang mewakili pengembang)</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400">
+          <p className="text-[8.5pt] text-slate-600">(Jabatan yang mewakili pengembang)</p>
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400">
             <span>Ttd dan cap perusahaan</span>
           </div>
           <p className="font-bold underline">({c.direktur})</p>
-          <p className="text-[7.5pt] text-slate-600">{c.pengembang}</p>
+          <p className="text-[8.5pt] text-slate-600">{c.pengembang}</p>
         </div>
         <div>
           <p className="font-semibold">Pemohon</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400">
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-2 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
@@ -810,10 +810,10 @@ export const DocBjbLampiran2: React.FC<{ data: BankKprDocData }> = ({ data }) =>
     <PageWrapper>
       <div className="text-center font-bold mb-4">
         <p className="text-xs uppercase">LAMPIRAN 2</p>
-        <p className="text-sm underline uppercase mt-1">SURAT PERMOHONAN SUBSIDI BANTUAN UANG MUKA</p>
+        <p className="text-base underline uppercase mt-1">SURAT PERMOHONAN SUBSIDI BANTUAN UANG MUKA</p>
       </div>
 
-      <div className="mb-3 text-[8pt]">
+      <div className="mb-3 text-[9.5pt]">
         <p className="font-semibold">Kepada Yth.</p>
         <p className="font-semibold">Kepala Satuan Kerja Direktorat Jenderal Pembiayaan Perumahan</p>
         <p>Kementerian Pekerjaan Umum dan Perumahan Rakyat</p>
@@ -821,12 +821,12 @@ export const DocBjbLampiran2: React.FC<{ data: BankKprDocData }> = ({ data }) =>
         <p>Kebayoran Baru, Jakarta Selatan 12110</p>
       </div>
 
-      <p className="text-[8pt] mb-2 font-semibold">Perihal : Permohonan Subsidi Bantuan Uang Muka</p>
+      <p className="text-[9.5pt] mb-2 font-semibold">Perihal : Permohonan Subsidi Bantuan Uang Muka</p>
 
-      <p className="text-[8pt] mb-2">Saya yang bertanda tangan dibawah ini :</p>
-      <table className="w-full mb-3 text-[8pt]">
+      <p className="text-[9.5pt] mb-2">Saya yang bertanda tangan dibawah ini :</p>
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-44 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat/ Tgl Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
@@ -834,13 +834,13 @@ export const DocBjbLampiran2: React.FC<{ data: BankKprDocData }> = ({ data }) =>
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-2">
+      <p className="text-justify text-[9.5pt] mb-2">
         Mengajukan permohonan subsidi bantuan uang muka untuk pembelian rumah sejahtera tapak dengan keterangan sebagai berikut:
       </p>
 
-      <table className="w-full mb-3 text-[8pt]">
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-52 py-0.5">Nama Pengembang</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
+          <tr><td className="w-56 py-0.5">Nama Pengembang</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
           <tr><td className="py-0.5">Alamat Rumah Yang Dibeli</td><td>:</td><td>{c.namaPerumahan} Blok {c.blokUnit}</td></tr>
           <tr><td className="py-0.5">Harga Jual Rumah</td><td>:</td><td className="font-semibold">{c.hargaJual}</td></tr>
           <tr><td className="py-0.5">Besaran Uang Muka</td><td>:</td><td>{c.dpTotal}</td></tr>
@@ -848,13 +848,13 @@ export const DocBjbLampiran2: React.FC<{ data: BankKprDocData }> = ({ data }) =>
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-3 leading-relaxed">
+      <p className="text-justify text-[9.5pt] mb-3 leading-relaxed">
         Sebagai pertimbangan, bersama ini kami lampirkan dokumen fotokopi surat pengakuan kekurangan bayar uang muka pembelian rumah sejahtera tapak yang disetujui oleh <span className="font-semibold">{c.direktur}</span> *)
       </p>
 
-      <p className="text-[8pt] mb-6">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
+      <p className="text-[9.5pt] mb-6">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
 
-      <div className="flex justify-end pr-12 text-center text-[8pt]">
+      <div className="flex justify-end pr-12 text-center text-[9.5pt]">
         <div>
           <p>Purwakarta, .................................... {c.currentYear}</p>
           <p className="mt-1 font-semibold">Pemohon,</p>
@@ -862,7 +862,7 @@ export const DocBjbLampiran2: React.FC<{ data: BankKprDocData }> = ({ data }) =>
           <p className="font-bold underline">({c.namaPemohon})</p>
         </div>
       </div>
-      <p className="text-[7pt] italic text-slate-500 mt-6">*) diisi dengan nama direktur atau yang mewakili pengembang</p>
+      <p className="text-[8pt] italic text-slate-500 mt-6">*) diisi dengan nama direktur atau yang mewakili pengembang</p>
     </PageWrapper>
   );
 };
@@ -873,13 +873,13 @@ export const DocBjbPembatalanFlpp: React.FC<{ data: BankKprDocData }> = ({ data 
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-6">
-        <p className="text-sm underline uppercase">SURAT PERNYATAAN PEMBATALAN DEBITUR FLPP</p>
+        <p className="text-base underline uppercase">SURAT PERNYATAAN PEMBATALAN DEBITUR FLPP</p>
       </div>
 
       <p className="mb-3">Saya yang bertanda tangan dibawah ini :</p>
-      <table className="w-full mb-4">
+      <table className="w-full mb-4 text-[10pt]">
         <tbody>
-          <tr><td className="w-44 py-1">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-1">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-1">Tempat/ Tgl Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-1">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-1">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
@@ -909,11 +909,11 @@ export const DocBjbPembatalanFlpp: React.FC<{ data: BankKprDocData }> = ({ data 
           <p className="font-semibold">PT BPD Jawa Barat dan Banten, Tbk.</p>
           <div className="h-20" />
           <p className="font-bold underline">( .................................................. )</p>
-          <p className="text-[7.5pt] text-slate-600">(Nama Pejabat) (Jabatan)</p>
+          <p className="text-[8.5pt] text-slate-600">(Nama Pejabat) (Jabatan)</p>
         </div>
         <div>
           <p>Yang membuat pernyataan,</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400 my-1">
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400 my-1">
             <span className="border border-dashed border-slate-400 px-2 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
@@ -928,15 +928,15 @@ export const DocBjbUrutanFasilitasKredit: React.FC<{ data: BankKprDocData }> = (
   const c = getCommons(data);
   return (
     <PageWrapper>
-      <div className="text-center font-bold mb-3">
+      <div className="text-center font-bold mb-2">
         <p className="text-xs uppercase">SURAT PERNYATAAN CALON DEBITUR</p>
         <p className="text-sm underline uppercase">MENGENAI URUTAN FASILITAS KREDIT</p>
       </div>
 
-      <p className="text-[8pt] mb-1">Kami yang bertandatangan di bawah ini :</p>
-      <table className="w-full mb-1 text-[7.5pt]">
+      <p className="text-[9pt] mb-1">Kami yang bertandatangan di bawah ini :</p>
+      <table className="w-full mb-1 text-[8.5pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5 font-semibold">Nama Calon Debitur</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-44 py-0.5 font-semibold">Nama Calon Debitur</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat/ Tgl Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
@@ -947,17 +947,17 @@ export const DocBjbUrutanFasilitasKredit: React.FC<{ data: BankKprDocData }> = (
         </tbody>
       </table>
 
-      <p className="text-[7.5pt] mb-1">
+      <p className="text-[8.5pt] mb-1">
         Adalah suami-istri berdasarkan Buku Nikah (atau yang disamakan dengan itu) Nomor : ________________ tanggal ___________
       </p>
-      <p className="text-[7.5pt] font-semibold mb-1">Dengan ini menyatakan bahwa :</p>
-      <ol className="list-decimal pl-4 space-y-0.5 text-justify text-[7pt]">
+      <p className="text-[8.5pt] font-semibold mb-0.5">Dengan ini menyatakan bahwa :</p>
+      <ol className="list-decimal pl-4 space-y-0.5 text-justify text-[8pt] leading-tight">
         <li>Telah mengajukan permohonan fasilitas bjb KPR sebagaimana tercantum pada Formulir Aplikasi bjb KPR tanggal _________________</li>
         <li>Telah membaca dan memahami seluruh persyaratan dan ketentuan yang berlaku dalam hal pengajuan fasilitas kredit bjb KPR pada PT. Bank Pembangunan Daerah Jawa Barat dan Banten, Tbk. (bank bjb);</li>
         <li>Saat ini sedang menikmati fasilitas kredit atau pembiayaan Konsumtif beragun Properti sebagai berikut :</li>
       </ol>
 
-      <table className="w-full border-collapse border border-black text-center text-[6.5pt] my-1">
+      <table className="w-full border-collapse border border-black text-center text-[7.5pt] my-1">
         <thead>
           <tr className="bg-slate-100 font-bold">
             <th className="border border-black p-0.5 w-6">No</th>
@@ -974,24 +974,24 @@ export const DocBjbUrutanFasilitasKredit: React.FC<{ data: BankKprDocData }> = (
         </tbody>
       </table>
 
-      <div className="space-y-0.5 text-justify text-[7pt]">
+      <div className="space-y-0.5 text-justify text-[8pt] leading-tight">
         <p>4. Sedang mengajukan permohonan fasilitas kredit/pembiayaan beragun properti pada Bank ...................................... dengan pengajuan kredit sebesar Rp. ......................................</p>
         <p>5. Bersedia melaksanakan langkah-langkah yang ditetapkan oleh bank bjb terkait LTV Bank Indonesia.</p>
         <p>6. Sehubungan dengan hal tersebut, saya bersedia menandatangani Perjanjian Kredit, menyetujui pencairan kredit, dan melakukan pembayaran angsuran bjb KPR.</p>
       </div>
 
-      <p className="text-justify text-[7pt] mt-1 mb-1">
+      <p className="text-justify text-[8pt] mt-1 mb-1">
         Demikian Surat Pernyataan ini dibuat dengan sebenarnya sesuai dengan keadaan yang sebenarnya, tanpa paksaan atau tekanan dari pihak manapun.
       </p>
 
-      <div className="text-right text-[7pt] mb-1">
+      <div className="text-right text-[8pt] mb-1">
         <p>Purwakarta, .................................... {c.currentYear}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-center text-[7pt]">
+      <div className="grid grid-cols-2 gap-2 text-center text-[8pt]">
         <div>
           <p className="font-semibold">Yang Membuat Pernyataan,</p>
-          <div className="h-10 flex items-center justify-center text-[6pt] text-slate-400">
+          <div className="h-10 flex items-center justify-center text-[7pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-1 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
@@ -1011,49 +1011,49 @@ export const DocBjbChecklist: React.FC<{ data: BankKprDocData; isKomersil?: bool
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-4">
-        <p className="text-sm underline uppercase">CHECKLIST DOKUMEN bjb KPR {isKomersil ? 'KOMERSIL' : 'Sejahtera FLPP'}</p>
-        <p className="text-xs uppercase">{isKomersil ? 'Dokumen Pengajuan KPR Non-Subsidi' : 'Dokumen FLPP dan Dokumen SBUM'}</p>
+        <p className="text-base underline uppercase">CHECKLIST DOKUMEN bjb KPR {isKomersil ? 'KOMERSIL' : 'Sejahtera FLPP'}</p>
+        <p className="text-xs uppercase text-slate-700">{isKomersil ? 'Dokumen Pengajuan KPR Non-Subsidi' : 'Dokumen FLPP dan Dokumen SBUM'}</p>
       </div>
 
-      <table className="w-full border-collapse border border-black text-[7.5pt] mb-6">
+      <table className="w-full border-collapse border border-black text-[9pt] mb-6">
         <thead>
           <tr className="bg-slate-100 font-bold text-center">
-            <th className="border border-black p-1 w-8">No</th>
-            <th className="border border-black p-1">Dokumen</th>
-            <th className="border border-black p-1 w-12">Ada</th>
-            <th className="border border-black p-1 w-16">Tidak Ada</th>
-            <th className="border border-black p-1 w-56">Keterangan</th>
+            <th className="border border-black p-1.5 w-8">No</th>
+            <th className="border border-black p-1.5">Dokumen</th>
+            <th className="border border-black p-1.5 w-14">Ada</th>
+            <th className="border border-black p-1.5 w-16">Tidak Ada</th>
+            <th className="border border-black p-1.5 w-64">Keterangan</th>
           </tr>
         </thead>
         <tbody>
-          <tr className="font-semibold bg-slate-50"><td className="border border-black p-1 text-center">1</td><td className="border border-black p-1" colSpan={4}>Dokumen Pengajuan {isKomersil ? 'Komersil' : 'FLPP'}</td></tr>
-          <tr><td className="border border-black p-1 text-center">a</td><td className="border border-black p-1">Format E : Surat Pernyataan Penghasilan</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Memakai kop surat perusahaan</td></tr>
-          <tr><td className="border border-black p-1 text-center">b</td><td className="border border-black p-1">Format F : Surat Pernyataan Tidak Memiliki Rumah (debitur dan pasangan)</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Memakai kop surat kelurahan dan harus sesuai format</td></tr>
-          <tr><td className="border border-black p-1 text-center">c</td><td className="border border-black p-1">Format G : Surat Pernyataan Pemohon KPR Sejahtera</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Harus di ttd oleh pejabat instansi kerja / kelurahan</td></tr>
-          <tr><td className="border border-black p-1 text-center">d</td><td className="border border-black p-1">Format H : Berita Acara Serah Terima Rumah Umum Tapak</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Memakai kop surat Pengembang, di ttd dan stempel</td></tr>
-          <tr><td className="border border-black p-1 text-center">e</td><td className="border border-black p-1">Lampiran Blok Unit yang dibiayai</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Kop pengembang, materai 10.000 dan stempel</td></tr>
-          <tr><td className="border border-black p-1 text-center">f</td><td className="border border-black p-1">Surat Pernyataan Tidak Memiliki Pekerjaan (Pasangan)</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Memakai kop kelurahan</td></tr>
-          <tr><td className="border border-black p-1 text-center">g</td><td className="border border-black p-1">Surat Pernyataan Pembatalan Debitur FLPP</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Format bjb</td></tr>
+          <tr className="font-semibold bg-slate-50"><td className="border border-black p-1.5 text-center">1</td><td className="border border-black p-1.5" colSpan={4}>Dokumen Pengajuan {isKomersil ? 'Komersil' : 'FLPP'}</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">a</td><td className="border border-black p-1.5">Format E : Surat Pernyataan Penghasilan</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Memakai kop surat perusahaan</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">b</td><td className="border border-black p-1.5">Format F : Surat Pernyataan Tidak Memiliki Rumah (debitur & pasangan)</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Memakai kop surat kelurahan</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">c</td><td className="border border-black p-1.5">Format G : Surat Pernyataan Pemohon KPR Sejahtera</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Di ttd pejabat instansi / kelurahan</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">d</td><td className="border border-black p-1.5">Format H : Berita Acara Serah Terima Rumah Umum Tapak</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Kop Pengembang, ttd & stempel</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">e</td><td className="border border-black p-1.5">Lampiran Blok Unit yang dibiayai</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Kop pengembang, materai & stempel</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">f</td><td className="border border-black p-1.5">Surat Pernyataan Tidak Memiliki Pekerjaan (Pasangan)</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Memakai kop kelurahan</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">g</td><td className="border border-black p-1.5">Surat Pernyataan Pembatalan Debitur FLPP</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Format bjb</td></tr>
 
-          <tr className="font-semibold bg-slate-50"><td className="border border-black p-1 text-center">2</td><td className="border border-black p-1" colSpan={4}>Dokumen Lainnya</td></tr>
-          <tr><td className="border border-black p-1 text-center">a</td><td className="border border-black p-1">Bukti telah membayar uang muka</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Bukti setor/pinbuk ke rekening Pengembang</td></tr>
-          <tr><td className="border border-black p-1 text-center">b</td><td className="border border-black p-1">Bukti dan Dokumentasi OTS</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Bukti kunjungan dan foto OTS</td></tr>
-          <tr><td className="border border-black p-1 text-center">c</td><td className="border border-black p-1">Surat Pernyataan Urutan Fasilitas Kredit (LTV)</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Ditandatangani debitur dan pasangan</td></tr>
+          <tr className="font-semibold bg-slate-50"><td className="border border-black p-1.5 text-center">2</td><td className="border border-black p-1.5" colSpan={4}>Dokumen Lainnya</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">a</td><td className="border border-black p-1.5">Bukti telah membayar uang muka</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Bukti setor/pinbuk ke rek Pengembang</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">b</td><td className="border border-black p-1.5">Bukti dan Dokumentasi OTS</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Bukti kunjungan dan foto OTS</td></tr>
+          <tr><td className="border border-black p-1.5 text-center">c</td><td className="border border-black p-1.5">Surat Pernyataan Urutan Fasilitas Kredit (LTV)</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Ditandatangani debitur & pasangan</td></tr>
 
           {!isKomersil && (
             <>
-              <tr className="font-semibold bg-slate-50"><td className="border border-black p-1 text-center">3</td><td className="border border-black p-1" colSpan={4}>Dokumen Pengajuan SBUM</td></tr>
-              <tr><td className="border border-black p-1 text-center">a</td><td className="border border-black p-1">Lampiran 2 : Surat Permohonan Subsidi Bantuan Uang Muka</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Ditujukan ke Ditjen KemenPUPR</td></tr>
-              <tr><td className="border border-black p-1 text-center">b</td><td className="border border-black p-1">Lampiran 3 : Surat Pengakuan Kekurangan Bayar Uang Muka</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Di ttd dan stempel Pengembang</td></tr>
-              <tr><td className="border border-black p-1 text-center">c</td><td className="border border-black p-1">Lampiran 6 : Surat Kuasa Pendebetan SBUM</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Di ttd oleh Pemimpin Cabang & Debitur</td></tr>
-              <tr><td className="border border-black p-1 text-center">d</td><td className="border border-black p-1">Lampiran 7 : Surat Pernyataan Kesediaan Pembayaran Kekurangan UM</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Materai 10.000</td></tr>
-              <tr><td className="border border-black p-1 text-center">e</td><td className="border border-black p-1">Form Q : Surat Permohonan Pembayaran SBUM</td><td className="border border-black p-1 text-center">v</td><td className="border border-black p-1"></td><td className="border border-black p-1">Dari Cabang ke Divisi KPR Pusat</td></tr>
+              <tr className="font-semibold bg-slate-50"><td className="border border-black p-1.5 text-center">3</td><td className="border border-black p-1.5" colSpan={4}>Dokumen Pengajuan SBUM</td></tr>
+              <tr><td className="border border-black p-1.5 text-center">a</td><td className="border border-black p-1.5">Lampiran 2 : Surat Permohonan Subsidi Bantuan Uang Muka</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Ditujukan ke Ditjen KemenPUPR</td></tr>
+              <tr><td className="border border-black p-1.5 text-center">b</td><td className="border border-black p-1.5">Lampiran 3 : Surat Pengakuan Kekurangan Bayar Uang Muka</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Di ttd dan stempel Pengembang</td></tr>
+              <tr><td className="border border-black p-1.5 text-center">c</td><td className="border border-black p-1.5">Lampiran 6 : Surat Kuasa Pendebetan SBUM</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Di ttd oleh Pemimpin Cabang & Debitur</td></tr>
+              <tr><td className="border border-black p-1.5 text-center">d</td><td className="border border-black p-1.5">Lampiran 7 : Surat Pernyataan Kesediaan Pembayaran Kekurangan UM</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Materai 10.000</td></tr>
+              <tr><td className="border border-black p-1.5 text-center">e</td><td className="border border-black p-1.5">Form Q : Surat Permohonan Pembayaran SBUM</td><td className="border border-black p-1.5 text-center font-bold">v</td><td className="border border-black p-1.5"></td><td className="border border-black p-1.5">Dari Cabang ke Divisi KPR Pusat</td></tr>
             </>
           )}
         </tbody>
       </table>
 
-      <div className="grid grid-cols-2 gap-4 text-center text-[8pt] mt-8">
+      <div className="grid grid-cols-2 gap-4 text-center text-[9pt] mt-8">
         <div>
           <p>Petugas Verifikasi KPR,</p>
           <div className="h-16" />
@@ -1078,36 +1078,36 @@ export const DocBriPernyataanPemohon: React.FC<{ data: BankKprDocData }> = ({ da
   const c = getCommons(data);
   return (
     <PageWrapper>
-      <div className="text-center font-bold mb-4">
+      <div className="text-center font-bold mb-3">
         <p className="text-sm underline uppercase">SURAT PERNYATAAN PEMOHON KPR BERSUBSIDI</p>
-        <p className="text-xs uppercase">(BANK BRI)</p>
+        <p className="text-xs uppercase text-slate-700">(BANK BRI)</p>
       </div>
 
-      <p className="mb-2 text-[8pt]">Yang bertanda-tangan di bawah ini :</p>
-      <table className="w-full mb-1 text-[8pt]">
+      <p className="mb-1 text-[9pt]">Yang bertanda-tangan di bawah ini :</p>
+      <table className="w-full mb-1 text-[9pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-44 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">No KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat/ Tgl lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7.5pt] pl-4 -mt-1 mb-2 font-medium">Selaku pemohon.</p>
+      <p className="italic text-[8.5pt] pl-4 -mt-1 mb-1.5 font-medium">Selaku pemohon.</p>
 
-      <table className="w-full mb-1 text-[8pt]">
+      <table className="w-full mb-1 text-[9pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
+          <tr><td className="w-44 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
           <tr><td className="py-0.5">No KTP</td><td>:</td><td>{c.nikPasangan || '...................................................'}</td></tr>
           <tr><td className="py-0.5">Tempat/ Tgl lahir</td><td>:</td><td>{c.tempatLahirPasangan || '........'}, {c.tglLahirPasangan || '........'}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPasangan}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPasangan || c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7.5pt] pl-4 -mt-1 mb-2 font-medium">Selaku suami/istri pemohon.</p>
+      <p className="italic text-[8.5pt] pl-4 -mt-1 mb-1.5 font-medium">Selaku suami/istri pemohon.</p>
 
-      <p className="font-semibold text-[8pt] mb-1">Menyatakan dengan sesungguhnya bahwa :</p>
-      <div className="space-y-1 text-justify text-[7.5pt] leading-snug pl-2">
+      <p className="font-semibold text-[9pt] mb-1">Menyatakan dengan sesungguhnya bahwa :</p>
+      <div className="space-y-0.5 text-justify text-[8.5pt] leading-tight pl-2">
         <p>1. Saya selaku pemohon memiliki gaji/upah pokok/penghasil bersih/upah rata-rata*) perbulan sebesar <span className="font-semibold">{c.gajiPemohon}</span></p>
         <p>2. Saya dan istri/suami*) tidak memiliki hak kepemilikan atas rumah pada saat pengajuan pembiayaan KPR Bersubsidi.</p>
         <p>3. Saya dan istri/suami*) belum pernah menerima subsidi atau bantuan pembiayaan perumahan dari pemerintah terkait kredit/pembiayaan kepemilikan rumah dan/atau pembangunan rumah swadaya.</p>
@@ -1118,38 +1118,38 @@ export const DocBriPernyataanPemohon: React.FC<{ data: BankKprDocData }> = ({ da
         <p>8. Apabila di kemudian hari pernyataan saya tidak benar dan/atau tidak saya penuhi, saya bersedia mengembalikan seluruh subsidi yang telah saya terima dari pemerintah dan bersedia dikenakan sanksi sesuai dengan ketentuan peraturan perundang-undangan.</p>
       </div>
 
-      <p className="text-justify text-[7.5pt] mt-2 mb-1">
+      <p className="text-justify text-[8.5pt] mt-1.5 mb-1">
         Demikian surat pernyataan ini saya buat dengan sebenar-benarnya tanpa paksaan dari pihak manapun.
       </p>
 
-      <div className="text-right text-[7.5pt] mb-1">
+      <div className="text-right text-[8.5pt] mb-1">
         <p>Purwakarta, .................................... {c.currentYear}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-center text-[7.5pt]">
+      <div className="grid grid-cols-2 gap-2 text-center text-[8.5pt]">
         <div>
           <p>Menyetujui,</p>
-          <div className="h-12" />
+          <div className="h-10" />
           <p className="font-bold underline">({c.namaPasangan || '...................................................'})</p>
-          <p className="text-[7pt] text-slate-500">Nama Suami/Istri Pemohon</p>
+          <p className="text-[8pt] text-slate-500">Nama Suami/Istri Pemohon</p>
         </div>
         <div>
           <p>Yang membuat pernyataan,</p>
-          <div className="h-12 flex items-center justify-center text-[6.5pt] text-slate-400">
+          <div className="h-10 flex items-center justify-center text-[7.5pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-1 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7pt] text-slate-500">Nama Pemohon</p>
+          <p className="text-[8pt] text-slate-500">Nama Pemohon</p>
         </div>
       </div>
 
-      <div className="text-center text-[7.5pt] mt-2">
+      <div className="text-center text-[8.5pt] mt-1">
         <p>Mengetahui,</p>
         <p>Pimpinan Tempat Bekerja/ Kepala Desa/Lurah* ......................................</p>
-        <div className="h-10" />
+        <div className="h-8" />
         <p className="font-bold underline">( ................................................................ )</p>
       </div>
-      <p className="text-[6.5pt] italic text-slate-500">*) Coret salah satu yang tidak perlu</p>
+      <p className="text-[7.5pt] italic text-slate-500">*) Coret salah satu yang tidak perlu</p>
     </PageWrapper>
   );
 };
@@ -1160,17 +1160,17 @@ export const DocBriStatusKepemilikanRumah: React.FC<{ data: BankKprDocData }> = 
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-6">
-        <p className="text-sm underline uppercase">SURAT PERNYATAAN STATUS KEPEMILIKAN RUMAH</p>
+        <p className="text-base underline uppercase">SURAT PERNYATAAN STATUS KEPEMILIKAN RUMAH</p>
       </div>
 
       <p className="mb-3">Saya/kami yang bertandatangan di bawah ini :</p>
 
-      <table className="w-full border-collapse border border-black text-[8pt] mb-6">
+      <table className="w-full border-collapse border border-black text-[9.5pt] mb-6">
         <thead>
           <tr className="bg-slate-100 font-bold text-center">
-            <th className="border border-black p-2 w-48">Keterangan</th>
-            <th className="border border-black p-2">Pemohon Utama</th>
-            <th className="border border-black p-2">Pemohon Pendamping (Pasangan)</th>
+            <th className="border border-black p-2.5 w-52">Keterangan</th>
+            <th className="border border-black p-2.5">Pemohon Utama</th>
+            <th className="border border-black p-2.5">Pemohon Pendamping (Pasangan)</th>
           </tr>
         </thead>
         <tbody>
@@ -1208,7 +1208,7 @@ export const DocBriStatusKepemilikanRumah: React.FC<{ data: BankKprDocData }> = 
       </table>
 
       <p className="font-semibold mb-2">Dengan ini menyatakan bahwa kami, secara sendiri maupun Bersama-sama :</p>
-      <ol className="list-disc pl-6 space-y-1.5 text-justify mb-6">
+      <ol className="list-disc pl-6 space-y-2 text-justify mb-6 leading-relaxed">
         <li>Tidak memiliki hak kepemilikan secara hukum atas Rumah Tapak Umum atau Sarusun;</li>
         <li>Hanya memiliki Rumah satu-satunya pada Alamat tersebut di atas dengan kondisi tidak layak huni; atau</li>
         <li>Memiliki tanah dengan alas hak yang sah dan tidak dalam sengketa untuk Pembangunan Rumah Swadaya.</li>
@@ -1240,39 +1240,39 @@ export const DocBtnLampiran3: React.FC<{ data: BankKprDocData }> = ({ data }) =>
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-3">
-        <p className="text-xs uppercase">Lampiran III</p>
-        <p className="text-sm underline uppercase">SURAT PERNYATAAN PERSETUJUAN</p>
-        <p className="text-sm underline uppercase">PENYALURAN KPR SEJAHTERA FLPP TA 2026</p>
+        <p className="text-xs uppercase tracking-wider">Lampiran III</p>
+        <p className="text-base underline uppercase">SURAT PERNYATAAN PERSETUJUAN</p>
+        <p className="text-base underline uppercase">PENYALURAN KPR SEJAHTERA FLPP TA 2026</p>
       </div>
 
-      <p className="text-[8pt] mb-1">Yang bertanda tangan di bawah ini:</p>
-      <table className="w-full mb-1 text-[8pt]">
+      <p className="text-[9.5pt] mb-1">Yang bertanda tangan di bawah ini:</p>
+      <table className="w-full mb-1 text-[9pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-44 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7.5pt] pl-4 -mt-1 mb-2 font-medium">Selaku pemohon.</p>
+      <p className="italic text-[8.5pt] pl-4 -mt-1 mb-1.5 font-medium">Selaku pemohon.</p>
 
-      <table className="w-full mb-1 text-[8pt]">
+      <table className="w-full mb-1 text-[9pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
+          <tr><td className="w-44 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPasangan || '...................................................'}</td></tr>
           <tr><td className="py-0.5">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPasangan || '........'}, {c.tglLahirPasangan || '........'}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPasangan}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPasangan || c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7.5pt] pl-4 -mt-1 mb-2 font-medium">Selaku istri/suami* pemohon.</p>
+      <p className="italic text-[8.5pt] pl-4 -mt-1 mb-1.5 font-medium">Selaku istri/suami* pemohon.</p>
 
-      <p className="text-justify text-[7.5pt] mb-2 leading-relaxed">
+      <p className="text-justify text-[9pt] mb-2 leading-relaxed">
         Menyatakan dengan sesungguhnya bahwa sehubungan dengan kerja sama penyaluran Subsidi Bantuan Uang Muka Perumahan (SBUM) Tahun 2026 masih dalam proses kajian internal Kementerian PUPR, maka atas fasilitas Kredit Pemilikan Rumah (KPR) Sejahtera FLPP yang Saya dan istri/suami* ajukan maka Saya dan istri/suami*:
       </p>
 
-      <ol className="list-decimal pl-4 space-y-1.5 text-justify text-[7.5pt] leading-snug mb-3">
+      <ol className="list-decimal pl-4 space-y-1.5 text-justify text-[9pt] leading-snug mb-3">
         <li>
           Mengetahui dan menyetujui bahwa penyaluran KPR Sejahtera FLPP TA 2026 dimaksud atas pembelian rumah umum tapak pada proyek <span className="font-semibold">{c.namaPerumahan} Blok/No {c.blokUnit}</span> yang dikembangkan oleh <span className="font-semibold">{c.pengembang}</span> dengan fasilitas SBUM yang akan dibayarkan apabila telah dapat ditagihkan dan sesuai dengan ketentuan pada PKS SBUM TA 2025.
         </li>
@@ -1281,40 +1281,40 @@ export const DocBtnLampiran3: React.FC<{ data: BankKprDocData }> = ({ data }) =>
         </li>
       </ol>
 
-      <p className="text-justify text-[7.5pt] mb-3 leading-relaxed">
+      <p className="text-justify text-[9pt] mb-3 leading-relaxed">
         Demikian surat pernyataan ini saya buat dengan sebenarnya tanpa paksaan dari pihak manapun dan apabila di kemudian hari pernyataan saya ini tidak benar, saya bersedia mengembalikan seluruh subsidi yang saya terima.
       </p>
 
-      <div className="text-right text-[7.5pt] mb-1">
+      <div className="text-right text-[9pt] mb-1">
         <p>Purwakarta, .................................... {c.currentYear}</p>
-        <p className="text-[7pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
+        <p className="text-[8pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-center text-[7.5pt]">
+      <div className="grid grid-cols-2 gap-2 text-center text-[9pt]">
         <div>
           <p>Menyetujui,</p>
           <div className="h-12" />
           <p className="font-bold underline">({c.namaPasangan || '...................................................'})</p>
-          <p className="text-[7pt] text-slate-500">Nama Lengkap Suami/Istri*</p>
+          <p className="text-[8pt] text-slate-500">Nama Lengkap Suami/Istri*</p>
         </div>
         <div>
           <p>Yang Membuat Pernyataan,</p>
-          <div className="h-12 flex items-center justify-center text-[6.5pt] text-slate-400">
+          <div className="h-12 flex items-center justify-center text-[7.5pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-1 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7pt] text-slate-500">Nama Lengkap Pemohon</p>
+          <p className="text-[8pt] text-slate-500">Nama Lengkap Pemohon</p>
         </div>
       </div>
 
-      <div className="text-center text-[7.5pt] mt-2">
+      <div className="text-center text-[9pt] mt-2">
         <p>Mengetahui,</p>
         <p className="font-semibold">Pengembang {c.pengembang}</p>
         <div className="h-10" />
         <p className="font-bold underline">({c.direktur})</p>
-        <p className="text-[7pt] text-slate-600">Nama Lengkap, Jabatan dan Stempel</p>
+        <p className="text-[8pt] text-slate-600">Nama Lengkap, Jabatan dan Stempel</p>
       </div>
-      <p className="text-[6.5pt] italic text-slate-500">*) coret salah yang tidak perlu</p>
+      <p className="text-[8pt] italic text-slate-500">*) coret salah yang tidak perlu</p>
     </PageWrapper>
   );
 };
@@ -1326,13 +1326,13 @@ export const DocBtnLampiran4: React.FC<{ data: BankKprDocData }> = ({ data }) =>
     <PageWrapper>
       <div className="text-center font-bold mb-4">
         <p className="text-xs uppercase">Lampiran IV</p>
-        <p className="text-sm underline uppercase mt-1">SURAT PERNYATAAN DEVELOPER</p>
+        <p className="text-base underline uppercase mt-1">SURAT PERNYATAAN DEVELOPER</p>
       </div>
 
-      <p className="mb-2 text-[8pt]">Yang bertanda tangan di bawah ini:</p>
-      <table className="w-full mb-3 text-[8pt]">
+      <p className="mb-2 text-[10pt]">Yang bertanda tangan di bawah ini:</p>
+      <table className="w-full mb-3 text-[10pt]">
         <tbody>
-          <tr><td className="w-40 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.direktur}</td></tr>
+          <tr><td className="w-44 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.direktur}</td></tr>
           <tr><td className="py-1">No. KTP</td><td>:</td><td>3214120810690001</td></tr>
           <tr><td className="py-1">Jabatan</td><td>:</td><td className="font-semibold">DIREKTUR UTAMA</td></tr>
           <tr><td className="py-1">Nama Developer</td><td>:</td><td className="font-semibold">{c.pengembang}</td></tr>
@@ -1340,45 +1340,45 @@ export const DocBtnLampiran4: React.FC<{ data: BankKprDocData }> = ({ data }) =>
         </tbody>
       </table>
 
-      <p className="font-semibold text-[8pt] mb-2">Dengan ini menyatakan bahwa debitur:</p>
-      <table className="w-full mb-4 text-[8pt]">
+      <p className="font-semibold text-[10pt] mb-2">Dengan ini menyatakan bahwa debitur:</p>
+      <table className="w-full mb-4 text-[10pt]">
         <tbody>
-          <tr><td className="w-40 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-44 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-1">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-1">Alamat Perumahan</td><td>:</td><td className="font-semibold">{c.namaPerumahan} Blok ({c.blokUnit})</td></tr>
         </tbody>
       </table>
 
-      <p className="text-justify text-[8.5pt] mb-4 leading-relaxed">
+      <p className="text-justify text-[10pt] mb-4 leading-relaxed">
         Melaksanakan akad kredit di Bank BTN dengan kondisi saat ini fasilitas SBUM akan dibayarkan apabila telah dapat ditagihkan dan sesuai dengan ketentuan pada PKS SBUM TA 2025. Sehubungan dengan hal tersebut kami menyatakan tidak akan mengaitkan pembayaran SBUM debitur dimaksud kepada Bank BTN.
       </p>
 
-      <p className="text-justify text-[8.5pt] mb-8">
+      <p className="text-justify text-[10pt] mb-8 leading-relaxed">
         Demikian surat pernyataan ini dibuat dengan sebenar-benarnya tanpa paksaan dari pihak manapun.
       </p>
 
-      <div className="text-right text-[8pt] mb-2">
+      <div className="text-right text-[10pt] mb-2">
         <p>Purwakarta, .................................... {c.currentYear}</p>
-        <p className="text-[7.5pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
+        <p className="text-[8.5pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-center text-[8pt] mt-4">
+      <div className="grid grid-cols-2 gap-4 text-center text-[10pt] mt-4">
         <div>
           <p className="font-semibold">Menyetujui,</p>
           <div className="h-20" />
           <p className="font-bold underline">( .................................................. )</p>
-          <p className="text-[7.5pt] text-slate-600">Nama Lengkap Developer</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap Developer</p>
         </div>
         <div>
           <p className="font-semibold">Yang Menyatakan,</p>
-          <div className="h-20 flex items-center justify-center text-[7pt] text-slate-400">
+          <div className="h-20 flex items-center justify-center text-[8pt] text-slate-400">
             <span>Stempel Developer & TTD</span>
           </div>
           <p className="font-bold underline">({c.direktur})</p>
-          <p className="text-[7.5pt] text-slate-600">Direktur Utama {c.pengembang}</p>
+          <p className="text-[8.5pt] text-slate-600">Direktur Utama {c.pengembang}</p>
         </div>
       </div>
-      <p className="text-[7pt] italic text-slate-500 mt-6">*) coret salah yang tidak perlu</p>
+      <p className="text-[8pt] italic text-slate-500 mt-6">*) coret salah yang tidak perlu</p>
     </PageWrapper>
   );
 };
@@ -1390,13 +1390,13 @@ export const DocBtnLampiran7: React.FC<{ data: BankKprDocData }> = ({ data }) =>
     <PageWrapper>
       <div className="text-center font-bold mb-6">
         <p className="text-xs uppercase">Lampiran VII</p>
-        <p className="text-sm underline uppercase mt-1">SURAT PERNYATAAN PENYERAHAN SPT PPH</p>
+        <p className="text-base underline uppercase mt-1">SURAT PERNYATAAN PENYERAHAN SPT PPH</p>
       </div>
 
       <p className="mb-3">Yang bertanda tangan di bawah ini:</p>
-      <table className="w-full mb-4">
+      <table className="w-full mb-4 text-[10pt]">
         <tbody>
-          <tr><td className="w-44 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-1">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-1">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-1">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
@@ -1405,7 +1405,7 @@ export const DocBtnLampiran7: React.FC<{ data: BankKprDocData }> = ({ data }) =>
       </table>
 
       <p className="font-semibold mb-2">Menyatakan hal-hal sebagai berikut:</p>
-      <ol className="list-decimal pl-6 space-y-2 text-justify mb-6">
+      <ol className="list-decimal pl-6 space-y-2 text-justify mb-6 leading-relaxed">
         <li>
           Bahwa dikarenakan saya memiliki Nomor Pokok Wajib Pajak (NPWP) kurang dari 1 (satu) tahun pada saat pengajuan KPR Bersubsidi BTN, maka saya belum dapat menyampaikan Surat Pemberitahuan Tahunan (SPT) Pajak Penghasilan (PPh) Orang Pribadi sebagai salah satu dokumen persyaratan pengajuan KPR Bersubsidi BTN sebagaimana telah diatur pada ketentuan Pemerintah.
         </li>
@@ -1417,17 +1417,17 @@ export const DocBtnLampiran7: React.FC<{ data: BankKprDocData }> = ({ data }) =>
         </li>
       </ol>
 
-      <p className="text-justify mb-8">
+      <p className="text-justify mb-8 leading-relaxed">
         Demikian surat pernyataan ini saya buat dengan sebenarnya tanpa paksaan dari pihak manapun dan apabila di kemudian hari pernyataan saya ini tidak benar, saya bersedia mengembalikan seluruh subsidi yang saya terima.
       </p>
 
       <div className="flex justify-end pr-12 text-center">
         <div>
           <p>Purwakarta, .................................... {c.currentYear}</p>
-          <p className="text-[7.5pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
+          <p className="text-[8.5pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
           <div className="h-20" />
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7.5pt] text-slate-600">Nama Lengkap</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap</p>
         </div>
       </div>
     </PageWrapper>
@@ -1441,13 +1441,13 @@ export const DocBtnLampiran10: React.FC<{ data: BankKprDocData }> = ({ data }) =
     <PageWrapper>
       <div className="text-center font-bold mb-3">
         <p className="text-xs uppercase">Lampiran X</p>
-        <p className="text-sm underline uppercase">SURAT PERNYATAAN VERIFIKASI</p>
+        <p className="text-base underline uppercase">SURAT PERNYATAAN VERIFIKASI</p>
       </div>
 
-      <p className="text-[8pt] mb-1">Yang bertanda tangan di bawah ini :</p>
-      <table className="w-full mb-2 text-[8pt]">
+      <p className="text-[9.5pt] mb-1">Yang bertanda tangan di bawah ini :</p>
+      <table className="w-full mb-2 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-36 py-0.5">Nama</td><td className="w-3">:</td><td>............................................................</td></tr>
+          <tr><td className="w-40 py-0.5">Nama</td><td className="w-3">:</td><td>............................................................</td></tr>
           <tr><td className="py-0.5">NIK / NIP</td><td>:</td><td>............................................................</td></tr>
           <tr><td className="py-0.5">Jabatan</td><td>:</td><td>............................................................</td></tr>
           <tr><td className="py-0.5">Alamat Kantor</td><td>:</td><td>Bank BTN Kantor Cabang Purwakarta</td></tr>
@@ -1455,9 +1455,9 @@ export const DocBtnLampiran10: React.FC<{ data: BankKprDocData }> = ({ data }) =
         </tbody>
       </table>
 
-      <p className="font-bold text-center text-[8.5pt] my-1">MENYATAKAN</p>
+      <p className="font-bold text-center text-[10pt] my-1">MENYATAKAN</p>
 
-      <div className="space-y-1 text-justify text-[7.5pt] leading-snug">
+      <div className="space-y-1.5 text-justify text-[9pt] leading-snug">
         <p>1. Telah melaksanakan verifikasi dokumen Kelompok Sasaran KPR Sejahtera sebanyak 1 (Satu) Pemohon atas nama <span className="font-semibold">{c.namaPemohon}</span>.</p>
         <p>2. Bahwa verifikasi dilakukan berupa verifikasi administrasi untuk memastikan ketetapan sasaran dan pemenuhan ketentuan KPR Sejahtera.</p>
         <p>3. Bahwa verifikasi administrasi meliputi kelengkapan SPR, identitas, slip gaji sah, NPWP, surat pernyataan pemohon, kesesuaian harga rumah umum tapak, dan analisa kemampuan mengangsur pemohon.</p>
@@ -1466,19 +1466,19 @@ export const DocBtnLampiran10: React.FC<{ data: BankKprDocData }> = ({ data }) =
         <p>6. Seluruh dokumen persyaratan pemohon sesuai dengan aslinya dan dapat dipertanggungjawabkan.</p>
       </div>
 
-      <p className="text-justify text-[7.5pt] mt-3 mb-2">
+      <p className="text-justify text-[9pt] mt-3 mb-2">
         Demikian surat pernyataan ini saya buat dengan sebenar-benarnya tanpa paksaan dari pihak manapun.
       </p>
 
-      <div className="mt-4 text-[8pt]">
+      <div className="mt-4 text-[9.5pt]">
         <p>Purwakarta, .................................... {c.currentYear}</p>
         <p className="font-semibold">PT. BANK TABUNGAN NEGARA (PERSERO) Tbk.</p>
         <p>KANTOR CABANG PURWAKARTA</p>
         <div className="h-16" />
         <p className="font-bold underline">( ................................................................ )</p>
-        <p className="text-[7pt] text-slate-600">Nama Lengkap, Jabatan dan Stempel</p>
+        <p className="text-[8.5pt] text-slate-600">Nama Lengkap, Jabatan dan Stempel</p>
       </div>
-      <p className="text-[6.5pt] italic text-slate-500 mt-2">*) coret yang tidak perlu</p>
+      <p className="text-[8pt] italic text-slate-500 mt-2">*) coret yang tidak perlu</p>
     </PageWrapper>
   );
 };
@@ -1490,13 +1490,13 @@ export const DocBtnLampiran11Kuasa: React.FC<{ data: BankKprDocData }> = ({ data
     <PageWrapper>
       <div className="text-center font-bold mb-3">
         <p className="text-xs uppercase">Lampiran XI</p>
-        <p className="text-sm underline uppercase">SURAT KUASA</p>
+        <p className="text-base underline uppercase">SURAT KUASA</p>
       </div>
 
-      <p className="text-[8pt] mb-1">Yang bertanda tangan di bawah ini:</p>
-      <table className="w-full mb-1 text-[8pt]">
+      <p className="text-[9.5pt] mb-1">Yang bertanda tangan di bawah ini:</p>
+      <table className="w-full mb-1 text-[9pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-44 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
@@ -1505,23 +1505,23 @@ export const DocBtnLampiran11Kuasa: React.FC<{ data: BankKprDocData }> = ({ data
           <tr><td className="py-0.5">Nomor Rekening Tabungan</td><td>:</td><td>............................................................</td></tr>
         </tbody>
       </table>
-      <p className="text-[8pt] italic pl-2 mb-2 font-medium">yang dalam hal ini bertindak untuk dan atas nama sendiri. Selanjutnya disebut <span className="font-bold">"Pemberi Kuasa"</span>.</p>
+      <p className="text-[9pt] italic pl-2 mb-2 font-medium">yang dalam hal ini bertindak untuk dan atas nama sendiri. Selanjutnya disebut <span className="font-bold">"Pemberi Kuasa"</span>.</p>
 
-      <p className="text-justify text-[7.5pt] mb-1">
+      <p className="text-justify text-[8.5pt] mb-1 leading-relaxed">
         PT. Bank Tabungan Negara (Persero) Tbk., berkedudukan di Jalan Gajah Mada No. 01 Jakarta Pusat yang dalam hal ini diwakili oleh ........................................ selaku ........................................ di PT. Bank Tabungan Negara (Persero) Tbk. Kantor Cabang Purwakarta. Selanjutnya disebut <span className="font-bold">"Penerima Kuasa"</span>.
       </p>
 
-      <p className="font-bold text-center text-[8pt] my-0.5">KHUSUS</p>
-      <p className="text-[7.5pt] mb-1">dengan ini Pemberi Kuasa memberikan kuasa kepada Penerima Kuasa untuk dapat melakukan hal-hal sebagai berikut:</p>
+      <p className="font-bold text-center text-[9pt] my-0.5">KHUSUS</p>
+      <p className="text-[8.5pt] mb-1">dengan ini Pemberi Kuasa memberikan kuasa kepada Penerima Kuasa untuk dapat melakukan hal-hal sebagai berikut:</p>
 
-      <div className="space-y-1 text-justify text-[7.5pt] leading-snug pl-2">
+      <div className="space-y-1 text-justify text-[8.5pt] leading-tight pl-2">
         <p>1. Membayarkan sejumlah dana kepada Penjual/Pengembang dari hasil pencairan kredit yang diterima oleh Pemberi Kuasa dari Bank BTN untuk pembayaran lunas harga jual rumah beserta lahan sesuai dengan tujuan pemberian kredit.</p>
         <p>2. Melakukan pemindahbukuan pencairan dana Subsidi Bantuan Uang Muka (SBUM) dari rekening simpanan milik Pemberi Kuasa di Bank BTN senilai <span className="font-semibold">{c.sbumStr}</span> untuk digunakan sebagai pengurang pokok kredit/pembayaran kekurangan uang muka pembelian Rumah Umum Tapak.</p>
         <div className="pl-3">
           <p className="font-semibold">3. Pembayaran dan pemindahbukuan dana ditujukan kepada:</p>
           <table className="w-full">
             <tbody>
-              <tr><td className="w-36">Nama Pengembang</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
+              <tr><td className="w-40">Nama Pengembang</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
               <tr><td>Nomor Rekening</td><td>:</td><td className="font-bold">{c.rekBtnDeveloper}</td></tr>
               <tr><td>Rekening Atas Nama</td><td>:</td><td className="font-semibold">{c.pengembang}</td></tr>
               <tr><td>Pada Bank</td><td>:</td><td>Bank BTN Kantor Cabang Purwakarta</td></tr>
@@ -1532,11 +1532,11 @@ export const DocBtnLampiran11Kuasa: React.FC<{ data: BankKprDocData }> = ({ data
         <p>5. Transaksi dapat dilakukan oleh Bank BTN secara manual, otomatis dan/atau mekanisme transaksi yang berlaku di Bank BTN.</p>
       </div>
 
-      <p className="text-justify text-[7.5pt] mt-2 mb-2">
+      <p className="text-justify text-[8.5pt] mt-2 mb-2 leading-relaxed">
         Demikian Surat Kuasa ini dibuat dan tidak dapat dicabut kembali serta tidak akan berakhir karena sebab – sebab yang tercantum dalam Pasal 1813 Kitab Undang – Undang Hukum Perdata atau karena sebab apapun juga.
       </p>
 
-      <div className="grid grid-cols-2 gap-4 text-center text-[7.5pt] mt-2">
+      <div className="grid grid-cols-2 gap-4 text-center text-[8.5pt] mt-2">
         <div>
           <p className="font-bold">PENERIMA KUASA</p>
           <p>PT. BANK TABUNGAN NEGARA (PERSERO) Tbk.</p>
@@ -1547,13 +1547,13 @@ export const DocBtnLampiran11Kuasa: React.FC<{ data: BankKprDocData }> = ({ data
         <div>
           <p>Purwakarta, .................................... {c.currentYear}</p>
           <p className="font-bold">PEMBERI KUASA</p>
-          <div className="h-12 flex items-center justify-center text-[6.5pt] text-slate-400">
+          <div className="h-12 flex items-center justify-center text-[7.5pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-1 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
         </div>
       </div>
-      <p className="text-[6.5pt] italic text-slate-500">*) coret yang tidak perlu</p>
+      <p className="text-[8pt] italic text-slate-500">*) coret yang tidak perlu</p>
     </PageWrapper>
   );
 };
@@ -1565,10 +1565,10 @@ export const DocBtnLampiran13: React.FC<{ data: BankKprDocData }> = ({ data }) =
     <PageWrapper>
       <div className="text-center font-bold mb-4">
         <p className="text-xs uppercase">LAMPIRAN XIII</p>
-        <p className="text-sm underline uppercase mt-1">Surat Permohonan Subsidi Bantuan Uang Muka</p>
+        <p className="text-base underline uppercase mt-1">Surat Permohonan Subsidi Bantuan Uang Muka</p>
       </div>
 
-      <div className="mb-3 text-[8pt]">
+      <div className="mb-3 text-[9.5pt]">
         <p className="font-semibold">Kepada Yth:</p>
         <p className="font-semibold">Kepala Satuan Kerja Direktorat Jenderal Pembiayaan Infrastruktur Pekerjaan Umum dan Perumahan</p>
         <p>Kementerian Pekerjaan Umum dan Perumahan Rakyat</p>
@@ -1576,12 +1576,12 @@ export const DocBtnLampiran13: React.FC<{ data: BankKprDocData }> = ({ data }) =
         <p>Kebayoran Baru, Jakarta Selatan 12110</p>
       </div>
 
-      <p className="text-[8pt] mb-2 font-semibold">Perihal : Permohonan Subsidi Bantuan Uang Muka Perumahan</p>
+      <p className="text-[9.5pt] mb-2 font-semibold">Perihal : Permohonan Subsidi Bantuan Uang Muka Perumahan</p>
 
-      <p className="text-[8pt] mb-2">Saya yang bertanda tangan di bawah ini:</p>
-      <table className="w-full mb-3 text-[8pt]">
+      <p className="text-[9.5pt] mb-2">Saya yang bertanda tangan di bawah ini:</p>
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-44 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
@@ -1589,13 +1589,13 @@ export const DocBtnLampiran13: React.FC<{ data: BankKprDocData }> = ({ data }) =
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-2">
+      <p className="text-justify text-[9.5pt] mb-2">
         mengajukan permohonan Subsidi Bantuan Uang Muka perumahan untuk pembelian Rumah Sejahtera Tapak dengan keterangan sebagai berikut:
       </p>
 
-      <table className="w-full mb-3 text-[8pt]">
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-52 py-0.5">Nama Pengembang</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
+          <tr><td className="w-56 py-0.5">Nama Pengembang</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
           <tr><td className="py-0.5">Alamat Rumah yang Dibeli</td><td>:</td><td>{c.namaPerumahan} Blok {c.blokUnit}</td></tr>
           <tr><td className="py-0.5">Harga Jual Rumah</td><td>:</td><td className="font-semibold">{c.hargaJual}</td></tr>
           <tr><td className="py-0.5">Besaran Uang Muka</td><td>:</td><td>{c.dpTotal}</td></tr>
@@ -1603,23 +1603,23 @@ export const DocBtnLampiran13: React.FC<{ data: BankKprDocData }> = ({ data }) =
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-3 leading-relaxed">
+      <p className="text-justify text-[9.5pt] mb-3 leading-relaxed">
         Sebagai pertimbangan, bersama ini kami lampirkan dokumen fotokopi surat pengakuan kekurangan bayar uang muka pembelian Rumah Sejahtera Tapak yang disetujui oleh <span className="font-semibold">{c.direktur}</span>*)
       </p>
 
-      <p className="text-[8pt] mb-6">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
+      <p className="text-[9.5pt] mb-6">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
 
-      <div className="flex justify-end pr-12 text-center text-[8pt]">
+      <div className="flex justify-end pr-12 text-center text-[9.5pt]">
         <div>
           <p>Purwakarta, .................................... {c.currentYear}</p>
-          <p className="text-[7.5pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
+          <p className="text-[8.5pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
           <p className="mt-1 font-semibold">PEMOHON</p>
           <div className="h-20" />
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7.5pt] text-slate-600">Nama Lengkap</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap</p>
         </div>
       </div>
-      <p className="text-[7pt] italic text-slate-500 mt-6">*) diisi nama direktur/atau yang mewakili pengembang</p>
+      <p className="text-[8pt] italic text-slate-500 mt-6">*) diisi nama direktur/atau yang mewakili pengembang</p>
     </PageWrapper>
   );
 };
@@ -1631,13 +1631,13 @@ export const DocBtnLampiran14: React.FC<{ data: BankKprDocData }> = ({ data }) =
     <PageWrapper>
       <div className="text-center font-bold mb-4">
         <p className="text-xs uppercase">LAMPIRAN XIV</p>
-        <p className="text-sm underline uppercase mt-1">Surat Pengakuan Kekurangan Bayar Uang Muka</p>
+        <p className="text-base underline uppercase mt-1">Surat Pengakuan Kekurangan Bayar Uang Muka</p>
       </div>
 
-      <p className="mb-2 text-[8pt]">Saya yang bertanda tangan di bawah ini:</p>
-      <table className="w-full mb-3 text-[8pt]">
+      <p className="mb-2 text-[9.5pt]">Saya yang bertanda tangan di bawah ini:</p>
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-44 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
@@ -1645,13 +1645,13 @@ export const DocBtnLampiran14: React.FC<{ data: BankKprDocData }> = ({ data }) =
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-3 leading-relaxed">
+      <p className="text-justify text-[9.5pt] mb-3 leading-relaxed">
         Dengan ini menyatakan bahwa saya telah melakukan pembayaran uang muka sebesar <span className="font-semibold">{c.dpDibayar} (Dua Juta Rupiah)</span> dan masih memiliki kekurangan bayar uang muka sebesar <span className="font-semibold">{c.sbumStr} (Empat Juta Rupiah)</span> untuk pembelian Rumah Sejahtera Tapak kepada:
       </p>
 
-      <table className="w-full mb-3 text-[8pt]">
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-52 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
+          <tr><td className="w-56 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
           <tr><td className="py-0.5">Alamat Rumah yang Dibeli</td><td>:</td><td>{c.namaPerumahan} Blok {c.blokUnit}</td></tr>
           <tr><td className="py-0.5">Harga Jual Rumah</td><td>:</td><td className="font-semibold">{c.hargaJual}</td></tr>
           <tr><td className="py-0.5">Besaran Uang Muka</td><td>:</td><td>{c.dpTotal}</td></tr>
@@ -1659,30 +1659,30 @@ export const DocBtnLampiran14: React.FC<{ data: BankKprDocData }> = ({ data }) =
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-4 leading-relaxed">
+      <p className="text-justify text-[9.5pt] mb-4 leading-relaxed">
         Jika permohonan SBUM saya tidak disetujui, maka saya bersedia untuk membayar kekurangan uang muka pembelian rumah sejahtera tapak menggunakan dana sendiri.
       </p>
 
-      <p className="text-[8pt] mb-4">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
+      <p className="text-[9.5pt] mb-4">Demikian kami sampaikan, atas perhatiannya kami ucapkan terima kasih.</p>
 
-      <div className="grid grid-cols-2 gap-4 text-center text-[8pt] mt-6">
+      <div className="grid grid-cols-2 gap-4 text-center text-[9.5pt] mt-6">
         <div>
           <p className="font-semibold">Menyetujui,</p>
-          <p className="text-[7.5pt] text-slate-600">(Jabatan yang mewakili pengembang)</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400">
+          <p className="text-[8.5pt] text-slate-600">(Jabatan yang mewakili pengembang)</p>
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400">
             <span>Stempel & TTD Pengembang</span>
           </div>
           <p className="font-bold underline">({c.direktur})</p>
-          <p className="text-[7.5pt] text-slate-600">{c.pengembang}</p>
+          <p className="text-[8.5pt] text-slate-600">{c.pengembang}</p>
         </div>
         <div>
           <p>Purwakarta, .................................... {c.currentYear}</p>
           <p className="font-semibold">PEMOHON</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400">
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-2 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7.5pt] text-slate-600">Nama Lengkap</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap</p>
         </div>
       </div>
     </PageWrapper>
@@ -1695,17 +1695,17 @@ export const DocBtnStandingInstruction: React.FC<{ data: BankKprDocData }> = ({ 
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-4">
-        <p className="text-sm underline uppercase">STANDING INSTRUCTION</p>
-        <p className="text-xs uppercase">(Perintah Pemindahbukuan)</p>
+        <p className="text-base underline uppercase">STANDING INSTRUCTION</p>
+        <p className="text-xs uppercase text-slate-700">(Perintah Pemindahbukuan)</p>
       </div>
 
-      <p className="text-justify text-[8pt] mb-3 leading-relaxed">
+      <p className="text-justify text-[9.5pt] mb-3 leading-relaxed">
         Sehubungan dengan permohonan dana Subsidi Bantuan Uang Muka (SBUM) kepada Kepala Satuan Kerja Direktorat Jenderal Pembiayaan Perumahan Kementerian Pekerjaan Umum dan Perumahan Rakyat, maka saya yang bertanda tangan dibawah ini :
       </p>
 
-      <table className="w-full mb-3 text-[8pt]">
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-44 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-0.5">Nama</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">NIK</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
@@ -1713,43 +1713,43 @@ export const DocBtnStandingInstruction: React.FC<{ data: BankKprDocData }> = ({ 
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-3 leading-relaxed">
+      <p className="text-justify text-[9.5pt] mb-3 leading-relaxed">
         Dengan ini memberikan kuasa kepada <span className="font-semibold">PT. Bank Tabungan Negara (Persero) Tbk. Kantor Cabang Purwakarta</span> Untuk melakukan pemindahbukuan pencairan dana Subsidi Bantuan Uang Muka (SBUM) senilai <span className="font-bold">{c.sbumStr} (Empat Juta Rupiah)</span> untuk digunakan sebagai pengurang pokok kredit atau pembayaran kekurangan uang muka pembelian rumah sejahtera*), kepada :
       </p>
 
-      <table className="w-full mb-4 text-[8pt]">
+      <table className="w-full mb-4 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-44 py-0.5">Nama Pengembang</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
+          <tr><td className="w-48 py-0.5">Nama Pengembang</td><td className="w-3">:</td><td className="font-semibold">{c.pengembang}</td></tr>
           <tr><td className="py-0.5">Nomor Rekening</td><td>:</td><td className="font-bold">{c.rekBtnDeveloper}</td></tr>
           <tr><td className="py-0.5">Rekening Atas Nama</td><td>:</td><td className="font-semibold">{c.pengembang}</td></tr>
           <tr><td className="py-0.5">Pada Bank</td><td>:</td><td>Bank BTN Kantor Cabang Purwakarta</td></tr>
         </tbody>
       </table>
 
-      <p className="text-justify text-[8pt] mb-6 leading-relaxed">
+      <p className="text-justify text-[9.5pt] mb-6 leading-relaxed">
         Demikian Standing Instruction ini dibuat tanpa adanya paksaan dari pihak manapun. Akibat apapun yang mungkin timbul dari paksaan penyaluran dana oleh PT. Bank Tabungan Negara (Persero) Tbk. Berdasarkan Standing Instruction ini adalah sepenuhnya menjadi tanggung jawab saya.
       </p>
 
-      <div className="grid grid-cols-2 gap-4 text-center text-[8pt] mt-6">
+      <div className="grid grid-cols-2 gap-4 text-center text-[9.5pt] mt-6">
         <div>
           <p className="font-semibold">Menyetujui,</p>
           <p>PT. BANK TABUNGAN NEGARA (PERSERO) Tbk</p>
           <p>KANTOR CABANG PURWAKARTA</p>
           <div className="h-16" />
           <p className="font-bold underline">( ................................................................ )</p>
-          <p className="text-[7pt] text-slate-600">Nama Lengkap, jabatan, Stempel</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap, jabatan, Stempel</p>
         </div>
         <div>
           <p>Purwakarta, .................................... {c.currentYear}</p>
           <p className="font-semibold">Yang Membuat Standing Instruction</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400">
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-2 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7pt] text-slate-600">Nama Lengkap Pembuat SI</p>
+          <p className="text-[8.5pt] text-slate-600">Nama Lengkap Pembuat SI</p>
         </div>
       </div>
-      <p className="text-[6.5pt] italic text-slate-500 mt-6">*) Pilih salah satu</p>
+      <p className="text-[8pt] italic text-slate-500 mt-6">*) Pilih salah satu</p>
     </PageWrapper>
   );
 };
@@ -1760,21 +1760,21 @@ export const DocBtnKuasaPendebetanDana: React.FC<{ data: BankKprDocData }> = ({ 
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-6">
-        <p className="text-sm underline uppercase">SURAT KUASA PENDEBETAN DANA</p>
-        <p className="text-xs uppercase">(BANK BTN)</p>
+        <p className="text-base underline uppercase">SURAT KUASA PENDEBETAN DANA</p>
+        <p className="text-xs uppercase text-slate-700">(BANK BTN)</p>
       </div>
 
       <p className="mb-3">Yang bertanda tangan di bawah ini :</p>
-      <table className="w-full mb-4">
+      <table className="w-full mb-4 text-[10pt]">
         <tbody>
-          <tr><td className="w-44 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-1">No KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-1">Tempat, tgl lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-1">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-1 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[8pt] pl-4 -mt-2 mb-4 font-medium">yang dalam hal ini bertindak untuk dan atas nama sendiri, Selanjutnya disebut <span className="font-bold">"Pemberi Kuasa"</span>.</p>
+      <p className="italic text-[9pt] pl-4 -mt-2 mb-4 font-medium">yang dalam hal ini bertindak untuk dan atas nama sendiri, Selanjutnya disebut <span className="font-bold">"Pemberi Kuasa"</span>.</p>
 
       <p className="text-justify mb-4 leading-relaxed">
         PT. Bank Tabungan Negara (Persero) Tbk, berkedudukan di Jalan Gajah Mada No. 01 Jakarta Pusat yang dalam hal ini diwakili oleh ........................................... selaku ........................................... di PT. Bank Tabungan Negara (Persero) Tbk. Kantor Cabang Purwakarta Selanjutnya disebut <span className="font-bold">"Penerima Kuasa"</span>.
@@ -1799,7 +1799,7 @@ export const DocBtnKuasaPendebetanDana: React.FC<{ data: BankKprDocData }> = ({ 
         <div>
           <p>Purwakarta, .................................... {c.currentYear}</p>
           <p className="font-bold">PEMBERI KUASA,</p>
-          <div className="h-16 flex items-center justify-center text-[7pt] text-slate-400 my-1">
+          <div className="h-16 flex items-center justify-center text-[8pt] text-slate-400 my-1">
             <span className="border border-dashed border-slate-400 px-2 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
@@ -1815,14 +1815,14 @@ export const DocBtnPenghunianRumah: React.FC<{ data: BankKprDocData }> = ({ data
   return (
     <PageWrapper>
       <div className="text-center font-bold mb-4">
-        <p className="text-sm underline uppercase">SURAT PERNYATAAN PENGHUNIAN RUMAH UMUM BERSUBSIDI</p>
-        <p className="text-xs uppercase">(BANK BTN)</p>
+        <p className="text-base underline uppercase">SURAT PERNYATAAN PENGHUNIAN RUMAH UMUM BERSUBSIDI</p>
+        <p className="text-xs uppercase text-slate-700">(BANK BTN)</p>
       </div>
 
-      <p className="mb-2 text-[8pt]">Yang bertanda tangan di bawah ini :</p>
-      <table className="w-full mb-3 text-[8pt]">
+      <p className="mb-2 text-[9.5pt]">Yang bertanda tangan di bawah ini :</p>
+      <table className="w-full mb-3 text-[9.5pt]">
         <tbody>
-          <tr><td className="w-44 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-48 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
@@ -1830,8 +1830,8 @@ export const DocBtnPenghunianRumah: React.FC<{ data: BankKprDocData }> = ({ data
         </tbody>
       </table>
 
-      <p className="font-semibold text-[8pt] mb-1">Selaku Debitur KPR Bersubsidi BTN menyatakan dengan sesungguhnya bahwa:</p>
-      <div className="space-y-1 text-justify text-[7.5pt] leading-snug pl-2">
+      <p className="font-semibold text-[9.5pt] mb-1">Selaku Debitur KPR Bersubsidi BTN menyatakan dengan sesungguhnya bahwa:</p>
+      <div className="space-y-1 text-justify text-[9pt] leading-snug pl-2">
         <p>1. Saya telah memahami ketentuan penghunian rumah sejahtera sebagaimana dimaksud di dalam Peraturan Menteri PUPR.</p>
         <p>2. Saya menyatakan bahwa : berpenghasilan tidak melebihi batas, saya dan istri/suami*) tidak memiliki rumah, tidak pernah menerima subsidi, menggunakan sendiri dan menghuni rumah dalam jangka waktu paling lambat 1 tahun setelah serah terima, dan tidak akan menyewakan/mengalihkan kepemilikan.</p>
         <p>3. Bahwa semua dokumen persyaratan yang disampaikan kepada Bank BTN untuk memperoleh KPR Bersubsidi BTN adalah benar dan dapat dipertanggungjawabkan keabsahannya.</p>
@@ -1839,38 +1839,38 @@ export const DocBtnPenghunianRumah: React.FC<{ data: BankKprDocData }> = ({ data
         <p>5. Saya bersedia menanggung segala biaya asuransi, pengikatan agunan, dan biaya lainnya yang timbul atas penghentian KPR Bersubsidi BTN.</p>
       </div>
 
-      <p className="text-justify text-[7.5pt] mt-3 mb-2">
+      <p className="text-justify text-[9pt] mt-3 mb-2">
         Demikian surat pernyataan ini saya buat dengan sebenar-benarnya tanpa paksaan dari pihak manapun.
       </p>
 
-      <div className="text-right text-[7.5pt] mb-1">
+      <div className="text-right text-[9pt] mb-1">
         <p>Purwakarta, .................................... {c.currentYear}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-center text-[7.5pt]">
+      <div className="grid grid-cols-2 gap-2 text-center text-[9pt]">
         <div>
           <p>Yang Menyetujui,</p>
           <div className="h-12" />
           <p className="font-bold underline">({c.namaPasangan || '...................................................'})</p>
-          <p className="text-[7pt] text-slate-500">Nama Pasangan suami/istri</p>
+          <p className="text-[8pt] text-slate-500">Nama Pasangan suami/istri</p>
         </div>
         <div>
           <p>Yang Membuat Pernyataan,</p>
-          <div className="h-12 flex items-center justify-center text-[6.5pt] text-slate-400">
+          <div className="h-12 flex items-center justify-center text-[7.5pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-1 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
         </div>
       </div>
 
-      <div className="text-center text-[7.5pt] mt-2">
+      <div className="text-center text-[9pt] mt-2">
         <p>Mengetahui,</p>
         <p className="font-semibold">PT. BANK TABUNGAN NEGARA (PERSERO) tbk.</p>
         <p>KANTOR CABANG PURWAKARTA</p>
         <div className="h-10" />
         <p className="font-bold underline">( ................................................................ )</p>
       </div>
-      <p className="text-[6.5pt] italic text-slate-500">*) coret yang tidak perlu</p>
+      <p className="text-[8pt] italic text-slate-500">*) coret yang tidak perlu</p>
     </PageWrapper>
   );
 };
@@ -1880,37 +1880,37 @@ export const DocBtnLampiran6PUPR: React.FC<{ data: BankKprDocData }> = ({ data }
   const c = getCommons(data);
   return (
     <PageWrapper>
-      <div className="text-center font-bold mb-3">
+      <div className="text-center font-bold mb-2">
         <p className="text-xs uppercase">Lampiran VI</p>
         <p className="text-sm underline uppercase">SURAT PERNYATAAN PEMOHON KPR BERSUBSIDI</p>
-        <p className="text-xs uppercase">(FORMAT KEMENTERIAN PUPR)</p>
+        <p className="text-xs uppercase text-slate-700">(FORMAT KEMENTERIAN PUPR)</p>
       </div>
 
-      <p className="text-[8pt] mb-1">Yang bertanda tangan di bawah ini:</p>
-      <table className="w-full mb-1 text-[8pt]">
+      <p className="text-[9pt] mb-1">Yang bertanda tangan di bawah ini:</p>
+      <table className="w-full mb-1 text-[9pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-44 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat/Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP/NIK</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7.5pt] pl-4 -mt-1 mb-2 font-medium">Selaku Pemohon.</p>
+      <p className="italic text-[8.5pt] pl-4 -mt-1 mb-1.5 font-medium">Selaku Pemohon.</p>
 
-      <table className="w-full mb-1 text-[8pt]">
+      <table className="w-full mb-1 text-[9pt]">
         <tbody>
-          <tr><td className="w-40 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
+          <tr><td className="w-44 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
           <tr><td className="py-0.5">Tempat/Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPasangan || '........'}, {c.tglLahirPasangan || '........'}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPasangan}</td></tr>
           <tr><td className="py-0.5">No. KTP/NIK</td><td>:</td><td>{c.nikPasangan || '...................................................'}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPasangan || c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7.5pt] pl-4 -mt-1 mb-2 font-medium">Selaku suami/istri* pemohon.</p>
+      <p className="italic text-[8.5pt] pl-4 -mt-1 mb-1.5 font-medium">Selaku suami/istri* pemohon.</p>
 
-      <p className="font-semibold text-[8pt] mb-1">Menyatakan dengan sesungguhnya bahwa:</p>
-      <div className="space-y-1 text-justify text-[7.5pt] leading-snug pl-2">
+      <p className="font-semibold text-[9pt] mb-1">Menyatakan dengan sesungguhnya bahwa:</p>
+      <div className="space-y-0.5 text-justify text-[8.5pt] leading-tight pl-2">
         <p>1. Saya memiliki gaji/upah pokok/penghasilan bersih per bulan sebesar <span className="font-semibold">{c.gajiPemohon}</span></p>
         <p>2. Saya dan (istri/suami*)) tidak memiliki hak kepemilikan atas rumah pada saat pengajuan pembiayaan KPR Bersubsidi.</p>
         <p>3. Saya dan (istri/suami*)) belum pernah menerima subsidi atau bantuan pembiayaan perumahan dari pemerintah.</p>
@@ -1921,39 +1921,39 @@ export const DocBtnLampiran6PUPR: React.FC<{ data: BankKprDocData }> = ({ data }
         <p>8. Apabila pernyataan tidak benar, bersedia mengembalikan seluruh dana subsidi dan dikenakan sanksi perundang-undangan.</p>
       </div>
 
-      <p className="text-justify text-[7.5pt] mt-2 mb-1">
+      <p className="text-justify text-[8.5pt] mt-1.5 mb-1">
         Demikian surat pernyataan ini saya buat dengan sebenar-benarnya tanpa paksaan dari pihak manapun.
       </p>
 
-      <div className="text-right text-[7.5pt] mb-1">
+      <div className="text-right text-[8.5pt] mb-1">
         <p>Purwakarta, .................................... {c.currentYear}</p>
-        <p className="text-[7pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
+        <p className="text-[8pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-center text-[7.5pt]">
+      <div className="grid grid-cols-2 gap-2 text-center text-[8.5pt]">
         <div>
           <p>Menyetujui,</p>
           <div className="h-10" />
           <p className="font-bold underline">({c.namaPasangan || '...................................................'})</p>
-          <p className="text-[7pt] text-slate-500">Nama Lengkap Suami/Istri*</p>
+          <p className="text-[8pt] text-slate-500">Nama Lengkap Suami/Istri*</p>
         </div>
         <div>
           <p>Yang membuat pernyataan,</p>
-          <div className="h-10 flex items-center justify-center text-[6.5pt] text-slate-400">
+          <div className="h-10 flex items-center justify-center text-[7.5pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-1 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[7pt] text-slate-500">Nama Lengkap Pemohon</p>
+          <p className="text-[8pt] text-slate-500">Nama Lengkap Pemohon</p>
         </div>
       </div>
 
-      <div className="text-center text-[7.5pt] mt-1">
+      <div className="text-center text-[8.5pt] mt-1">
         <p>Mengetahui,</p>
         <p>Pimpinan Tempat Bekerja/Kepala Desa/Lurah* ......................................</p>
-        <div className="h-10" />
+        <div className="h-8" />
         <p className="font-bold underline">( ................................................................ )</p>
       </div>
-      <p className="text-[6.5pt] italic text-slate-500">*) coret salah yang tidak perlu</p>
+      <p className="text-[7.5pt] italic text-slate-500">*) coret salah yang tidak perlu</p>
     </PageWrapper>
   );
 };
@@ -1966,37 +1966,37 @@ export const DocBtnLampiran11Internal: React.FC<{ data: BankKprDocData }> = ({ d
       <div className="text-center font-bold mb-2">
         <p className="text-xs uppercase">Lampiran XI</p>
         <p className="text-sm underline uppercase">SURAT PERNYATAAN PEMOHON KPR BERSUBSIDI BTN</p>
-        <p className="text-xs uppercase">(FORMAT INTERNAL BANK BTN)</p>
+        <p className="text-xs uppercase text-slate-700">(FORMAT INTERNAL BANK BTN)</p>
       </div>
 
-      <p className="text-justify text-[7.5pt] mb-2 leading-tight">
+      <p className="text-justify text-[8.5pt] mb-2 leading-tight">
         Berkenaan dengan persetujuan Kredit Pemilikan Rumah Bersubsidi BTN (KPR Bersubsidi BTN) yang disampaikan PT Bank Tabungan Negara (Persero) Tbk (Bank BTN) melalui Surat Persetujuan Pemberian Kredit (SP3K) No ........................................... tanggal ..........................................., kami yang bertanda tangan dibawah ini:
       </p>
 
-      <table className="w-full mb-1 text-[7.5pt]">
+      <table className="w-full mb-1 text-[8.5pt]">
         <tbody>
-          <tr><td className="w-36 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
+          <tr><td className="w-40 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPemohon}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPemohon}</td></tr>
           <tr><td className="py-0.5">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPemohon}, {c.tglLahirPemohon}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPemohon}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7pt] pl-4 -mt-1 mb-1 font-medium">Selaku Calon Debitur.</p>
+      <p className="italic text-[8pt] pl-4 -mt-1 mb-1 font-medium">Selaku Calon Debitur.</p>
 
-      <table className="w-full mb-1 text-[7.5pt]">
+      <table className="w-full mb-1 text-[8.5pt]">
         <tbody>
-          <tr><td className="w-36 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
+          <tr><td className="w-40 py-0.5">Nama Lengkap</td><td className="w-3">:</td><td className="font-semibold">{c.namaPasangan || '...................................................'}</td></tr>
           <tr><td className="py-0.5">No. KTP</td><td>:</td><td>{c.nikPasangan || '...................................................'}</td></tr>
           <tr><td className="py-0.5">Tempat, Tanggal Lahir</td><td>:</td><td>{c.tempatLahirPasangan || '........'}, {c.tglLahirPasangan || '........'}</td></tr>
           <tr><td className="py-0.5">Pekerjaan</td><td>:</td><td>{c.pekerjaanPasangan}</td></tr>
           <tr><td className="py-0.5 align-top">Alamat</td><td className="align-top">:</td><td className="align-top">{c.alamatPasangan || c.alamatPemohon}</td></tr>
         </tbody>
       </table>
-      <p className="italic text-[7pt] pl-4 -mt-1 mb-1 font-medium">Selaku suami/istri* Calon Debitur.</p>
+      <p className="italic text-[8pt] pl-4 -mt-1 mb-1 font-medium">Selaku suami/istri* Calon Debitur.</p>
 
-      <p className="font-semibold text-[7.5pt] mb-0.5">Menyatakan dengan sesungguhnya bahwa:</p>
-      <div className="space-y-0.5 text-justify text-[7pt] leading-tight pl-2">
+      <p className="font-semibold text-[8.5pt] mb-0.5">Menyatakan dengan sesungguhnya bahwa:</p>
+      <div className="space-y-0.5 text-justify text-[8pt] leading-tight pl-2">
         <p>1. Telah melaksanakan setiap proses permohonan KPR Bersubsidi BTN sesuai ketentuan Bank BTN secara bebas dan mandiri.</p>
         <p>2. Telah memahami hak dan kewajiban sebagai Debitur sesuai penjelasan Bank BTN.</p>
         <p>3. Bersedia melakukan aktivasi ulang QR Code setiap tahun hingga tahun ke-5 sejak akad KPR Bersubsidi BTN.</p>
@@ -2008,39 +2008,39 @@ export const DocBtnLampiran11Internal: React.FC<{ data: BankKprDocData }> = ({ d
         <p>9. Apabila tidak benar, bersedia mengembalikan seluruh subsidi dan mengubah/mengkonversi menjadi KPR Non-Subsidi.</p>
       </div>
 
-      <p className="text-justify text-[7pt] mt-1 mb-1">
+      <p className="text-justify text-[8pt] mt-1 mb-1">
         Demikian surat pernyataan ini saya buat dengan sebenar-benarnya tanpa paksaan dari pihak manapun.
       </p>
 
-      <div className="text-right text-[7pt] mb-1">
+      <div className="text-right text-[8pt] mb-1">
         <p>Purwakarta, .................................... {c.currentYear}</p>
-        <p className="text-[6.5pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
+        <p className="text-[7.5pt] text-slate-500">Kota/Kabupaten, tanggal bulan tahun</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-center text-[7pt]">
+      <div className="grid grid-cols-2 gap-2 text-center text-[8pt]">
         <div>
           <p>Menyetujui,</p>
           <div className="h-8" />
           <p className="font-bold underline">({c.namaPasangan || '...................................................'})</p>
-          <p className="text-[6.5pt] text-slate-500">Nama Lengkap Suami/Istri*</p>
+          <p className="text-[7.5pt] text-slate-500">Nama Lengkap Suami/Istri*</p>
         </div>
         <div>
           <p>Yang Membuat Pernyataan,</p>
-          <div className="h-8 flex items-center justify-center text-[6pt] text-slate-400">
+          <div className="h-8 flex items-center justify-center text-[7pt] text-slate-400">
             <span className="border border-dashed border-slate-400 px-1 py-0.5 rounded">Materai 10.000</span>
           </div>
           <p className="font-bold underline">({c.namaPemohon})</p>
-          <p className="text-[6.5pt] text-slate-500">Nama Lengkap Pemohon</p>
+          <p className="text-[7.5pt] text-slate-500">Nama Lengkap Pemohon</p>
         </div>
       </div>
 
-      <div className="text-center text-[7pt] mt-1">
+      <div className="text-center text-[8pt] mt-1">
         <p>Mengetahui,</p>
         <p>Pimpinan Tempat Bekerja/Kepala Desa/Lurah* ......................................</p>
         <div className="h-8" />
         <p className="font-bold underline">( ................................................................ )</p>
       </div>
-      <p className="text-[6.5pt] italic text-slate-500">*) coret salah yang tidak perlu</p>
+      <p className="text-[7.5pt] italic text-slate-500">*) coret salah yang tidak perlu</p>
     </PageWrapper>
   );
 };
