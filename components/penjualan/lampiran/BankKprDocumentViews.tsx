@@ -38,12 +38,15 @@ function getCommons(data: BankKprDocData) {
   const noHpPemohon = customer.no_hp || (customer as any)?.no_telepon || '-';
   const gajiPemohon = customer.pendapatan_per_bulan ? formatRupiah(customer.pendapatan_per_bulan) : '................................';
 
-  const namaPasangan = (customer.nama_pasangan || '').toUpperCase();
-  const nikPasangan = (customer as any)?.nik_pasangan || '-';
-  const tempatLahirPasangan = ((customer as any)?.tempat_lahir_pasangan || '-').toUpperCase();
-  const tglLahirPasangan = (customer as any)?.tanggal_lahir_pasangan ? formatTanggalIndonesia((customer as any).tanggal_lahir_pasangan) : '-';
-  const pekerjaanPasangan = ((customer as any)?.pekerjaan_pasangan || 'MENGURUS RUMAH TANGGA').toUpperCase();
-  const alamatPasangan = ((customer as any)?.alamat_domisili_pasangan || (customer as any)?.alamat_domisili || customer.alamat_ktp || customer.alamat || '-').toUpperCase();
+  // Cek apakah customer berstatus menikah (status_pernikahan 'Menikah' atau sudah diisi nama pasangan)
+  const isMenikah = (customer.status_pernikahan || '').trim().toLowerCase() === 'menikah' || !!(customer.nama_pasangan && customer.nama_pasangan.trim() !== '');
+
+  const namaPasangan = isMenikah && customer.nama_pasangan ? customer.nama_pasangan.toUpperCase() : '';
+  const nikPasangan = isMenikah && (customer as any)?.nik_pasangan ? (customer as any).nik_pasangan : '';
+  const tempatLahirPasangan = isMenikah && (customer as any)?.tempat_lahir_pasangan ? ((customer as any).tempat_lahir_pasangan).toUpperCase() : '';
+  const tglLahirPasangan = isMenikah && (customer as any)?.tanggal_lahir_pasangan ? formatTanggalIndonesia((customer as any).tanggal_lahir_pasangan) : '';
+  const pekerjaanPasangan = isMenikah ? (((customer as any)?.pekerjaan_pasangan || 'MENGURUS RUMAH TANGGA').toUpperCase()) : '';
+  const alamatPasangan = isMenikah ? (((customer as any)?.alamat_domisili_pasangan || (customer as any)?.alamat_domisili || customer.alamat_ktp || customer.alamat || '').toUpperCase()) : '';
 
   const namaPerumahan = (location?.nama_lokasi || 'BENTENG MUTIARA MAS').toUpperCase();
   const blokUnit = `${block?.nama_blok || 'S22'} NO. ${unit?.no_unit || '09'}`.toUpperCase();
@@ -73,6 +76,7 @@ function getCommons(data: BankKprDocData) {
   return {
     todayStr,
     currentYear,
+    isMenikah,
     namaPemohon,
     nikPemohon,
     tempatLahirPemohon,
