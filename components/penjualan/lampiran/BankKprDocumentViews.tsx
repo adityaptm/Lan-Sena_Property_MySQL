@@ -898,7 +898,7 @@ export const DocBjbFormatG: React.FC<{ data: BankKprDocData }> = ({ data }) => {
       <div className="grid grid-cols-2 gap-2 text-center text-[8.5pt]">
         <div>
           <p className="font-semibold">Menyetujui,</p>
-          <div className="h-20" />
+          <div className="h-24" />
           <p className="font-bold underline">
             (
             {c.namaPasangan ||
@@ -915,10 +915,10 @@ export const DocBjbFormatG: React.FC<{ data: BankKprDocData }> = ({ data }) => {
         </div>
       </div>
 
-      <div className="text-center text-[8.5pt] mt-1">
+      <div className="text-center text-[8.5pt] mt-3">
         <p>Mengetahui,</p>
         <p>(Pimpinan Instansi Tempat Bekerja/Kepala Desa/Lurah*))</p>
-        <div className="h-8" />
+        <div className="h-16" />
         <p className="font-bold underline">
           ( ................................................................ )
         </p>
@@ -1266,7 +1266,7 @@ export const DocBjbLampiran6: React.FC<{ data: BankKprDocData }> = ({
         <div>
           <p className="font-semibold">PENERIMA KUASA,</p>
           <p>PT. Bank Pembangunan Daerah Jawa Barat dan Banten, Tbk.</p>
-          <div className="h-20" />
+          <div className="h-24" />
           <p className="font-bold underline">
             ( ................................................................ )
           </p>
@@ -1279,9 +1279,9 @@ export const DocBjbLampiran6: React.FC<{ data: BankKprDocData }> = ({
         </div>
       </div>
 
-      <div className="text-center text-[8.5pt] mt-2">
+      <div className="text-center text-[8.5pt] mt-3">
         <p className="font-semibold">MENGETAHUI DAN MENYETUJUI</p>
-        <div className="h-10" />
+        <div className="h-16" />
         <p className="font-bold underline">
           (
           {c.namaPasangan ||
@@ -1404,7 +1404,7 @@ export const DocBjbLampiran3: React.FC<{ data: BankKprDocData }> = ({
           <p className="text-[8.5pt] text-slate-600">
             (Jabatan yang mewakili pengembang)
           </p>
-          <div className="h-20 flex items-center justify-center text-[8pt] text-slate-400">
+          <div className="h-24 flex items-center justify-center text-[8pt] text-slate-400">
             <span>Ttd dan cap perusahaan</span>
           </div>
           <p className="font-bold underline">({c.direktur})</p>
@@ -1797,7 +1797,7 @@ export const DocBjbUrutanFasilitasKredit: React.FC<{
         </div>
         <div>
           <p className="font-semibold">Suami/ Istri Pemohon,</p>
-          <div className="h-20" />
+          <div className="h-24" />
           <p className="font-bold underline">
             (
             {c.namaPasangan ||
@@ -2240,7 +2240,7 @@ export const DocBriPernyataanPemohon: React.FC<{ data: BankKprDocData }> = ({
       <div className="grid grid-cols-2 gap-2 text-center text-[8.5pt]">
         <div>
           <p className="font-semibold">Menyetujui,</p>
-          <div className="h-20" />
+          <div className="h-24" />
           <p className="font-bold underline">
             (
             {c.namaPasangan ||
@@ -2257,13 +2257,13 @@ export const DocBriPernyataanPemohon: React.FC<{ data: BankKprDocData }> = ({
         </div>
       </div>
 
-      <div className="text-center text-[8.5pt] mt-1">
+      <div className="text-center text-[8.5pt] mt-3">
         <p>Mengetahui,</p>
         <p>
           Pimpinan Tempat Bekerja/ Kepala Desa/Lurah*
           ......................................
         </p>
-        <div className="h-10" />
+        <div className="h-16" />
         <p className="font-bold underline">
           ( ................................................................ )
         </p>
@@ -2535,7 +2535,7 @@ export const DocBtnLampiran3: React.FC<{ data: BankKprDocData }> = ({
       <div className="grid grid-cols-2 gap-2 text-center text-[9pt]">
         <div>
           <p className="font-semibold">Menyetujui,</p>
-          <div className="h-20" />
+          <div className="h-24" />
           <p className="font-bold underline">
             (
             {c.namaPasangan ||
@@ -2552,10 +2552,10 @@ export const DocBtnLampiran3: React.FC<{ data: BankKprDocData }> = ({
         </div>
       </div>
 
-      <div className="text-center text-[9pt] mt-2">
+      <div className="text-center text-[9pt] mt-3">
         <p>Mengetahui,</p>
         <p className="font-semibold">Pengembang {c.pengembang}</p>
-        <div className="h-10" />
+        <div className="h-16" />
         <p className="font-bold underline">({c.direktur})</p>
         <p className="text-[8pt] text-slate-600">
           Nama Lengkap, Jabatan dan Stempel
@@ -3291,7 +3291,7 @@ export const DocBtnLampiran14: React.FC<{ data: BankKprDocData }> = ({
           <p className="text-[8.5pt] text-slate-600">
             (Jabatan yang mewakili pengembang)
           </p>
-          <div className="h-20 flex items-center justify-center text-[8pt] text-slate-400">
+          <div className="h-24 flex items-center justify-center text-[8pt] text-slate-400">
             <span>Stempel & TTD Pengembang</span>
           </div>
           <p className="font-bold underline">({c.direktur})</p>
@@ -3413,7 +3413,7 @@ export const DocBtnStandingInstruction: React.FC<{ data: BankKprDocData }> = ({
           <p className="font-semibold">Menyetujui,</p>
           <p>PT. BANK TABUNGAN NEGARA (PERSERO) Tbk</p>
           <p>KANTOR CABANG PURWAKARTA</p>
-          <div className="h-20" />
+          <div className="h-24" />
           <p className="font-bold underline">
             ( ................................................................ )
           </p>
@@ -3627,7 +3627,7 @@ export const DocBtnPenghunianRumah: React.FC<{ data: BankKprDocData }> = ({
       <div className="grid grid-cols-2 gap-2 text-center text-[9pt]">
         <div>
           <p className="font-semibold">Yang Menyetujui,</p>
-          <div className="h-20" />
+          <div className="h-24" />
           <p className="font-bold underline">
             (
             {c.namaPasangan ||
@@ -3643,11 +3643,11 @@ export const DocBtnPenghunianRumah: React.FC<{ data: BankKprDocData }> = ({
         </div>
       </div>
 
-      <div className="text-center text-[9pt] mt-2">
+      <div className="text-center text-[9pt] mt-3">
         <p>Mengetahui,</p>
         <p className="font-semibold">PT. BANK TABUNGAN NEGARA (PERSERO) tbk.</p>
         <p>KANTOR CABANG PURWAKARTA</p>
-        <div className="h-10" />
+        <div className="h-16" />
         <p className="font-bold underline">
           ( ................................................................ )
         </p>
@@ -3812,7 +3812,7 @@ export const DocBtnLampiran6PUPR: React.FC<{ data: BankKprDocData }> = ({
       <div className="grid grid-cols-2 gap-2 text-center text-[8.5pt]">
         <div>
           <p>Menyetujui,</p>
-          <div className="h-20" />
+          <div className="h-24" />
           <p className="font-bold underline">
             (
             {c.namaPasangan ||
@@ -3829,13 +3829,13 @@ export const DocBtnLampiran6PUPR: React.FC<{ data: BankKprDocData }> = ({
         </div>
       </div>
 
-      <div className="text-center text-[8.5pt] mt-1">
+      <div className="text-center text-[8.5pt] mt-3">
         <p>Mengetahui,</p>
         <p>
           Pimpinan Tempat Bekerja/Kepala Desa/Lurah*
           ......................................
         </p>
-        <div className="h-8" />
+        <div className="h-16" />
         <p className="font-bold underline">
           ( ................................................................ )
         </p>
@@ -4007,7 +4007,7 @@ export const DocBtnLampiran11Internal: React.FC<{ data: BankKprDocData }> = ({
       <div className="grid grid-cols-2 gap-2 text-center text-[8pt]">
         <div>
           <p>Menyetujui,</p>
-          <div className="h-20" />
+          <div className="h-24" />
           <p className="font-bold underline">
             (
             {c.namaPasangan ||
@@ -4026,13 +4026,13 @@ export const DocBtnLampiran11Internal: React.FC<{ data: BankKprDocData }> = ({
         </div>
       </div>
 
-      <div className="text-center text-[8pt] mt-1">
+      <div className="text-center text-[8pt] mt-3">
         <p>Mengetahui,</p>
         <p>
           Pimpinan Tempat Bekerja/Kepala Desa/Lurah*
           ......................................
         </p>
-        <div className="h-8" />
+        <div className="h-16" />
         <p className="font-bold underline">
           ( ................................................................ )
         </p>
