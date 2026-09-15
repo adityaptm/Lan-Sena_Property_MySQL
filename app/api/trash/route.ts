@@ -25,7 +25,7 @@ export async function DELETE(req: NextRequest) {
     const { ids, all } = body;
 
     if (all) {
-      const [res]: any = await query('DELETE FROM `trash`');
+      const res: any = await query('DELETE FROM `trash`');
       const count = res?.affectedRows || 0;
 
       // Log ke activity_logs
@@ -63,7 +63,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const placeholders = safeIds.map(() => '?').join(',');
-    const [res]: any = await query(`DELETE FROM \`trash\` WHERE id IN (${placeholders})`, safeIds);
+    const res: any = await query(`DELETE FROM \`trash\` WHERE id IN (${placeholders})`, safeIds);
     const count = res?.affectedRows || safeIds.length;
 
     // Log ke activity_logs
