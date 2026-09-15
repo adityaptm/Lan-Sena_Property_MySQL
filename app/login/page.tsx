@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useData } from '@/lib/data-context';
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,25 +28,25 @@ export default function LoginPage() {
     }
     setLoading(true);
     setErrorMsg('');
+
     try {
       const res = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      
-      let data: any = {};
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        try {
-          data = await res.json();
-        } catch {}
-      }
-      
+      const data = await res.json();
+
       if (!res.ok) {
-        setErrorMsg(data?.error || 'Email atau kata sandi salah. Silakan periksa kembali.');
+        throw new Error(data.error || 'Login gagal. Periksa email dan kata sandi Anda.');
+      }
+
+      await refresh();
+
+      if (data.user?.role === 'Viewer') {
+        router.replace('/');
       } else {
-        window.location.replace('/');
+        router.replace('/');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Terjadi kesalahan sistem');
@@ -56,24 +55,18 @@ export default function LoginPage() {
     }
   };
 
-
-
   return (
-    <div className="min-h-screen bg-[#F5F6F8] dark:bg-[#0B0F19] text-slate-800 dark:text-slate-100 flex flex-col justify-center items-center p-4 relative transition-colors duration-200">
-      <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-        <ThemeToggle />
-      </div>
-
-      <div className="w-full max-w-md bg-white dark:bg-[#151C2C] border border-slate-200 dark:border-[#243048] rounded-xl p-8 shadow-sm">
+    <div className="min-h-screen bg-[#F5F6F8] flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-lg p-8 shadow-sm">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-4 overflow-hidden p-1 bg-white border border-slate-100 shadow-sm">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded mb-4 overflow-hidden p-1 bg-white border border-slate-100 shadow-sm">
             <img src="/logo.jpg" alt="PT. LAN SENA JAYA" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
             PT. LAN SENA JAYA
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Sistem ERP Penjualan & Operasional
           </p>
         </div>
@@ -86,9 +79,9 @@ export default function LoginPage() {
 
         <div className="relative my-6 text-center">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200 dark:border-[#243048]" />
+            <div className="w-full border-t border-slate-200" />
           </div>
-          <span className="relative px-3 bg-white dark:bg-[#151C2C] text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
+          <span className="relative px-3 bg-white text-slate-500 text-xs font-semibold uppercase tracking-wider">
             Login
           </span>
         </div>
@@ -96,7 +89,7 @@ export default function LoginPage() {
         {/* Email Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Email Address / ID Login
             </label>
             <div className="relative">
@@ -106,13 +99,13 @@ export default function LoginPage() {
                 placeholder="Masukkan ID"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-white dark:bg-[#172033] border border-slate-300 dark:border-[#2D3B55] rounded-md text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Kata Sandi
             </label>
             <div className="relative">
@@ -122,7 +115,7 @@ export default function LoginPage() {
                 placeholder="Masukkan Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-10 py-2 bg-white dark:bg-[#172033] border border-slate-300 dark:border-[#2D3B55] rounded-md text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full pl-9 pr-10 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
               <button
                 type="button"
@@ -138,26 +131,22 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
-            >
-              <span>{loading ? 'Memproses...' : 'Login'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-sm transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+          >
+            {loading ? (
+              <span>Memproses...</span>
+            ) : (
+              <>
+                <span>Masuk ke Sistem</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
         </form>
-
-        <p className="text-xs text-slate-500 text-center mt-6">
-          Belum punya akun? Hubungi Super Admin untuk mendapatkan akses.
-        </p>
       </div>
-
-      <p className="text-sm text-slate-500 mt-8 text-center">
-        © 2026 Lansena Property System. All rights reserved.
-      </p>
     </div>
   );
 }

@@ -24,7 +24,6 @@ import {
 import { useData } from '@/lib/data-context';
 import type { UserRole } from '@/types';
 import { canAccessModule, ModuleName, normalizeRole } from '@/lib/permissions';
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 interface NavGroup {
   title: ModuleName;
@@ -294,31 +293,28 @@ export function Sidebar({
         })}
       </div>
 
-      {/* Footer Profile & Theme Toggle */}
-      <div className="p-3.5 border-t border-slate-700/50 bg-[#171C25] flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+      {/* Footer Profile */}
+      <div className="p-4 border-t border-slate-700/50 bg-[#171C25] flex items-center justify-between">
+        <div className="flex items-center gap-3 overflow-hidden">
           <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white text-xs font-semibold shrink-0">
             {currentUser?.nama?.charAt(0) || 'U'}
           </div>
-          <div className="truncate min-w-0">
+          <div className="truncate">
             <p className="text-xs font-semibold text-slate-200 truncate">{currentUser?.nama || 'Loading...'}</p>
-            <p className="text-[10px] text-slate-400 font-medium truncate">{currentUser?.role || ''}</p>
+            <p className="text-[10px] text-slate-400 font-medium">{currentUser?.role || ''}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <ThemeToggle className="!p-1.5 !w-8 !h-8 bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-amber-400" />
-          <button
-            onClick={async () => {
-              if (!window.confirm('Apakah kamu yakin ingin keluar dari website?')) return;
-              await fetch('/api/auth/signout', { method: 'POST' });
-              window.location.href = '/login';
-            }}
-            title="Sign Out"
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          onClick={async () => {
+            if (!window.confirm('Apakah kamu yakin ingin keluar dari website?')) return;
+            await fetch('/api/auth/signout', { method: 'POST' });
+            window.location.href = '/login';
+          }}
+          title="Sign Out"
+          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition cursor-pointer"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
