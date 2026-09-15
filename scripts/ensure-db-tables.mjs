@@ -94,6 +94,24 @@ const statements = [
     KEY idx_activity_logs_created_at (created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `,
+  `
+  CREATE TABLE IF NOT EXISTS login_logs (
+    id VARCHAR(36) NOT NULL,
+    user_id VARCHAR(36) NULL,
+    nama VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'Success',
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_login_logs_user_id (user_id),
+    KEY idx_login_logs_email (email),
+    KEY idx_login_logs_status (status),
+    KEY idx_login_logs_created_at (created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `,
 ];
 
 async function tableExists(conn, tableName) {
@@ -119,7 +137,7 @@ async function main() {
   const conn = await mysql.createConnection(config);
 
   try {
-    for (const table of ["sale_discounts", "trash", "activity_logs"]) {
+    for (const table of ["sale_discounts", "trash", "activity_logs", "login_logs"]) {
       const exists = await tableExists(conn, table);
       const usable = exists ? await tableUsable(conn, table) : false;
 
@@ -135,7 +153,7 @@ async function main() {
       await conn.query(sql);
     }
 
-    console.log("OK: sale_discounts, trash & activity_logs siap dipakai.");
+    console.log("OK: sale_discounts, trash, activity_logs & login_logs siap dipakai.");
   } finally {
     await conn.end();
   }

@@ -263,6 +263,19 @@ export default function RiwayatAktivitasPage() {
         </button>
       </div>
 
+      {/* Role Guard */}
+      {!isSuperAdmin && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-700 flex items-center gap-3 my-4">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <div>
+            <p className="font-bold">Akses Dibatasi Khusus Super Admin & Programmer</p>
+            <p className="text-xs text-rose-600 mt-0.5">
+              Hanya Super Admin dan Programmer yang memiliki hak akses untuk melihat log riwayat aktivitas.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Pesan error/sukses */}
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm flex items-center gap-2">
@@ -275,6 +288,8 @@ export default function RiwayatAktivitasPage() {
           {success}
         </div>
       )}
+
+      {isSuperAdmin && (
 
       {/* Toolbar: Search + Bulk Actions */}
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
@@ -488,6 +503,7 @@ export default function RiwayatAktivitasPage() {
           </div>
         )}
       </div>
+      )}
     </AppLayout>
   );
 }

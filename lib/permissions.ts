@@ -61,6 +61,7 @@ export const ALL_TABLES = [
   'kecamatan',
   'kelurahan',
   'activity_logs',
+  'login_logs',
   'trash',
 ] as const;
 

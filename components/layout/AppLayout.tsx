@@ -68,6 +68,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       if (requiredModule && !canAccessModule(role, requiredModule)) {
         router.replace('/');
+        return;
+      }
+
+      // Khusus Riwayat Aktivitas, Riwayat Login, dan Kotak Sampah: Hanya Super Admin & Programmer
+      const isSuperAdminOrProgrammer = role === 'Super Admin' || role === 'Programmer';
+      if (
+        (pathname.startsWith('/pengguna/riwayat') ||
+          pathname.startsWith('/pengaturan/trash')) &&
+        !isSuperAdminOrProgrammer
+      ) {
+        router.replace('/pengguna');
+        return;
       }
     }
   }, [loading, currentUser, pathname, router]);

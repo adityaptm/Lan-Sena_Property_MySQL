@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
     const session = decryptToken(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-    // Hanya Super Admin, Programmer, Admin yang bisa akses
-    const allowedRoles = ['Super Admin', 'Programmer', 'Admin'];
+    // Hanya Super Admin dan Programmer yang bisa akses
+    const allowedRoles = ['Super Admin', 'Programmer'];
     if (!allowedRoles.includes(session.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Akses ditolak: Hanya Super Admin dan Programmer yang dapat melihat riwayat aktivitas.' }, { status: 403 });
     }
 
     const rows = await query(
