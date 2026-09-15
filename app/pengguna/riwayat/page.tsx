@@ -289,10 +289,9 @@ export default function RiwayatAktivitasPage() {
         </div>
       )}
 
-      {isSuperAdmin && (
-
       {/* Toolbar: Search + Bulk Actions */}
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
+      {isSuperAdmin && (
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative">
