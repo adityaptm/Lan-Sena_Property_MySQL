@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer utilities {
-  /* Custom scrollbar — neutral gray, works in both sidebar (dark) and content (light) */
+  /* Custom scrollbar — neutral gray, works in both sidebar and content */
   .custom-scrollbar::-webkit-scrollbar {
     width: 5px;
     height: 5px;
@@ -18,15 +20,120 @@
   }
 }
 
+/* ── Global Dark Mode Styling & Adaptation ── */
+.dark {
+  color-scheme: dark;
+}
+
+html.dark,
+.dark body {
+  background-color: #0b0f19;
+  color: #f1f5f9;
+}
+
+/* Base card backgrounds in dark mode */
+.dark .bg-white {
+  background-color: #151c2c;
+  color: #f1f5f9;
+}
+
+.dark .bg-slate-50 {
+  background-color: #0e1524;
+}
+
+.dark .bg-slate-100 {
+  background-color: #1e293b;
+}
+
+.dark .bg-slate-200 {
+  background-color: #334155;
+}
+
+/* Borders in dark mode */
+.dark .border-slate-200,
+.dark .border-slate-100,
+.dark .border-slate-300 {
+  border-color: #243048;
+}
+
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #243048;
+}
+
+/* Text colors in dark mode */
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700 {
+  color: #f1f5f9;
+}
+
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  color: #94a3b8;
+}
+
+.dark .text-slate-400 {
+  color: #64748b;
+}
+
+/* Form inputs & controls in dark mode */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+.dark select,
+.dark textarea {
+  background-color: #172033;
+  color: #f8fafc;
+  border-color: #2d3b55;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #4f46e5;
+}
+
+/* Table rows in dark mode */
+.dark tr:hover td {
+  background-color: rgba(30, 41, 59, 0.45);
+}
+
+.dark thead tr {
+  background-color: #0e1524;
+}
+
+/* Modals & Popovers in dark mode */
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+}
+
+/* Dark mode scrollbars */
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
+}
+
 .print-only {
   display: none;
 }
 
-/* Print Styles for Document Checklist & Tables */
+/* ── Print Styles (always enforce clean white paper) ── */
 @media print {
-  body {
+  html, body, .dark html, .dark body, .dark {
     background-color: #ffffff !important;
+    background: #ffffff !important;
     color: #000000 !important;
+    color-scheme: light !important;
   }
   .no-print {
     display: none !important;
@@ -43,5 +150,9 @@
   main {
     padding: 0 !important;
     max-width: 100% !important;
+  }
+  .dark .bg-white, .dark .bg-slate-50, .dark .bg-slate-100 {
+    background-color: #ffffff !important;
+    color: #000000 !important;
   }
 }

@@ -86,7 +86,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F6F8] flex flex-col items-center justify-center p-4 text-slate-600">
+      <div className="min-h-screen bg-[#F5F6F8] dark:bg-[#0B0F19] flex flex-col items-center justify-center p-4 text-slate-600 dark:text-slate-400">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-sm font-medium">Memuat sistem & autentikasi...</p>
       </div>
@@ -98,7 +98,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F5F6F8]">
+    <div className="min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F5F6F8] dark:bg-[#0B0F19] text-slate-800 dark:text-slate-100 transition-colors duration-200">
       <Sidebar
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
