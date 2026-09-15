@@ -60,6 +60,7 @@ export const ALL_TABLES = [
   'kabupaten_kota',
   'kecamatan',
   'kelurahan',
+  'activity_logs',
   'trash',
 ] as const;
 

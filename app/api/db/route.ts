@@ -313,6 +313,39 @@ async function handleRestoreTrash(params: any) {
   return { success: true };
 }
 
+async function logActivity(
+  session: { id: string; role: string; nama?: string } | undefined,
+  action: string,
+  tableName: string,
+  recordId?: string,
+  recordLabel?: string,
+  detail?: string,
+) {
+  if (!session) return;
+  // Jangan log perubahan pada tabel activity_logs sendiri (cegah infinite loop)
+  if (tableName === 'activity_logs') return;
+  try {
+    await query(
+      `INSERT INTO activity_logs (id, user_id, user_nama, user_role, action, table_name, record_id, record_label, detail, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        crypto.randomUUID(),
+        session.id,
+        session.nama || '-',
+        session.role || '-',
+        action,
+        tableName,
+        recordId || null,
+        recordLabel || null,
+        detail || null,
+      ],
+    );
+  } catch (e: any) {
+    // Jangan gagalkan operasi utama jika logging gagal
+    console.warn('[activity_logs] Gagal menulis log:', e.message);
+  }
+}
+
 async function handleAction(
   action: any,
   session?: { id: string; role: string; nama?: string; email?: string },
@@ -323,12 +356,27 @@ async function handleAction(
   switch (action.action) {
     case "select":
       return handleSelect(action);
-    case "insert":
-      return handleInsert(action);
-    case "update":
-      return handleUpdate(action);
-    case "delete":
-      return handleDelete(action, session);
+    case "insert": {
+      const result = await handleInsert(action);
+      // Log aktivitas insert (async, fire-and-forget)
+      const insertedId = result?.id || action.data?.id || '-';
+      const label = result?.nama || result?.nama_barang || result?.nama_akun || result?.keterangan || '';
+      logActivity(session, 'insert', action.table, insertedId, label ? String(label).substring(0, 255) : undefined, `Menambahkan data baru di tabel ${action.table}`);
+      return result;
+    }
+    case "update": {
+      const result = await handleUpdate(action);
+      const updatedId = action.filters?.find((f: any) => f.column === 'id')?.value || '-';
+      const label = result?.nama || result?.nama_barang || result?.nama_akun || result?.keterangan || '';
+      logActivity(session, 'update', action.table, updatedId, label ? String(label).substring(0, 255) : undefined, `Mengedit data di tabel ${action.table}`);
+      return result;
+    }
+    case "delete": {
+      const result = await handleDelete(action, session);
+      const deletedId = action.filters?.find((f: any) => f.column === 'id')?.value || '-';
+      logActivity(session, 'delete', action.table, deletedId, action.record_label || undefined, `Menghapus data dari tabel ${action.table}`);
+      return result;
+    }
     case "restore_trash":
       return handleRestoreTrash(action);
     default:

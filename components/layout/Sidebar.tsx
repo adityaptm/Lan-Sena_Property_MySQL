@@ -111,6 +111,7 @@ const NAV_MENU: NavGroup[] = [
     icon: UserCheck,
     items: [
       { label: 'Manajemen User', href: '/pengguna' },
+      { label: 'Riwayat Aktivitas', href: '/pengguna/riwayat' },
       { label: 'Kotak Sampah (Trash)', href: '/pengaturan/trash', roles: ['Super Admin', 'Programmer'] },
     ],
   },

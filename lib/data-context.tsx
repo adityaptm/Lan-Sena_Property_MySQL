@@ -320,7 +320,10 @@ interface DataContextType {
   // Trash & Audit Log
   trashItems: TrashItem[];
   restoreFromTrash: (trashId: string) => Promise<void>;
+  restoreFromTrashBatch: (trashIds: string[]) => Promise<void>;
   permanentlyDeleteTrash: (trashId: string) => Promise<void>;
+  permanentlyDeleteTrashBatch: (trashIds: string[]) => Promise<void>;
+  emptyAllTrash: () => Promise<void>;
 
   // Refresh
   refresh: () => Promise<void>;
@@ -774,6 +777,41 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const permanentlyDeleteTrash = async (trashId: string) => {
     await dbDelete("trash", trashId, { skipTrash: true });
+    await loadAll();
+  };
+
+  const permanentlyDeleteTrashBatch = async (trashIds: string[]) => {
+    if (!trashIds || !trashIds.length) return;
+    const res = await fetch('/api/trash', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: trashIds }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Gagal menghapus data di Kotak Sampah');
+    await loadAll();
+  };
+
+  const emptyAllTrash = async () => {
+    const res = await fetch('/api/trash', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ all: true }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Gagal mengosongkan Kotak Sampah');
+    await loadAll();
+  };
+
+  const restoreFromTrashBatch = async (trashIds: string[]) => {
+    if (!trashIds || !trashIds.length) return;
+    const res = await fetch('/api/trash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'restore_batch', ids: trashIds }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Gagal memulihkan data');
     await loadAll();
   };
   // --- Kontak ---
@@ -1746,7 +1784,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         updateUser: updateUser,
         trashItems,
         restoreFromTrash,
+        restoreFromTrashBatch,
         permanentlyDeleteTrash,
+        permanentlyDeleteTrashBatch,
+        emptyAllTrash,
         refresh: loadAll,
       }}
     >
