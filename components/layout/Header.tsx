@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
-import { Menu, Bell, AlertTriangle, CheckCircle, Search, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Menu, Bell, AlertTriangle, CheckCircle, LogOut, Calendar, ChevronRight } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useData } from '@/lib/data-context';
 
 interface HeaderProps {
@@ -9,8 +10,78 @@ interface HeaderProps {
   isSidebarOpen?: boolean;
 }
 
+const ROUTE_TITLES: Record<string, { module: string; page: string }> = {
+  '/': { module: 'Utama', page: 'Dashboard' },
+  '/kontak/customer': { module: 'Kontak', page: 'Customer' },
+  '/kontak/bank': { module: 'Kontak', page: 'Bank Partner' },
+  '/unit-rumah': { module: 'Unit Rumah', page: 'Master Data & Unit' },
+  '/penjualan/input': { module: 'Penjualan', page: 'Input Penjualan Baru' },
+  '/penjualan/daftar': { module: 'Penjualan', page: 'Daftar Penjualan' },
+  '/marketing/jenis-marketer': { module: 'Marketing', page: 'Jenis Marketer' },
+  '/marketing/marketer': { module: 'Marketing', page: 'Marketer / Sales' },
+  '/marketing/booking-online': { module: 'Marketing', page: 'Booking Online' },
+  '/marketing/hak-marketer': { module: 'Marketing', page: 'Hak & Fee Marketer' },
+  '/gudang/stok-barang': { module: 'Gudang', page: 'Stok Barang' },
+  '/gudang/purchase': { module: 'Gudang', page: 'Purchase PO' },
+  '/gudang/barang-masuk': { module: 'Gudang', page: 'Barang Masuk' },
+  '/gudang/barang-keluar': { module: 'Gudang', page: 'Barang Keluar' },
+  '/keuangan/kas-bank': { module: 'Keuangan', page: 'Kas & Bank' },
+  '/keuangan/akun-operasional': { module: 'Keuangan', page: 'Akun Operasional (COA)' },
+  '/keuangan/hutang-bank': { module: 'Keuangan', page: 'Hutang Bank' },
+  '/keuangan/akun': { module: 'Keuangan', page: 'Sub-Akun Keuangan' },
+  '/keuangan/cashflow': { module: 'Keuangan', page: 'Cashflow' },
+  '/keuangan/kasbon-mandor': { module: 'Keuangan', page: 'Kasbon Mandor' },
+  '/keuangan/operasional': { module: 'Keuangan', page: 'Biaya Operasional' },
+  '/keuangan/pengajuan-pencairan': { module: 'Keuangan', page: 'Pengajuan Pencairan' },
+  '/keuangan/laporan-akuntansi': { module: 'Keuangan', page: 'Laporan Akuntansi' },
+  '/keuangan/aset-perusahaan': { module: 'Keuangan', page: 'Aset Perusahaan' },
+  '/laporan/penjualan-cash': { module: 'Laporan', page: 'Penjualan Cash' },
+  '/laporan/penjualan-kpr': { module: 'Laporan', page: 'Penjualan KPR' },
+  '/laporan/summary-unit': { module: 'Laporan', page: 'Summary Unit' },
+  '/laporan/pekerjaan-mandor': { module: 'Laporan', page: 'Pekerjaan Mandor' },
+  '/laporan/hutang-piutang': { module: 'Laporan', page: 'Hutang Piutang' },
+  '/laporan/marketing-fee': { module: 'Laporan', page: 'Marketing Fee' },
+  '/pengguna': { module: 'Pengguna', page: 'Manajemen User' },
+  '/pengguna/riwayat': { module: 'Pengguna', page: 'Riwayat Aktivitas' },
+  '/pengguna/riwayat-login': { module: 'Pengguna', page: 'Riwayat Login' },
+  '/pengaturan/trash': { module: 'Pengaturan', page: 'Kotak Sampah' },
+};
+
+function getRouteInfo(pathname: string) {
+  if (ROUTE_TITLES[pathname]) return ROUTE_TITLES[pathname];
+
+  // Match prefix
+  for (const [route, info] of Object.entries(ROUTE_TITLES)) {
+    if (route !== '/' && pathname.startsWith(route)) {
+      return info;
+    }
+  }
+
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length === 0) return { module: 'Utama', page: 'Dashboard' };
+  const moduleName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).replace(/-/g, ' ');
+  const pageName = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1).replace(/-/g, ' ') : moduleName;
+  return { module: moduleName, page: pageName };
+}
+
 export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
   const { items, disbursementRequests, currentUser } = useData();
+  const pathname = usePathname();
+  const [todayStr, setTodayStr] = useState('');
+
+  useEffect(() => {
+    const now = new Date();
+    setTodayStr(
+      now.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    );
+  }, []);
+
+  const routeInfo = getRouteInfo(pathname || '/');
 
   const handleLogout = async () => {
     if (!window.confirm('Apakah kamu yakin ingin keluar dari website?')) return;
@@ -29,7 +100,7 @@ export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-20 h-16 bg-white border-b border-slate-200 px-4 lg:px-8 flex items-center justify-between">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <button
           onClick={onToggleSidebar}
           className="p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
@@ -38,17 +109,27 @@ export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="relative hidden md:block w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari transaksi, unit, customer..."
-            className="w-full pl-9 pr-4 py-1.5 bg-slate-100 border border-slate-200 rounded-md text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-colors"
-          />
+        {/* Breadcrumb & Date Indicator (Opsi A) */}
+        <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-1.5 font-medium">
+            <span className="text-slate-400 hidden sm:inline">{routeInfo.module}</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-300 hidden sm:inline" />
+            <span className="text-slate-800 font-bold text-xs sm:text-sm tracking-tight">{routeInfo.page}</span>
+          </div>
+
+          {todayStr && (
+            <>
+              <span className="text-slate-200 mx-1 hidden md:inline">|</span>
+              <div className="hidden md:flex items-center gap-1.5 text-slate-500 bg-slate-50 border border-slate-200/70 px-2.5 py-1 rounded-md">
+                <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="capitalize font-medium">{todayStr}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         {/* Notification Bell Dropdown indicator */}
         <div className="relative group">
           <button className="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors">
@@ -103,7 +184,7 @@ export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
         </div>
 
         {/* User info + Logout */}
-        <div className="hidden sm:flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <div className="px-3 py-1 bg-blue-50 border border-blue-100 rounded-md text-xs flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-500" />
             <span className="text-blue-700 font-medium">{currentUser?.role || '...'}</span>
