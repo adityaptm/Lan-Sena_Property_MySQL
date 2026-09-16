@@ -54,6 +54,25 @@ export async function POST(req: NextRequest) {
       await query('UPDATE users SET nama = ?, role = ? WHERE id = ?', [nama, role, userId]);
     }
 
+    // Log ke activity_logs
+    try {
+      await query(
+        `INSERT INTO activity_logs (id, user_id, user_nama, user_role, action, table_name, record_id, record_label, detail, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          crypto.randomUUID(),
+          caller.id,
+          caller.nama || '-',
+          caller.role || '-',
+          'update',
+          'users',
+          userId,
+          `Pengguna: ${nama} (${role})`.substring(0, 255),
+          `Mengedit akun pengguna: ${nama} - Role: ${role}${password && password.trim() ? ' (termasuk ganti password)' : ''}`,
+        ]
+      );
+    } catch {}
+
     return NextResponse.json({ success: true, message: 'Data pengguna & password berhasil diperbarui.' });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Terjadi kesalahan server' }, { status: 500 });

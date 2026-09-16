@@ -64,6 +64,21 @@ const TABLE_LABELS: Record<string, string> = {
   bank_loans: 'Hutang Bank',
   chart_of_accounts: 'Akun Keuangan',
   trash: 'Kotak Sampah',
+  sale_step_history: 'Tahapan Penjualan',
+  sale_kpr_submissions: 'Pengajuan KPR',
+  sale_billing_letters: 'Surat Tagihan',
+  sales_steps: 'Master Tahapan Penjualan',
+  certificate_steps: 'Master Tahapan Sertifikat',
+  kpr_steps: 'Master Tahapan KPR',
+  price_items: 'Item Harga',
+  subsidy_types: 'Jenis Subsidi',
+  marketer_types: 'Jenis Marketer',
+  purchase_items: 'Item Pembelian',
+  goods_in_items: 'Item Barang Masuk',
+  goods_out_items: 'Item Barang Keluar',
+  marketing_fees: 'Marketing Fee',
+  login_logs: 'Riwayat Login',
+  activity_logs: 'Riwayat Aktivitas',
 };
 
 function getTableLabel(tableName: string): string {
@@ -433,18 +448,26 @@ export default function RiwayatAktivitasPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">{getActionBadge(log.action)}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-slate-700 font-medium">
-                        {getTableLabel(log.table_name)}
-                      </span>
-                      {log.record_label && (
-                        <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[200px]">
-                          {log.record_label}
-                        </p>
-                      )}
+                    <td className="px-4 py-3 align-top">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="text-sm text-slate-800 font-semibold">
+                          {getTableLabel(log.table_name)}
+                        </span>
+                        {log.record_label && (
+                          <span
+                            className="inline-block text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200/80 rounded px-2 py-0.5 max-w-[280px] break-words"
+                            title={log.record_label}
+                          >
+                            {log.record_label}
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="text-xs text-slate-500 truncate max-w-[300px]">
+                    <td className="px-4 py-3 align-top">
+                      <p
+                        className="text-xs text-slate-600 leading-relaxed max-w-[450px] whitespace-normal break-words"
+                        title={log.detail || ''}
+                      >
                         {log.detail || '-'}
                       </p>
                     </td>

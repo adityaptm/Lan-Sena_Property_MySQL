@@ -56,6 +56,25 @@ export async function POST(req: NextRequest) {
       [newUserId, nama, email, hashedPassword, role, true]
     );
 
+    // Log ke activity_logs
+    try {
+      await query(
+        `INSERT INTO activity_logs (id, user_id, user_nama, user_role, action, table_name, record_id, record_label, detail, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          crypto.randomUUID(),
+          caller.id,
+          caller.nama || '-',
+          caller.role || '-',
+          'insert',
+          'users',
+          newUserId,
+          `Pengguna: ${nama} (${role})`.substring(0, 255),
+          `Menambahkan akun pengguna baru: ${nama} (${email}) - Role: ${role}`,
+        ]
+      );
+    } catch {}
+
     return NextResponse.json({ success: true, userId: newUserId, email });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Terjadi kesalahan server' }, { status: 500 });

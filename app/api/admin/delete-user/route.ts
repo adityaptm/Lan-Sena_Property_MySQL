@@ -42,6 +42,25 @@ export async function DELETE(req: NextRequest) {
 
     await query('DELETE FROM users WHERE id = ?', [userId]);
 
+    // Log ke activity_logs
+    try {
+      await query(
+        `INSERT INTO activity_logs (id, user_id, user_nama, user_role, action, table_name, record_id, record_label, detail, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          crypto.randomUUID(),
+          caller.id,
+          caller.nama || '-',
+          caller.role || '-',
+          'delete',
+          'users',
+          userId,
+          `Pengguna: ${rows[0].nama || rows[0].email || '-'} (${rows[0].role || '-'})`.substring(0, 255),
+          `Menghapus akun pengguna: ${rows[0].nama || '-'} (${rows[0].email || '-'})`,
+        ]
+      );
+    } catch {}
+
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Terjadi kesalahan server' }, { status: 500 });
